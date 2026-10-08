@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anatomy FPS - Sandbox Prototype</title>
+    <!-- Cargar Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Cargar Phaser 3 -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; }
+        #three-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+        /* Phaser UI encima de Three.js. pointer-events: none permite hacer clic en el mundo 3D */
+        #phaser-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+        #instructions { position: absolute; bottom: 20px; left: 20px; color: white; z-index: 3; pointer-events: none; text-shadow: 1px 1px 2px black;}
+    </style>
+</head>
+<body>
+    <canvas id="three-canvas"></canvas>
+    <div id="phaser-canvas"></div>
+    <div id="instructions">Haz clic en las esferas para activar las mecánicas.<br>Usa las teclas 1, 2, 3 o 4 para responder.</div>
+
+    <script>
+        // ==========================================
+        // 1. GESTOR DE ESTADO GLOBAL (PUENTE THREE-PHASER)
+        // ==========================================
+        const GameState = {
+            health: 100,
+            maxHealth: 100,
+            isPaused: false,
+            currentObstacle: null,
+            // Base de datos de trivia según la mecánica
+            trivia: {
+                'golpe': {
+                    q: "Mecánica: GOLPE. ¿Cuál es la capa más interna del útero que se desprende en la menstruación?",
+                    options: ["1. Miometrio", "2. Perimetrio", "3. Endometrio", "4. Epitelio vaginal"],
+                    correct: 3,
+                    color: 0xff0000 // Rojo
+                },
+                'parry': {
+                    q: "Mecánica: PARRY. ¿Qué hormona tiene un pico que desencadena directamente la ovulación?",
+                    options: ["1. Progesterona", "2. LH (Luteinizante)", "3. Testosterona", "4. Inhibina"],
+                    correct: 2,
+                    color: 0x0088ff // Azul
+                },
+                'disparo': {
+                    q: "Mecánica: DISPARO. ¿En qué estructura maduran y se almacenan los espermatozoides?",
+                    options: ["1. Epidídimo", "2. Próstata", "3. Vesícula seminal", "4. Uretra"],
+                    correct: 1,
+                    color: 0xffff00 // Amarillo
+                },
+                'qte': {
+                    q: "Mecánica: QTE. Orden correcto del recorrido del espermatozoide:",
+                    options: ["1. Uretra -> Próstata -> Testículo", "2. Testículo -> Epidídimo -> Conducto Deferente -> Uretra", "3. Epidídimo -> Testículo -> Uretra", "4. Conducto Deferente -> Uretra -> Epidídimo"],
+                    correct: 2,
+                    color: 0x8800ff // Morado
+                }
+            },
+            triggerTrivia: function(type, obstacleMesh) {
+                if(this.isPaused) return;
+                this.isPaused = true;
+                this.currentObstacle = obstacleMesh;
+                
+                // Disparar evento para que Phaser muestre la UI
+                window.dispatchEvent(new CustomEvent('showTrivia', { detail: this.trivia[type] }));
+            },
+            resolveTrivia: function(isCorrect) {
+                if(isCorrect) {
+                    // Animación de destrucción en Three.js
+                    window.dispatchEvent(new CustomEvent('destroyObstacle', { detail: this.currentObstacle }));
+                } else {
+                    // Restar vida y resetear si llega a 0
+                    this.health -= 34; // 3 fallos = muerte
+                    window.dispatchEvent(new CustomEvent('updateHealth', { detail: this.health }));
+                    
+                    if(this.health <= 0) {
+                        setTimeout(() => {
+                            alert("¡VITALIDAD AGOTADA! Reiniciando desde el Checkpoint...");
+                            this.health = 100;
+                            window.dispatchEvent(new CustomEvent('updateHealth', { detail: this.health }));
+                            window.dispatchEvent(new Event('resetScene'));
+                        }, 500);
+                    }
+                }
+                this.isPaused = false;
+                this.currentObstacle = null;
+                window.dispatchEvent(new Event('hideTrivia'));
+            }
+        };
+
+        // ==========================================
+        // 2. ENTORNO 3D (THREE.JS)
+        // ==========================================
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+        scene.fog = new THREE.Fog(0x111111, 10, 50);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, 10);
+
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas'), antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // Luces
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 1, 100);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        // Suelo (Grid anatómico/cibernético)
+        const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x222222);
+        scene.add(gridHelper);
+
+        // Obstáculos interactivos
+        const obstacles = [];
+        function createObstacle(x, z, type) {
+            const data = GameState.trivia[type];
+            const geometry = new THREE.OctahedronGeometry(1.5);
+            const material = new THREE.MeshPhongMaterial({ color: data.color, wireframe: false });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, 1.5, z);
+            mesh.userData = { type: type, originalY: 1.5 };
+            scene.add(mesh);
+            obstacles.push(mesh);
+        }
+
+        function spawnObstacles() {
+            obstacles.forEach(obs => scene.remove(obs));
+            obstacles.length = 0;
+            createObstacle(-6, 0, 'golpe');
+            createObstacle(-2, 0, 'parry');
+            createObstacle(2, 0, 'disparo');
+            createObstacle(6, 0, 'qte');
+        }
+        spawnObstacles();
+
+        // Sistema de Raycasting para clics (simulando que el jugador se acerca/ataca)
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('click', (event) => {
+            if(GameState.isPaused) return;
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObjects(obstacles);
+            if(intersects.length > 0) {
+                const target = intersects[0].object;
+                GameState.triggerTrivia(target.userData.type, target);
+            }
+        });
+
+        // Animación de destrucción (Partículas simples simuladas reduciendo escala)
+        window.addEventListener('destroyObstacle', (e) => {
+            const mesh = e.detail;
+            const animateDestruction = () => {
+                mesh.scale.multiplyScalar(0.8);
+                if(mesh.scale.x > 0.1) {
+                    requestAnimationFrame(animateDestruction);
+                } else {
+                    scene.remove(mesh);
+                    obstacles.splice(obstacles.indexOf(mesh), 1);
+                }
+            };
+            animateDestruction();
+        });
+
+        window.addEventListener('resetScene', spawnObstacles);
+
+        // Bucle de renderizado 3D
+        function animate() {
+            requestAnimationFrame(animate);
+            if(!GameState.isPaused) {
+                // Rotar obstáculos suavemente
+                const time = Date.now() * 0.001;
+                obstacles.forEach((obs, index) => {
+                    obs.rotation.y += 0.02;
+                    obs.rotation.x += 0.01;
+                    obs.position.y = obs.userData.originalY + Math.sin(time + index) * 0.5;
+                });
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // ==========================================
+        // 3. INTERFAZ UI Y LOGICA 2D (PHASER 3)
+        // ==========================================
+        class UIScene extends Phaser.Scene {
+            constructor() {
+                super('UIScene');
+            }
+
+            create() {
+                const width = this.cameras.main.width;
+                const height = this.cameras.main.height;
+
+                // --- HUD ESTÁNDAR ---
+                this.healthBarBg = this.add.rectangle(20, 20, 300, 30, 0x440000).setOrigin(0, 0);
+                this.healthBar = this.add.rectangle(20, 20, 300, 30, 0xff0000).setOrigin(0, 0);
+                this.add.text(25, 25, 'VITALIDAD', { fontSize: '18px', fill: '#fff', fontStyle: 'bold' });
+                
+                this.scoreText = this.add.text(width - 200, 20, 'ESTILO: SSS', { fontSize: '24px', fill: '#ffd700', fontStyle: 'bold' });
+
+                // --- PANEL DE TRIVIA (Oculto por defecto) ---
+                this.triviaContainer = this.add.container(width / 2, height / 2);
+                
+                // Fondo del panel
+                const bg = this.add.rectangle(0, 0, 800, 400, 0x000000, 0.85);
+                bg.setStrokeStyle(4, 0xffffff);
+                this.triviaContainer.add(bg);
+
+                // Texto de la pregunta
+                this.qText = this.add.text(0, -120, '', { 
+                    fontSize: '24px', fill: '#fff', align: 'center', wordWrap: { width: 700 } 
+                }).setOrigin(0.5);
+                this.triviaContainer.add(this.qText);
+
+                // Opciones de respuesta
+                this.optionTexts = [];
+                for(let i=0; i<4; i++) {
+                    let opt = this.add.text(-350, -30 + (i * 50), '', { fontSize: '20px', fill: '#aaa' });
+                    this.triviaContainer.add(opt);
+                    this.optionTexts.push(opt);
+                }
+                
+                this.triviaContainer.setVisible(false);
+
+                // --- LISTENERS EXTERNOS ---
+                window.addEventListener('showTrivia', (e) => this.displayTrivia(e.detail));
+                window.addEventListener('hideTrivia', () => {
+                    this.triviaContainer.setVisible(false);
+                });
+                window.addEventListener('updateHealth', (e) => {
+                    const hp = e.detail;
+                    const percentage = Math.max(0, hp / 100);
+                    this.tweens.add({
+                        targets: this.healthBar,
+                        width: 300 * percentage,
+                        duration: 200
+                    });
+                });
+
+                // --- ENTRADA DE TECLADO (1, 2, 3, 4) ---
+                this.input.keyboard.on('keydown', (event) => {
+                    if(!GameState.isPaused || !this.currentTriviaData) return;
+                    
+                    const keyMap = { 'Digit1': 1, 'Digit2': 2, 'Digit3': 3, 'Digit4': 4 };
+                    if(keyMap[event.code]) {
+                        const isCorrect = (keyMap[event.code] === this.currentTriviaData.correct);
+                        
+                        // Feedback visual rápido
+                        const targetText = this.optionTexts[keyMap[event.code] - 1];
+                        targetText.setColor(isCorrect ? '#00ff00' : '#ff0000');
+                        
+                        setTimeout(() => {
+                            GameState.resolveTrivia(isCorrect);
+                        }, 400);
+                    }
+                });
+            }
+
+            displayTrivia(data) {
+                this.currentTriviaData = data;
+                this.qText.setText(data.q);
+                for(let i=0; i<4; i++) {
+                    this.optionTexts[i].setText(data.options[i]);
+                    this.optionTexts[i].setColor('#ffffff');
+                }
+                this.triviaContainer.setVisible(true);
+            }
+        }
+
+        const phaserConfig = {
+            type: Phaser.CANVAS,
+            parent: 'phaser-canvas',
+            width: window.innerWidth,
+            height: window.innerHeight,
+            transparent: true,
+            scene: [UIScene]
+        };
+        const phaserGame = new Phaser.Game(phaserConfig);
+
+        // Reescalado dinámico
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            phaserGame.scale.resize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
