@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ULTRANATOMIA - Sandbox</title>
+    <!-- Cargar Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Cargar Phaser 3 -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; color: #fff; }
+        #three-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+        /* Phaser UI encima de Three.js. pointer-events: none permite hacer clic en el mundo 3D */
+        #phaser-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+        #instructions { position: absolute; bottom: 16px; left: 20px; z-index: 3; pointer-events: none; text-shadow: 1px 1px 2px black; font-size: 13px; line-height: 1.5; opacity: .85; }
+
+        /* Panel de sandbox */
+        #panel { position: absolute; top: 120px; right: 16px; width: 236px; z-index: 4; background: rgba(0,0,0,.72); border: 1px solid #555; padding: 10px 12px; font-size: 13px; }
+        #panel.collapsed .body { display: none; }
+        #panel h3 { margin: 0; font-size: 14px; letter-spacing: 2px; cursor: pointer; display: flex; justify-content: space-between; }
+        #panel .body { margin-top: 8px; }
+        #panel .row { margin: 8px 0; }
+        #panel label { display: block; margin-bottom: 3px; color: #bbb; }
+        #panel select, #panel button { font: inherit; background: #111; color: #fff; border: 1px solid #666; padding: 4px 6px; }
+        #panel select { width: 100%; }
+        #panel input[type=range] { width: 100%; }
+        #panel .mech { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        #panel .mech button { cursor: pointer; font-weight: bold; border-width: 2px; }
+        #panel .mech button:hover { background: #222; }
+        #panel .chk { display: flex; gap: 6px; align-items: center; color: #fff; }
+        #panel .stats { border-top: 1px solid #444; padding-top: 6px; color: #ddd; line-height: 1.5; }
+        #panel .full { width: 100%; cursor: pointer; }
+
+        /* Menú inicial */
+        #menu { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,.88); text-align: center; padding: 16px; }
+        #menu.hidden { display: none; }
+        #menu h1 { font-size: clamp(32px, 7vw, 64px); letter-spacing: 6px; margin: 0; }
+        #menu p { max-width: 560px; color: #bbb; line-height: 1.5; }
+        #menu button { font: inherit; font-size: 18px; margin: 6px; padding: 12px 22px; cursor: pointer; background: #111; color: #fff; border: 2px solid #fff; }
+        #menu button:hover { background: #fff; color: #000; }
+        #menu small { color: #888; margin-top: 18px; max-width: 560px; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <canvas id="three-canvas"></canvas>
+    <div id="phaser-canvas"></div>
+    <div id="instructions">1-4: responder trivia &middot; QTE: flechas / WASD &middot; Esc: cancelar (modo libre) &middot; Clic en un obst&aacute;culo: reintentar</div>
+
+    <div id="panel">
+        <h3 id="panelToggle"><span>SANDBOX</span><span id="panelArrow">&#9662;</span></h3>
+        <div class="body">
+            <div class="row">
+                <label for="modeSel">Modo</label>
+                <select id="modeSel">
+                    <option value="free">Libre (probar mec&aacute;nicas)</option>
+                    <option value="run">Carrera (8 obst&aacute;culos + rango)</option>
+                </select>
+            </div>
+            <div class="row">
+                <label>Probar mec&aacute;nica (modo libre)</label>
+                <div class="mech">
+                    <button data-mech="golpe" style="border-color:#ff3344;color:#ff3344">GOLPE</button>
+                    <button data-mech="parry" style="border-color:#2a9dff;color:#2a9dff">PARRY</button>
+                    <button data-mech="disparo" style="border-color:#ffd400;color:#ffd400">DISPARO</button>
+                    <button data-mech="qte" style="border-color:#a23bff;color:#a23bff">QTE</button>
+                </div>
+            </div>
+            <div class="row">
+                <label for="bulletRange">Bullet time: <span id="bulletVal">12</span>% velocidad</label>
+                <input type="range" id="bulletRange" min="3" max="100" value="12">
+            </div>
+            <div class="row">
+                <label for="dmgRange">Da&ntilde;o por fallo: <span id="dmgVal">25</span>% vida</label>
+                <input type="range" id="dmgRange" min="5" max="50" step="5" value="25">
+            </div>
+            <div class="row chk"><input type="checkbox" id="infHp"><label for="infHp" style="margin:0;color:#fff">Vida infinita</label></div>
+            <div class="row chk"><input type="checkbox" id="showAns"><label for="showAns" style="margin:0;color:#fff">Mostrar respuesta correcta</label></div>
+            <div class="row"><button class="full" id="btnRestart">Reiniciar</button></div>
+            <div class="row"><button class="full" id="btnMenu">Men&uacute;</button></div>
+            <div class="stats" id="stats"></div>
+        </div>
+    </div>
+
+    <div id="menu">
+        <h1>ULTRANATOMIA</h1>
+        <p>Sandbox de mec&aacute;nicas. Acércate a un obstáculo, entra en bullet time, responde la pregunta anatómica y desbloquea la mecánica para destruirlo.</p>
+        <div>
+            <button id="startFree">MODO LIBRE</button>
+            <button id="startRun">CARRERA</button>
+        </div>
+        <small>Libre: prueba GOLPE, PARRY, DISPARO y QTE una por una desde el panel.<br>Carrera: 8 obst&aacute;culos en autom&aacute;tico con checkpoint, tiempo, estilo, precisi&oacute;n y rango D-S-P.<br>Teclado necesario: 1-4 para responder, flechas o WASD para el QTE.</small>
+    </div>
+
+    <script>
+        // ==========================================
+        // 0. DATOS: MECÁNICAS Y BANCO DE PREGUNTAS
+        // ==========================================
+        const MECH = {
+            golpe:   { name: 'GOLPE',   color: 0xff3344, css: '#ff3344', tema: 'Estructura e histología' },
+            parry:   { name: 'PARRY',   color: 0x2a9dff, css: '#2a9dff', tema: 'Regulación hormonal' },
+            disparo: { name: 'DISPARO', color: 0xffd400, css: '#ffd400', tema: 'Transporte y bioquímica' },
+            qte:     { name: 'QTE',     color: 0xa23bff, css: '#a23bff', tema: 'Procesos secuenciales' }
+        };
+
+        // La primera opción de cada pregunta es la correcta; se barajan al mostrarlas.
+        const BANK = {
+            golpe: [
+                { q: '¿Cuál es la capa más interna del útero, la que se desprende durante la menstruación?', a: ['Endometrio', 'Miometrio', 'Perimetrio', 'Epitelio vaginal'] },
+                { q: '¿Qué célula forma la barrera hematotesticular mediante uniones estrechas?', a: ['Célula de Sertoli', 'Célula de Leydig', 'Espermatogonia', 'Célula mioide peritubular'] },
+                { q: '¿Cuál es la cápsula fibrosa gruesa que envuelve directamente al testículo?', a: ['Túnica albugínea', 'Túnica vaginal', 'Túnica dartos', 'Fascia espermática externa'] },
+                { q: '¿Qué célula del intersticio testicular sintetiza la testosterona?', a: ['Célula de Leydig', 'Célula de Sertoli', 'Espermátide', 'Célula mioide peritubular'] },
+                { q: '¿Qué capa del útero es una gruesa capa de músculo liso responsable de las contracciones del parto?', a: ['Miometrio', 'Endometrio', 'Perimetrio', 'Mucosa cervical'] },
+                { q: '¿Cuál es la capa serosa más externa del útero?', a: ['Perimetrio', 'Miometrio', 'Endometrio', 'Túnica albugínea'] }
+            ],
+            parry: [
+                { q: '¿Qué hormona tiene un pico que desencadena directamente la ovulación?', a: ['LH (hormona luteinizante)', 'Progesterona', 'Testosterona', 'Inhibina'] },
+                { q: 'La inhibina B secretada por las células de Sertoli retroalimenta negativamente a:', a: ['La FSH', 'La testosterona', 'La prolactina', 'La oxitocina'] },
+                { q: 'La testosterona ejerce retroalimentación negativa sobre:', a: ['El hipotálamo y la adenohipófisis', 'La neurohipófisis', 'El epidídimo', 'La próstata'] },
+                { q: '¿Qué hormona domina la fase lútea, secretada por el cuerpo lúteo?', a: ['Progesterona', 'FSH', 'GnRH', 'Prolactina'] },
+                { q: 'El pico preovulatorio de estradiol ejerce sobre la LH una retroalimentación:', a: ['Positiva', 'Negativa', 'Nula', 'Competitiva'] },
+                { q: 'En el testículo, ¿qué células responden principalmente a la LH?', a: ['Células de Leydig', 'Células de Sertoli', 'Espermatogonias', 'Células peritubulares'] }
+            ],
+            disparo: [
+                { q: '¿En qué estructura maduran y se almacenan los espermatozoides?', a: ['Epidídimo', 'Próstata', 'Vesícula seminal', 'Uretra'] },
+                { q: '¿Qué azúcar aportada por las vesículas seminales nutre al espermatozoide?', a: ['Fructosa', 'Lactosa', 'Sacarosa', 'Maltosa'] },
+                { q: '¿Dónde ocurre normalmente la fecundación?', a: ['Ampolla de la trompa de Falopio', 'Cavidad uterina', 'Vagina', 'Cérvix'] },
+                { q: '¿Qué estructura produce la enzima proteolítica (PSA) que licúa el coágulo seminal?', a: ['Próstata', 'Epidídimo', 'Glándula bulbouretral', 'Conducto deferente'] },
+                { q: '¿Qué mediador provoca la vasodilatación y la erección en los cuerpos cavernosos?', a: ['Óxido nítrico', 'Adrenalina', 'Angiotensina II', 'Endotelina'] },
+                { q: '¿Qué glándula aporta la mayor proporción del volumen del líquido seminal?', a: ['Vesículas seminales', 'Próstata', 'Glándulas bulbouretrales', 'Epidídimo'] }
+            ],
+            qte: [
+                { q: 'Orden correcto del recorrido del espermatozoide:', a: ['Túbulos seminíferos → Epidídimo → Conducto deferente → Uretra', 'Epidídimo → Túbulos seminíferos → Uretra → Conducto deferente', 'Uretra → Próstata → Testículo → Epidídimo', 'Conducto deferente → Uretra → Epidídimo → Testículo'] },
+                { q: 'Orden correcto de la espermatogénesis:', a: ['Espermatogonia → Espermatocito primario → Espermatocito secundario → Espermátide', 'Espermatocito primario → Espermatogonia → Espermátide → Espermatocito secundario', 'Espermátide → Espermatocito secundario → Espermatocito primario → Espermatogonia', 'Espermatogonia → Espermátide → Espermatocito primario → Espermatocito secundario'] },
+                { q: 'Fases del ciclo endometrial a partir del primer día de sangrado:', a: ['Menstrual → Proliferativa → Secretora', 'Proliferativa → Menstrual → Secretora', 'Secretora → Proliferativa → Menstrual', 'Menstrual → Secretora → Proliferativa'] },
+                { q: 'Orden de la foliculogénesis:', a: ['Primordial → Primario → Secundario (antral) → De Graaf', 'Primario → Primordial → De Graaf → Secundario (antral)', 'De Graaf → Secundario (antral) → Primario → Primordial', 'Primordial → Secundario (antral) → Primario → De Graaf'] },
+                { q: 'Secuencia de eventos de la fecundación:', a: ['Capacitación → Reacción acrosómica → Fusión con el ovocito → Reacción cortical', 'Reacción cortical → Capacitación → Reacción acrosómica → Fusión con el ovocito', 'Fusión con el ovocito → Capacitación → Reacción acrosómica → Reacción cortical', 'Reacción acrosómica → Reacción cortical → Capacitación → Fusión con el ovocito'] }
+            ]
+        };
+
+        function shuffle(arr) {
+            const a = arr.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // Mazo por mecánica: no repite pregunta hasta agotar el banco
+        const decks = {};
+        function drawQuestion(type) {
+            if (!decks[type] || decks[type].length === 0) decks[type] = shuffle(BANK[type].map((_, i) => i));
+            const item = BANK[type][decks[type].pop()];
+            const opts = shuffle(item.a.map((t, i) => ({ t, ok: i === 0 })));
+            return {
+                type,
+                q: item.q,
+                options: opts.map((o, i) => (i + 1) + '. ' + o.t),
+                correct: opts.findIndex(o => o.ok) + 1
+            };
+        }
+
+        const emit = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }));
+
+        // ==========================================
+        // 1. CONSTANTES DE JUEGO
+        // ==========================================
+        const RUN_LEN = 8;               // obstáculos por carrera
+        const CHECKPOINT_EVERY = 4;
+        const FIRST_Z = -40;
+        const SPACING = 40;
+        const RUN_SPEED = 14;
+        const TRIGGER_DIST = 18;         // distancia a la que arranca el bullet time
+        const STOP_DIST = 7;             // el jugador se detiene a esta distancia
+        const QTE_LEN = 5;
+        const QTE_STEP_TIME = 1.5;
+        const BASE_FOV = 75;
+        const TRIVIA_FOV = 64;
+        const RANKS = ['D', 'C', 'B', 'A', 'S'];
+        const TIME_THRESH = [90, 120, 150, 190];       // S, A, B, C (segundos, menor es mejor)
+        const STYLE_THRESH = [1250, 1000, 750, 450];   // S, A, B, C (mayor es mejor)
+        const ACC_THRESH = [95, 85, 70, 50];           // S, A, B, C (%)
+        const QTE_KEYS = {
+            ArrowLeft: 'L', KeyA: 'L', ArrowRight: 'R', KeyD: 'R',
+            ArrowUp: 'U', KeyW: 'U', ArrowDown: 'D', KeyS: 'D'
+        };
+
+        // ==========================================
+        // 2. ENTORNO 3D (THREE.JS)
+        // ==========================================
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0d0406);
+        scene.fog = new THREE.Fog(0x0d0406, 10, 70);
+
+        const camera = new THREE.PerspectiveCamera(BASE_FOV, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2.2, 0);
+
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas'), antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // Luces
+        scene.add(new THREE.AmbientLight(0x604048));
+        const pointLight = new THREE.PointLight(0xffffff, 1.3, 70);
+        scene.add(pointLight);
+
+        // Suelo (Grid anatómico/cibernético)
+        const gridHelper = new THREE.GridHelper(60, 60, 0x555555, 0x222222);
+        scene.add(gridHelper);
+
+        // Túnel orgánico + costillas que dan sensación de velocidad
+        const tube = new THREE.Mesh(
+            new THREE.CylinderGeometry(9, 9, 400, 24, 1, true),
+            new THREE.MeshPhongMaterial({ color: 0x2a0a10, emissive: 0x140407, side: THREE.BackSide })
+        );
+        tube.rotation.x = Math.PI / 2;
+        tube.position.y = 3;
+        scene.add(tube);
+
+        const RING_COUNT = 14, RING_GAP = 8;
+        const ringGeo = new THREE.TorusGeometry(9, 0.25, 8, 28);
+        const ringMat = new THREE.MeshPhongMaterial({ color: 0x5a1520, emissive: 0x2a0a10 });
+        const rings = [];
+        for (let i = 0; i < RING_COUNT; i++) {
+            const r = new THREE.Mesh(ringGeo, ringMat);
+            r.position.set(0, 3, 10 - i * RING_GAP);
+            scene.add(r);
+            rings.push(r);
+        }
+
+        // Obstáculos
+        const obstacles = [];
+        let finishMarker = null;
+
+        function buildObstacle(o) {
+            const g = o.group, c = MECH[o.type].color, p = o.parts;
+            const mat = (extra) => new THREE.MeshPhongMaterial(Object.assign({
+                color: c, emissive: c, emissiveIntensity: 0.25, transparent: true, opacity: 0.85, shininess: 60
+            }, extra));
+
+            if (o.type === 'golpe') {
+                // Barrera celular densa
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(11, 6.5, 1.2), mat());
+                wall.position.y = 3.25;
+                const cage = new THREE.Mesh(
+                    new THREE.BoxGeometry(11.3, 6.8, 1.5),
+                    new THREE.MeshBasicMaterial({ color: 0xffaaaa, wireframe: true, transparent: true, opacity: 0.35 })
+                );
+                cage.position.y = 3.25;
+                g.add(wall, cage);
+                p.wall = wall;
+            } else if (o.type === 'parry') {
+                // Torreta que dispara secreciones hostiles
+                const core = new THREE.Mesh(new THREE.OctahedronGeometry(1.4), mat());
+                core.position.y = 3.2;
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.15, 8, 32), mat({ opacity: 1 }));
+                ring.position.y = 3.2;
+                g.add(core, ring);
+                p.core = core;
+                p.ring = ring;
+            } else if (o.type === 'disparo') {
+                // Compuerta cerrada + receptor lejano
+                const gate = new THREE.Mesh(new THREE.BoxGeometry(11, 6.5, 0.8), mat({ opacity: 0.8 }));
+                gate.position.y = 3.25;
+                g.add(gate);
+                const target = new THREE.Group();
+                target.add(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffee88 })),
+                    new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.12, 8, 28), new THREE.MeshBasicMaterial({ color: c }))
+                );
+                target.position.set(0, 7.6, -2);
+                g.add(target);
+                p.gate = gate;
+                p.target = target;
+            } else {
+                // Esfínter fisiológico para el QTE
+                const iris = new THREE.Group();
+                iris.add(
+                    new THREE.Mesh(new THREE.TorusGeometry(3.4, 0.8, 12, 36), mat({ opacity: 1 })),
+                    p.disc = new THREE.Mesh(new THREE.CircleGeometry(3.4, 32), mat({ opacity: 0.55, side: THREE.DoubleSide }))
+                );
+                iris.position.y = 3.2;
+                g.add(iris);
+                p.iris = iris;
+            }
+            g.traverse(m => { m.userData.obs = o; });
+        }
+
+        function disposeObject(obj) {
+            obj.traverse(c => {
+                if (c.geometry) c.geometry.dispose();
+                if (c.material) (Array.isArray(c.material) ? c.material : [c.material]).forEach(m => m.dispose());
+            });
+        }
+
+        function createObstacle(type, z, index) {
+            const o = { type, z, index, cleared: false, t: Math.random() * 6, group: new THREE.Group(), parts: {} };
+            o.group.position.set(0, 0, z);
+            buildObstacle(o);
+            scene.add(o.group);
+            obstacles.push(o);
+            return o;
+        }
+
+        function removeObstacle(o) {
+            scene.remove(o.group);
+            disposeObject(o.group);
+            const i = obstacles.indexOf(o);
+            if (i >= 0) obstacles.splice(i, 1);
+        }
+
+        function clearObstacles() {
+            obstacles.slice().forEach(removeObstacle);
+            if (finishMarker) {
+                scene.remove(finishMarker);
+                disposeObject(finishMarker);
+                finishMarker = null;
+            }
+        }
+
+        function animateObstacles(dt) {
+            obstacles.forEach(o => {
+                o.t += dt;
+                const p = o.parts;
+                if (p.core) {
+                    p.core.rotation.y += dt * 1.2;
+                    p.core.rotation.x += dt * 0.6;
+                    p.core.position.y = 3.2 + Math.sin(o.t * 2) * 0.4;
+                }
+                if (p.ring) p.ring.rotation.z += dt * 1.5;
+                if (p.target) p.target.rotation.y += dt * 2;
+                if (p.wall) p.wall.material.emissiveIntensity = 0.25 + 0.15 * Math.sin(o.t * 4);
+                if (p.iris && !o.opening) p.iris.scale.setScalar(1 + 0.08 * Math.sin(o.t * 5));
+            });
+        }
+
+        // --- Efectos: fragmentos, destellos, proyectiles ---
+        const fx = [];
+        const shardGeo = new THREE.BoxGeometry(0.35, 0.35, 0.35);
+
+        function spawnShard(pos, vel, color, life) {
+            const mesh = new THREE.Mesh(shardGeo, new THREE.MeshBasicMaterial({ color, transparent: true }));
+            mesh.position.copy(pos);
+            scene.add(mesh);
+            fx.push({
+                mesh, vel, life, max: life, grav: true, grow: 0,
+                spin: new THREE.Vector3(Math.random() * 8, Math.random() * 8, Math.random() * 8)
+            });
+        }
+
+        function burst(pos, color, n, speed) {
+            for (let i = 0; i < n; i++) {
+                const v = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.1, Math.random() - 0.5).normalize().multiplyScalar(speed * (0.4 + Math.random() * 0.6));
+                spawnShard(pos, v, color, 0.8 + Math.random() * 0.8);
+            }
+        }
+
+        function flashRing(pos, color) {
+            const mesh = new THREE.Mesh(
+                new THREE.RingGeometry(0.6, 0.9, 32),
+                new THREE.MeshBasicMaterial({ color, transparent: true, side: THREE.DoubleSide })
+            );
+            mesh.position.copy(pos);
+            scene.add(mesh);
+            fx.push({ mesh, vel: new THREE.Vector3(), spin: new THREE.Vector3(), life: 0.5, max: 0.5, grav: false, grow: 7 });
+        }
+
+        function updateFx(dt) {
+            for (let i = fx.length - 1; i >= 0; i--) {
+                const f = fx[i];
+                f.life -= dt;
+                if (f.life <= 0) {
+                    scene.remove(f.mesh);
+                    f.mesh.material.dispose();
+                    if (f.mesh.geometry !== shardGeo) f.mesh.geometry.dispose();
+                    fx.splice(i, 1);
+                    continue;
+                }
+                if (f.grav) f.vel.y -= 14 * dt;
+                f.mesh.position.addScaledVector(f.vel, dt);
+                f.mesh.rotation.x += f.spin.x * dt;
+                f.mesh.rotation.y += f.spin.y * dt;
+                f.mesh.rotation.z += f.spin.z * dt;
+                if (f.grow) f.mesh.scale.addScalar(f.grow * dt);
+                f.mesh.material.opacity = f.life / f.max;
+            }
+        }
+
+        function clearFx() {
+            fx.forEach(f => { scene.remove(f.mesh); f.mesh.material.dispose(); });
+            fx.length = 0;
+        }
+
+        function glowSphere(color, r) {
+            const m = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), new THREE.MeshBasicMaterial({ color }));
+            scene.add(m);
+            return m;
+        }
+
+        function dropMesh(m) {
+            scene.remove(m);
+            disposeObject(m);
+        }
+
+        // --- Animaciones por tiempo real (la ejecución corre a velocidad normal) ---
+        const anims = [];
+        function anim(dur, fn, done) {
+            anims.push({ t: 0, dur, fn, done, tk: GameState.token });
+        }
+        function updateAnims(dt) {
+            for (let i = anims.length - 1; i >= 0; i--) {
+                const a = anims[i];
+                if (a.tk !== GameState.token) { anims.splice(i, 1); continue; }
+                a.t += dt;
+                const k = Math.min(1, a.t / a.dur);
+                a.fn(k);
+                if (k >= 1) {
+                    anims.splice(i, 1);
+                    if (a.done) a.done();
+                }
+            }
+        }
+
+        // ==========================================
+        // 3. EJECUCIÓN DE CADA MECÁNICA
+        // ==========================================
+        let shakeAmt = 0;
+        const shake = (n) => { shakeAmt = Math.max(shakeAmt, n); };
+
+        const EXEC = {
+            // Puñetazo que revienta la barrera celular
+            golpe(o) {
+                emit('banner', { text: '¡GOLPE!', color: MECH.golpe.css });
+                const fist = glowSphere(MECH.golpe.color, 0.45);
+                const from = new THREE.Vector3(0.7, 1.6, GameState.player.z - 1.5);
+                const to = new THREE.Vector3(0, 3, o.z + 0.9);
+                anim(0.28, k => fist.position.lerpVectors(from, to, k * k), () => {
+                    dropMesh(fist);
+                    for (let i = 0; i < 70; i++) {
+                        const pos = new THREE.Vector3((Math.random() - 0.5) * 11, 0.3 + Math.random() * 6, o.z + (Math.random() - 0.5) * 0.8);
+                        const vel = new THREE.Vector3((Math.random() - 0.5) * 8, 2 + Math.random() * 8, (Math.random() - 0.3) * 12);
+                        spawnShard(pos, vel, 0xff3344, 0.8 + Math.random() * 0.8);
+                    }
+                    shake(0.7);
+                    removeObstacle(o);
+                    finishClear(o);
+                });
+            },
+
+            // Refleja el proyectil hostil, recarga la vida y destruye la torreta
+            parry(o) {
+                emit('banner', { text: '¡PARRY!', color: MECH.parry.css });
+                const turret = new THREE.Vector3(0, 3.2, o.z);
+                const hit = new THREE.Vector3(0, 2.5, GameState.player.z - 2.5);
+                const bolt = glowSphere(0x66ff88, 0.55);
+                bolt.position.copy(turret);
+                anim(0.7, k => bolt.position.lerpVectors(turret, hit, k), () => {
+                    flashRing(hit, 0x2a9dff);
+                    shake(0.4);
+                    bolt.material.color.set(MECH.parry.color);
+                    GameState.health = GameState.maxHealth;
+                    emit('updateHealth', GameState.health);
+                    GameState.addStyle(100);
+                    emit('banner', { text: '¡PARRY! VITALIDAD 100%', color: MECH.parry.css });
+                    anim(0.4, k => bolt.position.lerpVectors(hit, turret, k), () => {
+                        dropMesh(bolt);
+                        burst(turret, MECH.parry.color, 60, 12);
+                        shake(0.5);
+                        removeObstacle(o);
+                        finishClear(o);
+                    });
+                });
+            },
+
+            // Dispara al receptor lejano para abrir la compuerta
+            disparo(o) {
+                emit('banner', { text: '¡DISPARO!', color: MECH.disparo.css });
+                const targetPos = new THREE.Vector3().copy(o.group.position).add(o.parts.target.position);
+                const from = new THREE.Vector3(0.4, 1.6, GameState.player.z - 1);
+                const bolt = glowSphere(0xffffaa, 0.25);
+                anim(0.35, k => bolt.position.lerpVectors(from, targetPos, k), () => {
+                    dropMesh(bolt);
+                    burst(targetPos, MECH.disparo.color, 40, 10);
+                    flashRing(targetPos, MECH.disparo.color);
+                    o.group.remove(o.parts.target);
+                    disposeObject(o.parts.target);
+                    delete o.parts.target;
+                    const gate = o.parts.gate;
+                    anim(0.9, k => {
+                        gate.position.y = 3.25 + k * 8;
+                        gate.material.opacity = 0.8 * (1 - k * 0.8);
+                    }, () => {
+                        removeObstacle(o);
+                        finishClear(o);
+                    });
+                });
+            },
+
+            // Secuencia de teclas contrarreloj
+            qte(o) {
+                const dirs = ['L', 'U', 'D', 'R'];
+                const seq = [];
+                for (let i = 0; i < QTE_LEN; i++) seq.push(dirs[Math.floor(Math.random() * 4)]);
+                GameState.qte = { o, seq, i: 0, time: QTE_STEP_TIME };
+                GameState.phase = 'qte';
+                emit('showQTE', { seq });
+            }
+        };
+
+        function finishClear(o) {
+            o.cleared = true;
+            GameState.onCleared(o);
+        }
+
+        // ==========================================
+        // 4. GESTOR DE ESTADO GLOBAL (PUENTE THREE-PHASER)
+        // ==========================================
+        const GameState = {
+            mode: null,                  // 'free' | 'run'
+            phase: 'menu',               // menu | idle | running | trivia | exec | qte | dead | finished
+            health: 100,
+            maxHealth: 100,
+            infiniteHP: false,
+            showAnswer: false,
+            bulletScale: 0.12,
+            damagePct: 25,
+            stats: { correct: 0, wrong: 0, deaths: 0 },
+            style: 0,
+            styleAtCp: 0,
+            lastMech: null,
+            runTime: 0,
+            plan: [],
+            cpIdx: 0,
+            cpZ: 0,
+            finishZ: 0,
+            timeScale: 1,
+            targetScale: 1,
+            fov: BASE_FOV,
+            targetFov: BASE_FOV,
+            player: { z: 0 },
+            current: null,
+            question: null,
+            answerLock: false,
+            qte: null,
+            token: 0,
+            lastSpawn: null,
+
+            // Callback diferido que se cancela si la partida se reinicia o el jugador muere
+            later(ms, fn) {
+                const tk = this.token;
+                setTimeout(() => { if (tk === this.token) fn(); }, ms);
+            },
+
+            resetAll() {
+                this.token++;
+                clearObstacles();
+                clearFx();
+                anims.length = 0;
+                this.health = this.maxHealth;
+                this.stats = { correct: 0, wrong: 0, deaths: 0 };
+                this.style = 0;
+                this.styleAtCp = 0;
+                this.lastMech = null;
+                this.runTime = 0;
+                this.cpIdx = 0;
+                this.cpZ = 0;
+                this.player.z = 0;
+                this.timeScale = this.targetScale = 1;
+                this.targetFov = BASE_FOV;
+                this.current = null;
+                this.question = null;
+                this.answerLock = false;
+                this.qte = null;
+                this.lastSpawn = null;
+                emit('hideTrivia');
+                emit('hideQTE');
+                emit('hideDeath');
+                emit('hideResults');
+                emit('updateHealth', this.health);
+            },
+
+            start(mode) {
+                this.resetAll();
+                this.mode = mode;
+                document.getElementById('modeSel').value = mode;
+                document.getElementById('menu').classList.add('hidden');
+                if (mode === 'run') {
+                    this.buildRun();
+                    this.phase = 'running';
+                    emit('banner', { text: '¡CORRE!', color: '#ffffff' });
+                } else {
+                    this.phase = 'idle';
+                    emit('banner', { text: 'Elige una mecánica en el panel', color: '#ffffff' });
+                }
+            },
+
+            toMenu() {
+                this.resetAll();
+                this.phase = 'menu';
+                document.getElementById('menu').classList.remove('hidden');
+            },
+
+            restart() {
+                if (this.phase === 'menu') return;
+                this.start(this.mode || 'free');
+            },
+
+            makePlan() {
+                const types = Object.keys(MECH);
+                let best = null;
+                for (let tries = 0; tries < 50; tries++) {
+                    const p = shuffle(types.concat(types));
+                    let ok = true;
+                    for (let i = 1; i < p.length; i++) if (p[i] === p[i - 1]) ok = false;
+                    if (ok) return p;
+                    best = p;
+                }
+                return best;
+            },
+
+            zFor(i) { return FIRST_Z - i * SPACING; },
+
+            buildRun() {
+                this.plan = this.makePlan();
+                this.plan.slice(0, RUN_LEN).forEach((type, i) => createObstacle(type, this.zFor(i), i));
+                this.finishZ = this.zFor(RUN_LEN - 1) - 35;
+                finishMarker = new THREE.Mesh(
+                    new THREE.TorusGeometry(7.5, 0.5, 8, 40),
+                    new THREE.MeshBasicMaterial({ color: 0xffffff })
+                );
+                finishMarker.position.set(0, 3, this.finishZ);
+                scene.add(finishMarker);
+            },
+
+            // Modo libre: aparece una sola mecánica delante del jugador y arranca la trivia
+            spawnMech(type) {
+                if (this.phase === 'menu') return;
+                if (this.mode !== 'free') this.start('free');
+                if (this.phase !== 'idle' && this.phase !== 'trivia') return;
+                this.token++;
+                emit('hideTrivia');
+                emit('hideQTE');
+                this.answerLock = false;
+                this.qte = null;
+                this.timeScale = this.targetScale = 1;
+                clearObstacles();
+                this.lastSpawn = type;
+                const o = createObstacle(type, this.player.z - 14, 0);
+                this.phase = 'idle';
+                this.triggerTrivia(o);
+            },
+
+            nextObstacle() {
+                let best = null;
+                obstacles.forEach(o => { if (!o.cleared && (!best || o.index < best.index)) best = o; });
+                return best;
+            },
+
+            triggerTrivia(o) {
+                if (this.phase !== 'idle' && this.phase !== 'running') return;
+                this.phase = 'trivia';
+                this.current = o;
+                this.targetScale = this.bulletScale;
+                this.targetFov = TRIVIA_FOV;
+                this.showQuestion();
+            },
+
+            showQuestion() {
+                this.question = drawQuestion(this.current.type);
+                this.answerLock = false;
+                this.emitQuestion();
+            },
+
+            emitQuestion() {
+                const m = MECH[this.current.type];
+                emit('showTrivia', {
+                    q: this.question.q,
+                    options: this.question.options,
+                    name: m.name,
+                    tema: m.tema,
+                    color: m.css,
+                    hint: this.showAnswer ? this.question.correct : 0,
+                    canCancel: this.mode === 'free'
+                });
+            },
+
+            cancelTrivia() {
+                if (this.phase !== 'trivia' || this.answerLock) return;
+                this.phase = 'idle';
+                this.current = null;
+                this.question = null;
+                this.targetScale = 1;
+                this.targetFov = BASE_FOV;
+                emit('hideTrivia');
+            },
+
+            answer(n) {
+                if (this.phase !== 'trivia' || this.answerLock) return;
+                const type = this.current.type;
+                const ok = n === this.question.correct;
+                this.answerLock = true;
+                emit('triviaFeedback', { picked: n, correct: this.question.correct });
+
+                if (ok) {
+                    this.stats.correct++;
+                    this.addStyle(this.lastMech && this.lastMech !== type ? 150 : 100);  // bonus por alternar mecánicas
+                    this.lastMech = type;
+                    this.later(450, () => {
+                        emit('hideTrivia');
+                        this.phase = 'exec';
+                        this.targetScale = type === 'qte' ? 0.5 : 1;
+                        this.targetFov = BASE_FOV;
+                        EXEC[type](this.current);
+                    });
+                } else {
+                    this.stats.wrong++;
+                    this.addStyle(-150);
+                    this.damage(this.damagePct);
+                    if (this.phase === 'dead') return;
+                    this.later(1500, () => this.showQuestion());   // nueva pregunta hasta acertar
+                }
+            },
+
+            addStyle(n) {
+                this.style = Math.max(0, this.style + n);
+            },
+
+            damage(pct) {
+                if (!this.infiniteHP) {
+                    this.health = Math.max(0, this.health - this.maxHealth * pct / 100);
+                    emit('updateHealth', this.health);
+                }
+                shake(0.5);
+                if (this.health <= 0) this.die();
+            },
+
+            die() {
+                this.token++;                    // cancela callbacks y animaciones pendientes
+                this.phase = 'dead';
+                this.stats.deaths++;
+                this.qte = null;
+                this.answerLock = false;
+                emit('hideTrivia');
+                emit('hideQTE');
+                emit('showDeath');
+                this.later(1500, () => this.respawn());
+            },
+
+            respawn() {
+                this.health = this.maxHealth;
+                emit('updateHealth', this.health);
+                emit('hideDeath');
+                this.timeScale = this.targetScale = 1;
+                this.targetFov = BASE_FOV;
+                this.current = null;
+                this.question = null;
+                clearObstacles();
+                if (this.mode === 'run') {
+                    // Reinicia desde el último checkpoint
+                    this.player.z = this.cpZ;
+                    this.style = this.styleAtCp;
+                    this.lastMech = null;
+                    for (let i = this.cpIdx; i < RUN_LEN; i++) createObstacle(this.plan[i], this.zFor(i), i);
+                    finishMarker = new THREE.Mesh(
+                        new THREE.TorusGeometry(7.5, 0.5, 8, 40),
+                        new THREE.MeshBasicMaterial({ color: 0xffffff })
+                    );
+                    finishMarker.position.set(0, 3, this.finishZ);
+                    scene.add(finishMarker);
+                    this.phase = 'running';
+                    emit('banner', { text: 'CHECKPOINT', color: '#ffffff' });
+                } else {
+                    this.phase = 'idle';
+                    if (this.lastSpawn) {
+                        const o = createObstacle(this.lastSpawn, this.player.z - 14, 0);
+                        this.triggerTrivia(o);
+                    }
+                }
+            },
+
+            onCleared(o) {
+                this.current = null;
+                this.question = null;
+                this.targetScale = 1;
+                this.targetFov = BASE_FOV;
+                if (this.mode === 'run') {
+                    this.phase = 'running';
+                    const done = o.index + 1;
+                    if (done % CHECKPOINT_EVERY === 0 && done < RUN_LEN) {
+                        this.cpIdx = done;
+                        this.cpZ = this.player.z;
+                        this.styleAtCp = this.style;
+                        emit('banner', { text: 'CHECKPOINT', color: '#ffffff' });
+                    }
+                } else {
+                    this.phase = 'idle';
+                }
+            },
+
+            // --- QTE ---
+            qteInput(key) {
+                const q = this.qte;
+                if (this.phase !== 'qte' || !q) return;
+                if (key !== q.seq[q.i]) return this.qteFail();
+                q.i++;
+                q.time = QTE_STEP_TIME;
+                this.player.z -= 1.2;            // pequeño impulso hacia delante
+                flashRing(new THREE.Vector3(0, 2.5, this.player.z - 3), MECH.qte.color);
+                emit('qteStep', { i: q.i });
+                if (q.i >= q.seq.length) this.qteSuccess();
+            },
+
+            qteSuccess() {
+                const o = this.qte.o;
+                this.qte = null;
+                this.phase = 'exec';
+                this.addStyle(100);
+                emit('hideQTE');
+                emit('banner', { text: '¡QTE PERFECTO!', color: MECH.qte.css });
+                shake(0.5);
+                o.opening = true;
+                anim(0.5, k => {
+                    o.parts.iris.scale.setScalar(1 + k * 1.6);
+                    o.parts.disc.material.opacity = 0.55 * (1 - k);
+                }, () => {
+                    burst(new THREE.Vector3(0, 3.2, o.z), MECH.qte.color, 60, 12);
+                    removeObstacle(o);
+                    finishClear(o);
+                });
+            },
+
+            qteFail() {
+                const o = this.qte.o;
+                this.qte = null;
+                this.phase = 'exec';
+                emit('hideQTE');
+                emit('banner', { text: 'QTE FALLIDO', color: '#ff4444' });
+                this.addStyle(-100);
+                this.damage(this.damagePct);
+                if (this.phase === 'dead') return;
+                this.later(500, () => {
+                    burst(new THREE.Vector3(0, 3.2, o.z), 0x888888, 30, 8);
+                    removeObstacle(o);
+                    finishClear(o);
+                });
+            },
+
+            // --- Calificación ---
+            accuracy() {
+                const t = this.stats.correct + this.stats.wrong;
+                return t === 0 ? 100 : this.stats.correct / t * 100;
+            },
+
+            finishRun() {
+                this.phase = 'finished';
+                this.targetScale = 1;
+                const rankLow = (v, th) => v <= th[0] ? 4 : v <= th[1] ? 3 : v <= th[2] ? 2 : v <= th[3] ? 1 : 0;
+                const rankHigh = (v, th) => v >= th[0] ? 4 : v >= th[1] ? 3 : v >= th[2] ? 2 : v >= th[3] ? 1 : 0;
+                const acc = this.accuracy();
+                const tR = rankLow(this.runTime, TIME_THRESH);
+                const sR = rankHigh(this.style, STYLE_THRESH);
+                const aR = rankHigh(acc, ACC_THRESH);
+                const perfect = tR === 4 && sR === 4 && acc === 100 && this.stats.deaths === 0;
+                const overall = perfect ? 'P' : RANKS[Math.floor((tR + sR + aR) / 3)];
+                emit('showResults', {
+                    rows: [
+                        ['TIEMPO', fmtTime(this.runTime), RANKS[tR]],
+                        ['ESTILO', this.style + ' pts', RANKS[sR]],
+                        ['PRECISIÓN', acc.toFixed(1) + '%  (' + this.stats.correct + '/' + (this.stats.correct + this.stats.wrong) + ')', RANKS[aR]],
+                        ['MUERTES', String(this.stats.deaths), this.stats.deaths === 0 ? '-' : 'sin Rango P']
+                    ],
+                    rank: overall
+                });
+            },
+
+            // --- Bucle lógico (dt en tiempo real) ---
+            update(dt) {
+                // Escala de tiempo (bullet time) con transición suave
+                this.timeScale += (this.targetScale - this.timeScale) * Math.min(1, dt * 8);
+                this.fov += (this.targetFov - this.fov) * Math.min(1, dt * 6);
+                const sdt = dt * this.timeScale;
+
+                const active = ['running', 'trivia', 'exec', 'qte'].includes(this.phase);
+                if (this.mode === 'run' && active) this.runTime += dt;
+
+                if (this.mode === 'run' && this.phase === 'running') {
+                    this.player.z -= RUN_SPEED * sdt;
+                    const next = this.nextObstacle();
+                    if (next && this.player.z - next.z <= TRIGGER_DIST) this.triggerTrivia(next);
+                    else if (!next && this.player.z <= this.finishZ) this.finishRun();
+                } else if (this.phase === 'trivia' && this.mode === 'run') {
+                    // Avance lento hasta el punto de parada
+                    this.player.z = Math.max(this.current.z + STOP_DIST, this.player.z - RUN_SPEED * sdt);
+                }
+
+                if (this.phase === 'qte' && this.qte) {
+                    this.qte.time -= dt;
+                    emit('qteTime', { frac: Math.max(0, this.qte.time / QTE_STEP_TIME) });
+                    if (this.qte.time <= 0) this.qteFail();
+                }
+                return sdt;
+            },
+
+            hud() {
+                return {
+                    time: this.runTime,
+                    style: this.style,
+                    mode: this.mode,
+                    progress: this.mode === 'run' ? (RUN_LEN - obstacles.filter(o => !o.cleared).length) + '/' + RUN_LEN : '',
+                    stats: this.stats,
+                    acc: this.accuracy()
+                };
+            }
+        };
+
+        function fmtTime(s) {
+            const m = Math.floor(s / 60);
+            return String(m).padStart(2, '0') + ':' + (s - m * 60).toFixed(1).padStart(4, '0');
+        }
+
+        // ==========================================
+        // 5. ENTRADA (RATÓN / TECLADO)
+        // ==========================================
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Clic sobre un obstáculo: inicia (o reintenta) su trivia
+        window.addEventListener('click', (event) => {
+            if (event.target.closest('#panel, #menu')) return;
+            if (GameState.phase !== 'idle') return;
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(obstacles.map(o => o.group), true);
+            if (hits.length > 0 && hits[0].object.userData.obs) GameState.triggerTrivia(hits[0].object.userData.obs);
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            const gs = GameState;
+            if (gs.phase === 'trivia') {
+                if (e.code === 'Escape' && gs.mode === 'free') return gs.cancelTrivia();
+                const m = /^(?:Digit|Numpad)([1-4])$/.exec(e.code);
+                if (m) gs.answer(Number(m[1]));
+            } else if (gs.phase === 'qte') {
+                const k = QTE_KEYS[e.code];
+                if (k) {
+                    e.preventDefault();
+                    gs.qteInput(k);
+                }
+            } else if (gs.phase === 'finished') {
+                if (e.code === 'KeyR' || e.code === 'Enter') gs.start('run');
+                else if (e.code === 'KeyM') gs.toMenu();
+            }
+        });
+
+        // ==========================================
+        // 6. PANEL DE SANDBOX (DOM)
+        // ==========================================
+        const $ = (id) => document.getElementById(id);
+
+        $('startFree').onclick = () => GameState.start('free');
+        $('startRun').onclick = () => GameState.start('run');
+        $('modeSel').onchange = (e) => { GameState.start(e.target.value); e.target.blur(); };
+        document.querySelectorAll('#panel .mech button').forEach(b => {
+            b.onclick = () => { GameState.spawnMech(b.dataset.mech); b.blur(); };
+        });
+        $('bulletRange').oninput = (e) => {
+            GameState.bulletScale = e.target.value / 100;
+            $('bulletVal').textContent = e.target.value;
+        };
+        $('dmgRange').oninput = (e) => {
+            GameState.damagePct = Number(e.target.value);
+            $('dmgVal').textContent = e.target.value;
+        };
+        $('bulletRange').onchange = $('dmgRange').onchange = (e) => e.target.blur();
+        $('infHp').onchange = (e) => { GameState.infiniteHP = e.target.checked; e.target.blur(); };
+        $('showAns').onchange = (e) => {
+            GameState.showAnswer = e.target.checked;
+            e.target.blur();
+            if (GameState.phase === 'trivia' && !GameState.answerLock) GameState.emitQuestion();
+        };
+        $('btnRestart').onclick = (e) => { GameState.restart(); e.target.blur(); };
+        $('btnMenu').onclick = (e) => { GameState.toMenu(); e.target.blur(); };
+        $('panelToggle').onclick = () => {
+            const c = $('panel').classList.toggle('collapsed');
+            $('panelArrow').innerHTML = c ? '&#9656;' : '&#9662;';
+        };
+
+        function refreshPanel(h) {
+            const s = h.stats;
+            $('stats').innerHTML =
+                'Aciertos: ' + s.correct + ' &middot; Fallos: ' + s.wrong + '<br>' +
+                'Precisi&oacute;n: ' + h.acc.toFixed(0) + '% &middot; Muertes: ' + s.deaths + '<br>' +
+                'Estilo: ' + h.style;
+        }
+
+        // ==========================================
+        // 7. BUCLE DE RENDER
+        // ==========================================
+        const clock = new THREE.Clock();
+        let hudTimer = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.05);
+            const sdt = GameState.update(dt);
+            updateAnims(dt);
+            animateObstacles(sdt);
+            updateFx(sdt);
+
+            const pz = GameState.player.z;
+
+            // Costillas del túnel: reciclar las que quedan atrás
+            rings.forEach(r => { while (r.position.z > pz + 10) r.position.z -= RING_COUNT * RING_GAP; });
+            tube.position.z = pz - 150;
+            gridHelper.position.z = Math.round(pz);
+            pointLight.position.set(0, 6, pz - 6);
+
+            // Cámara: bob al correr, FOV dinámico y sacudida
+            const running = GameState.mode === 'run' && GameState.phase === 'running';
+            const bob = running ? Math.sin(performance.now() * 0.012) * 0.08 : 0;
+            shakeAmt *= Math.max(0, 1 - dt * 6);
+            camera.position.set(
+                (Math.random() - 0.5) * shakeAmt,
+                2.2 + bob + (Math.random() - 0.5) * shakeAmt,
+                pz
+            );
+            camera.lookAt(0, 2.6, pz - 20);
+            if (Math.abs(camera.fov - GameState.fov) > 0.01) {
+                camera.fov = GameState.fov;
+                camera.updateProjectionMatrix();
+            }
+
+            hudTimer += dt;
+            if (hudTimer > 0.1) {
+                hudTimer = 0;
+                const h = GameState.hud();
+                emit('updateHud', h);
+                refreshPanel(h);
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // ==========================================
+        // 8. INTERFAZ UI Y LÓGICA 2D (PHASER 3)
+        // ==========================================
+        const ARROW = { L: '←', U: '↑', D: '↓', R: '→' };
+
+        class UIScene extends Phaser.Scene {
+            constructor() {
+                super('UIScene');
+            }
+
+            create() {
+                const F = (size, extra) => Object.assign({
+                    fontFamily: '"Courier New", Courier, monospace', fontSize: size + 'px', color: '#ffffff', fontStyle: 'bold'
+                }, extra || {});
+
+                // --- HUD ESTÁNDAR ---
+                this.hpBg = this.add.rectangle(20, 20, 300, 30, 0x440000).setOrigin(0, 0);
+                this.hpBar = this.add.rectangle(20, 20, 300, 30, 0xff0000).setOrigin(0, 0);
+                this.hpLabel = this.add.text(26, 25, 'VITALIDAD', F(18));
+                this.hpProxy = { v: 1 };
+                this.styleText = this.add.text(0, 20, 'ESTILO: 0', F(24, { color: '#ffd700' })).setOrigin(1, 0);
+                this.timeText = this.add.text(0, 52, '', F(20)).setOrigin(1, 0);
+                this.progText = this.add.text(0, 78, '', F(16, { color: '#aaaaaa' })).setOrigin(1, 0);
+                this.bannerText = this.add.text(0, 0, '', F(34, { align: 'center' })).setOrigin(0.5).setAlpha(0);
+
+                // --- PANEL DE TRIVIA (oculto por defecto) ---
+                this.tri = this.add.container(0, 0);
+                this.triBg = this.add.rectangle(0, 0, 940, 500, 0x000000, 0.88).setStrokeStyle(4, 0xffffff);
+                this.triHead = this.add.text(0, -225, '', F(20)).setOrigin(0.5);
+                this.qText = this.add.text(0, -190, '', F(24, { align: 'center', wordWrap: { width: 860 } })).setOrigin(0.5, 0);
+                this.optionTexts = [];
+                for (let i = 0; i < 4; i++) {
+                    this.optionTexts.push(this.add.text(-430, -100 + i * 66, '', F(20, { fontStyle: 'normal', color: '#ffffff', wordWrap: { width: 860 } })));
+                }
+                this.triHint = this.add.text(0, 225, '', F(14, { fontStyle: 'normal', color: '#888888' })).setOrigin(0.5);
+                this.tri.add([this.triBg, this.triHead, this.qText, ...this.optionTexts, this.triHint]);
+                this.tri.setVisible(false);
+
+                // --- PANEL QTE ---
+                this.qteBox = this.add.container(0, 0);
+                this.qteBg = this.add.rectangle(0, 0, 600, 220, 0x000000, 0.8).setStrokeStyle(3, MECH.qte.color);
+                this.qteTitle = this.add.text(0, -85, '¡QTE! Repite la secuencia', F(20, { color: MECH.qte.css })).setOrigin(0.5);
+                this.qteArrows = [];
+                for (let i = 0; i < QTE_LEN; i++) {
+                    this.qteArrows.push(this.add.text((i - (QTE_LEN - 1) / 2) * 100, -5, '', F(60)).setOrigin(0.5));
+                }
+                this.qteBarBg = this.add.rectangle(-250, 80, 500, 14, 0x333333).setOrigin(0, 0.5);
+                this.qteBar = this.add.rectangle(-250, 80, 500, 14, MECH.qte.color).setOrigin(0, 0.5);
+                this.qteBox.add([this.qteBg, this.qteTitle, ...this.qteArrows, this.qteBarBg, this.qteBar]);
+                this.qteBox.setVisible(false);
+
+                // --- MUERTE ---
+                this.deathBg = this.add.rectangle(0, 0, 10, 10, 0x660000, 0.55).setOrigin(0, 0).setVisible(false);
+                this.deathText = this.add.text(0, 0, 'VITALIDAD AGOTADA\nReiniciando desde el checkpoint...', F(36, { align: 'center' })).setOrigin(0.5).setVisible(false);
+
+                // --- RESULTADOS ---
+                this.res = this.add.container(0, 0);
+                this.resBg = this.add.rectangle(0, 0, 760, 480, 0x000000, 0.92).setStrokeStyle(4, 0xffffff);
+                this.resTitle = this.add.text(0, -200, 'TRAMO COMPLETADO', F(28)).setOrigin(0.5);
+                this.resRows = this.add.text(-330, -140, '', F(24, { lineSpacing: 18 }));
+                this.resRank = this.add.text(0, 120, '', F(110, { color: '#ffd700' })).setOrigin(0.5);
+                this.resHint = this.add.text(0, 205, 'R / Enter: repetir   ·   M: menú', F(16, { fontStyle: 'normal', color: '#888888' })).setOrigin(0.5);
+                this.res.add([this.resBg, this.resTitle, this.resRows, this.resRank, this.resHint]);
+                this.res.setVisible(false);
+
+                this.layout();
+                this.scale.on('resize', this.layout, this);
+
+                // --- LISTENERS EXTERNOS ---
+                window.addEventListener('showTrivia', (e) => this.displayTrivia(e.detail));
+                window.addEventListener('triviaFeedback', (e) => {
+                    const { picked, correct } = e.detail;
+                    this.optionTexts[picked - 1].setColor(picked === correct ? '#00ff00' : '#ff3333');
+                    if (picked !== correct) this.optionTexts[correct - 1].setColor('#00ff00');
+                });
+                window.addEventListener('hideTrivia', () => this.tri.setVisible(false));
+                window.addEventListener('updateHealth', (e) => {
+                    const frac = Math.max(0, e.detail / 100);
+                    this.tweens.add({
+                        targets: this.hpProxy,
+                        v: frac,
+                        duration: 200,
+                        onUpdate: () => { this.hpBar.width = Math.max(0.01, 300 * this.hpProxy.v); }
+                    });
+                });
+                window.addEventListener('updateHud', (e) => {
+                    const h = e.detail;
+                    this.styleText.setText('ESTILO: ' + h.style);
+                    this.timeText.setText(h.mode === 'run' ? fmtTime(h.time) : '');
+                    this.progText.setText(h.mode === 'run' ? 'OBSTÁCULOS ' + h.progress : (h.mode === 'free' ? 'MODO LIBRE' : ''));
+                });
+                window.addEventListener('banner', (e) => {
+                    this.bannerText.setText(e.detail.text).setColor(e.detail.color).setAlpha(1);
+                    this.tweens.killTweensOf(this.bannerText);
+                    this.tweens.add({ targets: this.bannerText, alpha: 0, delay: 700, duration: 500 });
+                });
+                window.addEventListener('showQTE', (e) => {
+                    this.qteSeq = e.detail.seq;
+                    this.qteArrows.forEach((t, i) => t.setText(ARROW[this.qteSeq[i]]).setColor('#666666'));
+                    this.qteArrows[0].setColor('#ffffff');
+                    this.qteBar.width = 500;
+                    this.qteBox.setVisible(true);
+                });
+                window.addEventListener('qteStep', (e) => {
+                    const i = e.detail.i;
+                    this.qteArrows.forEach((t, k) => t.setColor(k < i ? '#00ff00' : (k === i ? '#ffffff' : '#666666')));
+                });
+                window.addEventListener('qteTime', (e) => { this.qteBar.width = Math.max(0.01, 500 * e.detail.frac); });
+                window.addEventListener('hideQTE', () => this.qteBox.setVisible(false));
+                window.addEventListener('showDeath', () => { this.deathBg.setVisible(true); this.deathText.setVisible(true); });
+                window.addEventListener('hideDeath', () => { this.deathBg.setVisible(false); this.deathText.setVisible(false); });
+                window.addEventListener('showResults', (e) => {
+                    const lines = e.detail.rows.map(r => r[0].padEnd(11) + r[1].padEnd(18) + r[2]);
+                    this.resRows.setText(lines.join('\n'));
+                    this.resRank.setText('RANGO ' + e.detail.rank);
+                    this.res.setVisible(true);
+                });
+                window.addEventListener('hideResults', () => this.res.setVisible(false));
+            }
+
+            layout() {
+                const w = this.scale.width, h = this.scale.height;
+                const s = Math.min(1, w / 980, h / 560);
+                this.styleText.setPosition(w - 20, 20);
+                this.timeText.setPosition(w - 20, 52);
+                this.progText.setPosition(w - 20, 78);
+                this.bannerText.setPosition(w / 2, h * 0.22);
+                this.tri.setPosition(w / 2, h / 2).setScale(s);
+                this.qteBox.setPosition(w / 2, h * 0.72).setScale(Math.min(1, w / 640));
+                this.deathBg.setSize(w, h);
+                this.deathText.setPosition(w / 2, h / 2);
+                this.res.setPosition(w / 2, h / 2).setScale(Math.min(1, w / 800, h / 520));
+            }
+
+            displayTrivia(d) {
+                this.triHead.setText(d.name + '  ·  ' + d.tema).setColor(d.color);
+                this.triBg.setStrokeStyle(4, Phaser.Display.Color.HexStringToColor(d.color).color);
+                this.qText.setText(d.q);
+                for (let i = 0; i < 4; i++) {
+                    this.optionTexts[i].setText(d.options[i]);
+                    this.optionTexts[i].setColor(d.hint === i + 1 ? '#aaffaa' : '#ffffff');
+                }
+                this.triHint.setText('[1-4] responder' + (d.canCancel ? '   ·   [Esc] cancelar' : ''));
+                this.tri.setVisible(true);
+            }
+        }
+
+        const phaserConfig = {
+            type: Phaser.CANVAS,
+            parent: 'phaser-canvas',
+            width: window.innerWidth,
+            height: window.innerHeight,
+            transparent: true,
+            input: { keyboard: false, mouse: false, touch: false, gamepad: false },
+            scene: [UIScene]
+        };
+        const phaserGame = new Phaser.Game(phaserConfig);
+
+        // Reescalado dinámico
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            phaserGame.scale.resize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
