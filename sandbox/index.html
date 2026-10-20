@@ -14,6 +14,7 @@
         #three-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; touch-action: none; }
         /* Phaser UI encima de Three.js con soporte táctil y de ratón */
         #phaser-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; touch-action: none; }
+        #phaser-canvas canvas { width: 100% !important; height: 100% !important; display: block; }
         #instructions { position: absolute; bottom: 12px; left: 16px; right: 16px; z-index: 3; pointer-events: none; text-shadow: 1px 1px 2px black; font-size: 12px; line-height: 1.4; opacity: .85; }
 
         /* Panel de sandbox */
@@ -56,7 +57,7 @@
 <body>
     <canvas id="three-canvas"></canvas>
     <div id="phaser-canvas"></div>
-    <div id="instructions">Toca o pulsa 1-4: responder trivia &middot; QTE: botones táctiles / deslizar / flechas / WASD &middot; Esc o botón: cancelar (libre)</div>
+    <div id="instructions">Toca o pulsa 1-3: responder trivia &middot; QTE: botones táctiles / deslizar / flechas / WASD &middot; Esc o botón: cancelar (libre)</div>
 
     <div id="panel">
         <h3 id="panelToggle"><span>SANDBOX</span><span id="panelArrow">&#9662;</span></h3>
@@ -103,7 +104,7 @@
             <button id="startRun">CARRERA</button>
         </div>
         <a class="menu-link secondary" href="../">&larr; VOLVER AL MEN&Uacute; PRINCIPAL</a>
-        <small>Libre: prueba GOLPE, PARRY, DISPARO y QTE una por una desde el panel.<br>Carrera: 8 obst&aacute;culos en autom&aacute;tico con checkpoint, tiempo, estilo, precisi&oacute;n y rango D-S-P.<br>Compatible con teclado (1-4, flechas/WASD) y pantalla t&aacute;ctil (tocar opciones y botones QTE o deslizar).</small>
+        <small>Libre: prueba GOLPE, PARRY, DISPARO y QTE una por una desde el panel.<br>Carrera: 8 obst&aacute;culos en autom&aacute;tico con checkpoint, tiempo, estilo, precisi&oacute;n y rango D-S-P.<br>Compatible con teclado (1-3, flechas/WASD) y pantalla t&aacute;ctil (tocar opciones y botones QTE o deslizar).</small>
     </div>
 
     <script>
@@ -120,35 +121,35 @@
         // La primera opción de cada pregunta es la correcta; se barajan al mostrarlas.
         const BANK = {
             golpe: [
-                { q: '¿Cuál es la capa más interna del útero, la que se desprende durante la menstruación?', a: ['Endometrio', 'Miometrio', 'Perimetrio', 'Epitelio vaginal'] },
-                { q: '¿Qué célula forma la barrera hematotesticular mediante uniones estrechas?', a: ['Célula de Sertoli', 'Célula de Leydig', 'Espermatogonia', 'Célula mioide peritubular'] },
-                { q: '¿Cuál es la cápsula fibrosa gruesa que envuelve directamente al testículo?', a: ['Túnica albugínea', 'Túnica vaginal', 'Túnica dartos', 'Fascia espermática externa'] },
-                { q: '¿Qué célula del intersticio testicular sintetiza la testosterona?', a: ['Célula de Leydig', 'Célula de Sertoli', 'Espermátide', 'Célula mioide peritubular'] },
-                { q: '¿Qué capa del útero es una gruesa capa de músculo liso responsable de las contracciones del parto?', a: ['Miometrio', 'Endometrio', 'Perimetrio', 'Mucosa cervical'] },
-                { q: '¿Cuál es la capa serosa más externa del útero?', a: ['Perimetrio', 'Miometrio', 'Endometrio', 'Túnica albugínea'] }
+                { q: '¿Qué capa del útero se desprende en la menstruación?', a: ['Endometrio', 'Miometrio', 'Perimetrio'] },
+                { q: '¿Qué célula forma la barrera del testículo?', a: ['Célula de Sertoli', 'Célula de Leydig', 'Espermatogonia'] },
+                { q: '¿Qué capa fibrosa envuelve al testículo?', a: ['Túnica albugínea', 'Túnica vaginal', 'Túnica dartos'] },
+                { q: '¿Qué célula del testículo produce testosterona?', a: ['Célula de Leydig', 'Célula de Sertoli', 'Espermátide'] },
+                { q: '¿Qué capa muscular del útero se contrae en el parto?', a: ['Miometrio', 'Endometrio', 'Perimetrio'] },
+                { q: '¿Cuál es la capa más externa del útero?', a: ['Perimetrio', 'Miometrio', 'Endometrio'] }
             ],
             parry: [
-                { q: '¿Qué hormona tiene un pico que desencadena directamente la ovulación?', a: ['LH (hormona luteinizante)', 'Progesterona', 'Testosterona', 'Inhibina'] },
-                { q: 'La inhibina B secretada por las células de Sertoli retroalimenta negativamente a:', a: ['La FSH', 'La testosterona', 'La prolactina', 'La oxitocina'] },
-                { q: 'La testosterona ejerce retroalimentación negativa sobre:', a: ['El hipotálamo y la adenohipófisis', 'La neurohipófisis', 'El epidídimo', 'La próstata'] },
-                { q: '¿Qué hormona domina la fase lútea, secretada por el cuerpo lúteo?', a: ['Progesterona', 'FSH', 'GnRH', 'Prolactina'] },
-                { q: 'El pico preovulatorio de estradiol ejerce sobre la LH una retroalimentación:', a: ['Positiva', 'Negativa', 'Nula', 'Competitiva'] },
-                { q: 'En el testículo, ¿qué células responden principalmente a la LH?', a: ['Células de Leydig', 'Células de Sertoli', 'Espermatogonias', 'Células peritubulares'] }
+                { q: '¿Qué hormona provoca directamente la ovulación?', a: ['LH', 'Progesterona', 'Testosterona'] },
+                { q: '¿A qué hormona frena la inhibina B?', a: ['FSH', 'Testosterona', 'Oxitocina'] },
+                { q: '¿Dónde hace control negativo la testosterona?', a: ['Hipotálamo e hipófisis', 'Epidídimo', 'Próstata'] },
+                { q: '¿Qué hormona produce el cuerpo lúteo?', a: ['Progesterona', 'FSH', 'Prolactina'] },
+                { q: 'Antes de ovular, el estradiol estimula a la LH de forma:', a: ['Positiva', 'Negativa', 'Nula'] },
+                { q: '¿Qué células del testículo activan la hormona LH?', a: ['Células de Leydig', 'Células de Sertoli', 'Espermatogonias'] }
             ],
             disparo: [
-                { q: '¿En qué estructura maduran y se almacenan los espermatozoides?', a: ['Epidídimo', 'Próstata', 'Vesícula seminal', 'Uretra'] },
-                { q: '¿Qué azúcar aportada por las vesículas seminales nutre al espermatozoide?', a: ['Fructosa', 'Lactosa', 'Sacarosa', 'Maltosa'] },
-                { q: '¿Dónde ocurre normalmente la fecundación?', a: ['Ampolla de la trompa de Falopio', 'Cavidad uterina', 'Vagina', 'Cérvix'] },
-                { q: '¿Qué estructura produce la enzima proteolítica (PSA) que licúa el coágulo seminal?', a: ['Próstata', 'Epidídimo', 'Glándula bulbouretral', 'Conducto deferente'] },
-                { q: '¿Qué mediador provoca la vasodilatación y la erección en los cuerpos cavernosos?', a: ['Óxido nítrico', 'Adrenalina', 'Angiotensina II', 'Endotelina'] },
-                { q: '¿Qué glándula aporta la mayor proporción del volumen del líquido seminal?', a: ['Vesículas seminales', 'Próstata', 'Glándulas bulbouretrales', 'Epidídimo'] }
+                { q: '¿Dónde maduran y se guardan los espermatozoides?', a: ['Epidídimo', 'Próstata', 'Uretra'] },
+                { q: '¿Qué azúcar da energía al espermatozoide?', a: ['Fructosa', 'Lactosa', 'Glucosa'] },
+                { q: '¿Dónde ocurre normalmente la fecundación?', a: ['Trompa de Falopio', 'Útero', 'Vagina'] },
+                { q: '¿Qué glándula hace más líquido al semen (PSA)?', a: ['Próstata', 'Epidídimo', 'Testículo'] },
+                { q: '¿Qué gas relaja los vasos para lograr la erección?', a: ['Óxido nítrico', 'Oxígeno', 'Adrenalina'] },
+                { q: '¿Qué glándula produce la mayor parte del semen?', a: ['Vesículas seminales', 'Próstata', 'Epidídimo'] }
             ],
             qte: [
-                { q: 'Orden correcto del recorrido del espermatozoide:', a: ['Túbulos seminíferos → Epidídimo → Conducto deferente → Uretra', 'Epidídimo → Túbulos seminíferos → Uretra → Conducto deferente', 'Uretra → Próstata → Testículo → Epidídimo', 'Conducto deferente → Uretra → Epidídimo → Testículo'] },
-                { q: 'Orden correcto de la espermatogénesis:', a: ['Espermatogonia → Espermatocito primario → Espermatocito secundario → Espermátide', 'Espermatocito primario → Espermatogonia → Espermátide → Espermatocito secundario', 'Espermátide → Espermatocito secundario → Espermatocito primario → Espermatogonia', 'Espermatogonia → Espermátide → Espermatocito primario → Espermatocito secundario'] },
-                { q: 'Fases del ciclo endometrial a partir del primer día de sangrado:', a: ['Menstrual → Proliferativa → Secretora', 'Proliferativa → Menstrual → Secretora', 'Secretora → Proliferativa → Menstrual', 'Menstrual → Secretora → Proliferativa'] },
-                { q: 'Orden de la foliculogénesis:', a: ['Primordial → Primario → Secundario (antral) → De Graaf', 'Primario → Primordial → De Graaf → Secundario (antral)', 'De Graaf → Secundario (antral) → Primario → Primordial', 'Primordial → Secundario (antral) → Primario → De Graaf'] },
-                { q: 'Secuencia de eventos de la fecundación:', a: ['Capacitación → Reacción acrosómica → Fusión con el ovocito → Reacción cortical', 'Reacción cortical → Capacitación → Reacción acrosómica → Fusión con el ovocito', 'Fusión con el ovocito → Capacitación → Reacción acrosómica → Reacción cortical', 'Reacción acrosómica → Reacción cortical → Capacitación → Fusión con el ovocito'] }
+                { q: 'Recorrido del espermatozoide al salir:', a: ['Testículo → Epidídimo → Conducto deferente → Uretra', 'Epidídimo → Testículo → Uretra → Conducto deferente', 'Uretra → Próstata → Testículo → Epidídimo'] },
+                { q: 'Orden de formación del espermatozoide:', a: ['Espermatogonia → Espermatocito → Espermátide', 'Espermátide → Espermatocito → Espermatogonia', 'Espermatocito → Espermatogonia → Espermátide'] },
+                { q: 'Fases del ciclo uterino desde el sangrado:', a: ['Menstrual → Proliferativa → Secretora', 'Proliferativa → Menstrual → Secretora', 'Secretora → Proliferativa → Menstrual'] },
+                { q: 'Orden de maduración del folículo ovárico:', a: ['Primordial → Primario → Secundario → De Graaf', 'De Graaf → Secundario → Primario → Primordial', 'Primario → Primordial → De Graaf → Secundario'] },
+                { q: 'Pasos de la fecundación en orden:', a: ['Capacitación → Reacción acrosómica → Fusión', 'Fusión → Capacitación → Reacción acrosómica', 'Reacción acrosómica → Fusión → Capacitación'] }
             ]
         };
 
@@ -204,6 +205,7 @@
         // ==========================================
         // 2. ENTORNO 3D (THREE.JS)
         // ==========================================
+        const DPR = Math.min(window.devicePixelRatio || 1, 3);
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0d0406);
         scene.fog = new THREE.Fog(0x0d0406, 10, 70);
@@ -212,7 +214,7 @@
         camera.position.set(0, 2.2, 0);
 
         const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas'), antialias: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setPixelRatio(DPR);
         renderer.setSize(window.innerWidth, window.innerHeight);
 
         // Luces
@@ -968,7 +970,7 @@
             const gs = GameState;
             if (gs.phase === 'trivia') {
                 if (e.code === 'Escape' && gs.mode === 'free') return gs.cancelTrivia();
-                const m = /^(?:Digit|Numpad)([1-4])$/.exec(e.code);
+                const m = /^(?:Digit|Numpad)([1-3])$/.exec(e.code);
                 if (m) gs.answer(Number(m[1]));
             } else if (gs.phase === 'qte') {
                 const k = QTE_KEYS[e.code];
@@ -1087,7 +1089,11 @@
 
             create() {
                 const F = (size, extra) => Object.assign({
-                    fontFamily: '"Courier New", Courier, monospace', fontSize: size + 'px', color: '#ffffff', fontStyle: 'bold'
+                    fontFamily: '"Courier New", Courier, monospace',
+                    fontSize: size + 'px',
+                    color: '#ffffff',
+                    fontStyle: 'bold',
+                    resolution: DPR
                 }, extra || {});
 
                 // --- HUD ESTÁNDAR ---
@@ -1105,21 +1111,21 @@
 
                 // --- PANEL DE TRIVIA CON SOPORTE TÁCTIL Y RATÓN ---
                 this.tri = this.add.container(0, 0);
-                this.triBg = this.add.rectangle(0, 0, 820, 520, 0x000000, 0.90).setStrokeStyle(4, 0xffffff);
-                this.triHead = this.add.text(0, -230, '', F(20)).setOrigin(0.5);
-                this.qText = this.add.text(0, -195, '', F(22, { align: 'center', wordWrap: { width: 760 } })).setOrigin(0.5, 0);
+                this.triBg = this.add.rectangle(0, 0, 560, 430, 0x000000, 0.90).setStrokeStyle(4, 0xffffff);
+                this.triHead = this.add.text(0, -182, '', F(19)).setOrigin(0.5);
+                this.qText = this.add.text(0, -148, '', F(22, { align: 'center', wordWrap: { width: 510 } })).setOrigin(0.5, 0);
 
                 this.optionBgs = [];
                 this.optionTexts = [];
                 this.hintIndex = 0;
 
-                for (let i = 0; i < 4; i++) {
-                    const oy = -75 + i * 68;
-                    const bg = this.add.rectangle(0, oy, 760, 56, 0x161616, 0.95)
+                for (let i = 0; i < 3; i++) {
+                    const oy = -38 + i * 76;
+                    const bg = this.add.rectangle(0, oy, 510, 64, 0x161616, 0.95)
                         .setStrokeStyle(2, 0x444444)
                         .setInteractive({ useHandCursor: true });
 
-                    const txt = this.add.text(-360, oy, '', F(19, { fontStyle: 'normal', color: '#ffffff', wordWrap: { width: 720 } }))
+                    const txt = this.add.text(-235, oy, '', F(19, { fontStyle: 'normal', color: '#ffffff', wordWrap: { width: 470 } }))
                         .setOrigin(0, 0.5);
 
                     bg.on('pointerover', () => {
@@ -1141,11 +1147,11 @@
                     this.optionTexts.push(txt);
                 }
 
-                this.triHint = this.add.text(0, 224, '', F(14, { fontStyle: 'normal', color: '#999999' })).setOrigin(0.5);
-                this.triCancelBtn = this.add.rectangle(290, 224, 170, 34, 0x221111, 0.95)
+                this.triHint = this.add.text(0, 182, '', F(14, { fontStyle: 'normal', color: '#999999' })).setOrigin(0.5);
+                this.triCancelBtn = this.add.rectangle(170, 182, 160, 34, 0x221111, 0.95)
                     .setStrokeStyle(1.5, 0x884444)
                     .setInteractive({ useHandCursor: true });
-                this.triCancelTxt = this.add.text(290, 224, 'CANCELAR [Esc]', F(13, { color: '#ffaaaa' })).setOrigin(0.5);
+                this.triCancelTxt = this.add.text(170, 182, 'CANCELAR [Esc]', F(13, { color: '#ffaaaa' })).setOrigin(0.5);
                 this.triCancelBtn.on('pointerdown', () => GameState.cancelTrivia());
                 this.triCancelBtn.on('pointerover', () => this.triCancelBtn.setFillStyle(0x441818, 1));
                 this.triCancelBtn.on('pointerout', () => this.triCancelBtn.setFillStyle(0x221111, 0.95));
@@ -1159,28 +1165,28 @@
 
                 // --- PANEL QTE CON BOTONES TÁCTILES ---
                 this.qteBox = this.add.container(0, 0);
-                this.qteBg = this.add.rectangle(0, 0, 600, 310, 0x000000, 0.88).setStrokeStyle(3, MECH.qte.color);
-                this.qteTitle = this.add.text(0, -122, '¡QTE! Repite la secuencia', F(20, { color: MECH.qte.css })).setOrigin(0.5);
+                this.qteBg = this.add.rectangle(0, 0, 520, 300, 0x000000, 0.88).setStrokeStyle(3, MECH.qte.color);
+                this.qteTitle = this.add.text(0, -118, '¡QTE! Repite la secuencia', F(19, { color: MECH.qte.css })).setOrigin(0.5);
                 this.qteArrows = [];
                 for (let i = 0; i < QTE_LEN; i++) {
-                    this.qteArrows.push(this.add.text((i - (QTE_LEN - 1) / 2) * 100, -52, '', F(56)).setOrigin(0.5));
+                    this.qteArrows.push(this.add.text((i - (QTE_LEN - 1) / 2) * 88, -50, '', F(52)).setOrigin(0.5));
                 }
-                this.qteBarBg = this.add.rectangle(-250, 8, 500, 14, 0x333333).setOrigin(0, 0.5);
-                this.qteBar = this.add.rectangle(-250, 8, 500, 14, MECH.qte.color).setOrigin(0, 0.5);
+                this.qteBarBg = this.add.rectangle(-220, 8, 440, 14, 0x333333).setOrigin(0, 0.5);
+                this.qteBar = this.add.rectangle(-220, 8, 440, 14, MECH.qte.color).setOrigin(0, 0.5);
 
                 // Botones direccionales táctiles para el QTE
                 const qteDirs = [
-                    { k: 'L', label: '←', x: -180 },
-                    { k: 'U', label: '↑', x: -60 },
-                    { k: 'D', label: '↓', x: 60 },
-                    { k: 'R', label: '→', x: 180 }
+                    { k: 'L', label: '←', x: -165 },
+                    { k: 'U', label: '↑', x: -55 },
+                    { k: 'D', label: '↓', x: 55 },
+                    { k: 'R', label: '→', x: 165 }
                 ];
                 this.qteTouchItems = [];
                 qteDirs.forEach(d => {
-                    const btn = this.add.rectangle(d.x, 76, 104, 72, 0x1a0b2a, 0.95)
+                    const btn = this.add.rectangle(d.x, 72, 98, 70, 0x1a0b2a, 0.95)
                         .setStrokeStyle(2, MECH.qte.color)
                         .setInteractive({ useHandCursor: true });
-                    const lbl = this.add.text(d.x, 76, d.label, F(40, { color: '#ffffff' })).setOrigin(0.5);
+                    const lbl = this.add.text(d.x, 72, d.label, F(38, { color: '#ffffff' })).setOrigin(0.5);
                     btn.on('pointerdown', () => {
                         btn.setFillStyle(0x4a1b7a, 1);
                         GameState.qteInput(d.k);
@@ -1189,7 +1195,7 @@
                     btn.on('pointerout', () => btn.setFillStyle(0x1a0b2a, 0.95));
                     this.qteTouchItems.push(btn, lbl);
                 });
-                this.qteHint = this.add.text(0, 134, 'Toca las flechas, desliza o usa WASD / Flechas', F(13, { fontStyle: 'normal', color: '#aaaaaa' })).setOrigin(0.5);
+                this.qteHint = this.add.text(0, 128, 'Toca las flechas, desliza o usa WASD / Flechas', F(13, { fontStyle: 'normal', color: '#aaaaaa' })).setOrigin(0.5);
 
                 this.qteBox.add([
                     this.qteBg, this.qteTitle, ...this.qteArrows,
@@ -1199,27 +1205,27 @@
 
                 // --- MUERTE ---
                 this.deathBg = this.add.rectangle(0, 0, 10, 10, 0x660000, 0.55).setOrigin(0, 0).setVisible(false);
-                this.deathText = this.add.text(0, 0, 'VITALIDAD AGOTADA\nReiniciando desde el checkpoint...', F(32, { align: 'center' })).setOrigin(0.5).setVisible(false);
+                this.deathText = this.add.text(0, 0, 'VITALIDAD AGOTADA\nReiniciando desde el checkpoint...', F(28, { align: 'center' })).setOrigin(0.5).setVisible(false);
 
                 // --- RESULTADOS CON BOTONES TÁCTILES ---
                 this.res = this.add.container(0, 0);
-                this.resBg = this.add.rectangle(0, 0, 760, 500, 0x000000, 0.92).setStrokeStyle(4, 0xffffff);
-                this.resTitle = this.add.text(0, -205, 'TRAMO COMPLETADO', F(28)).setOrigin(0.5);
-                this.resRows = this.add.text(-330, -145, '', F(24, { lineSpacing: 18 }));
-                this.resRank = this.add.text(0, 100, '', F(104, { color: '#ffd700' })).setOrigin(0.5);
+                this.resBg = this.add.rectangle(0, 0, 540, 440, 0x000000, 0.92).setStrokeStyle(4, 0xffffff);
+                this.resTitle = this.add.text(0, -180, 'TRAMO COMPLETADO', F(26)).setOrigin(0.5);
+                this.resRows = this.add.text(-240, -125, '', F(20, { lineSpacing: 16 }));
+                this.resRank = this.add.text(0, 85, '', F(84, { color: '#ffd700' })).setOrigin(0.5);
 
-                this.resRetryBtn = this.add.rectangle(-135, 198, 230, 48, 0x161616, 0.95)
+                this.resRetryBtn = this.add.rectangle(-120, 175, 210, 48, 0x161616, 0.95)
                     .setStrokeStyle(2, 0xffffff)
                     .setInteractive({ useHandCursor: true });
-                this.resRetryTxt = this.add.text(-135, 198, 'REPETIR [R]', F(18)).setOrigin(0.5);
+                this.resRetryTxt = this.add.text(-120, 175, 'REPETIR [R]', F(17)).setOrigin(0.5);
                 this.resRetryBtn.on('pointerdown', () => { lastUiAction = performance.now(); GameState.start('run'); });
                 this.resRetryBtn.on('pointerover', () => this.resRetryBtn.setFillStyle(0x333333, 1));
                 this.resRetryBtn.on('pointerout', () => this.resRetryBtn.setFillStyle(0x161616, 0.95));
 
-                this.resMenuBtn = this.add.rectangle(135, 198, 230, 48, 0x161616, 0.95)
+                this.resMenuBtn = this.add.rectangle(120, 175, 210, 48, 0x161616, 0.95)
                     .setStrokeStyle(2, 0xaaaaaa)
                     .setInteractive({ useHandCursor: true });
-                this.resMenuTxt = this.add.text(135, 198, 'MENÚ [M]', F(18)).setOrigin(0.5);
+                this.resMenuTxt = this.add.text(120, 175, 'MENÚ [M]', F(17)).setOrigin(0.5);
                 this.resMenuBtn.on('pointerdown', () => { lastUiAction = performance.now(); GameState.toMenu(); });
                 this.resMenuBtn.on('pointerover', () => this.resMenuBtn.setFillStyle(0x333333, 1));
                 this.resMenuBtn.on('pointerout', () => this.resMenuBtn.setFillStyle(0x161616, 0.95));
@@ -1270,14 +1276,14 @@
                     this.qteSeq = e.detail.seq;
                     this.qteArrows.forEach((t, i) => t.setText(ARROW[this.qteSeq[i]]).setColor('#666666'));
                     this.qteArrows[0].setColor('#ffffff');
-                    this.qteBar.width = 500;
+                    this.qteBar.width = 440;
                     this.qteBox.setVisible(true);
                 });
                 window.addEventListener('qteStep', (e) => {
                     const i = e.detail.i;
                     this.qteArrows.forEach((t, k) => t.setColor(k < i ? '#00ff00' : (k === i ? '#ffffff' : '#666666')));
                 });
-                window.addEventListener('qteTime', (e) => { this.qteBar.width = Math.max(0.01, 500 * e.detail.frac); });
+                window.addEventListener('qteTime', (e) => { this.qteBar.width = Math.max(0.01, 440 * e.detail.frac); });
                 window.addEventListener('hideQTE', () => this.qteBox.setVisible(false));
                 window.addEventListener('showDeath', () => { this.deathBg.setVisible(true); this.deathText.setVisible(true); });
                 window.addEventListener('hideDeath', () => { this.deathBg.setVisible(false); this.deathText.setVisible(false); });
@@ -1292,18 +1298,18 @@
 
             layout() {
                 const w = this.scale.width, h = this.scale.height;
-                const hudScale = Math.min(1, w / 520);
+                const hudScale = Math.min(1, w / 460);
                 this.hudLeft.setPosition(14, 16).setScale(hudScale);
                 this.styleText.setPosition(w - 14, 16).setScale(hudScale);
                 this.timeText.setPosition(w - 14, 16 + 28 * hudScale).setScale(hudScale);
                 this.progText.setPosition(w - 14, 16 + 52 * hudScale).setScale(hudScale);
 
-                this.bannerText.setPosition(w / 2, h * 0.20).setScale(Math.min(1, w / 600));
-                this.tri.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 820, (h - 24) / 520));
-                this.qteBox.setPosition(w / 2, h * 0.62).setScale(Math.min(1, (w - 16) / 600, (h - 40) / 340));
+                this.bannerText.setPosition(w / 2, h * 0.20).setScale(Math.min(1, w / 520));
+                this.tri.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 560, (h - 24) / 430));
+                this.qteBox.setPosition(w / 2, h * 0.62).setScale(Math.min(1, (w - 16) / 520, (h - 40) / 310));
                 this.deathBg.setSize(w, h);
-                this.deathText.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 24) / 620));
-                this.res.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 760, (h - 24) / 500));
+                this.deathText.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 24) / 520));
+                this.res.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 540, (h - 24) / 440));
             }
 
             displayTrivia(d) {
@@ -1311,14 +1317,14 @@
                 this.triHead.setText(d.name + '  ·  ' + d.tema).setColor(d.color);
                 this.triBg.setStrokeStyle(4, Phaser.Display.Color.HexStringToColor(d.color).color);
                 this.qText.setText(d.q);
-                for (let i = 0; i < 4; i++) {
+                for (let i = 0; i < 3; i++) {
                     const isHint = this.hintIndex === i + 1;
                     this.optionTexts[i].setText(d.options[i]);
                     this.optionTexts[i].setColor(isHint ? '#aaffaa' : '#ffffff');
                     this.optionBgs[i].setFillStyle(0x161616, 0.95).setStrokeStyle(2, isHint ? 0x55aa55 : 0x444444);
                 }
-                this.triHint.setText('Toca una opción o pulsa [1-4]');
-                this.triHint.setX(d.canCancel ? -70 : 0);
+                this.triHint.setText('Toca una opción o pulsa [1-3]');
+                this.triHint.setX(d.canCancel ? -80 : 0);
                 this.triCancelBtn.setVisible(!!d.canCancel);
                 this.triCancelTxt.setVisible(!!d.canCancel);
                 this.tri.setVisible(true);
@@ -1326,10 +1332,13 @@
         }
 
         const phaserConfig = {
-            type: Phaser.CANVAS,
+            type: Phaser.AUTO,
             parent: 'phaser-canvas',
             width: window.innerWidth,
             height: window.innerHeight,
+            resolution: DPR,
+            autoRound: false,
+            antialias: true,
             transparent: true,
             input: { keyboard: false, mouse: true, touch: true, gamepad: false },
             scene: [UIScene]
@@ -1340,6 +1349,7 @@
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3));
             renderer.setSize(window.innerWidth, window.innerHeight);
             phaserGame.scale.resize(window.innerWidth, window.innerHeight);
         });
