@@ -152,9 +152,64 @@
             line-height: 1.5;
             font-size: 12px;
         }
+        #rotate-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: #0d0406;
+            color: #fff;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 24px;
+            touch-action: none;
+        }
+        #rotate-overlay .rot-icon {
+            font-size: 56px;
+            color: #ff3344;
+            margin-bottom: 14px;
+            display: inline-block;
+            animation: rotPhone 1.8s ease-in-out infinite;
+        }
+        #rotate-overlay h2 {
+            margin: 0 0 8px;
+            font-size: 22px;
+            letter-spacing: 3px;
+            color: #ff3344;
+        }
+        #rotate-overlay p {
+            margin: 0;
+            color: #ccc;
+            font-size: 14px;
+            max-width: 320px;
+            line-height: 1.5;
+        }
+        @keyframes rotPhone {
+            0%, 20% { transform: rotate(0deg); }
+            60%, 100% { transform: rotate(-90deg); }
+        }
+        @media (orientation: portrait) and (max-width: 900px) {
+            #rotate-overlay { display: flex; }
+        }
+        @media (max-height: 500px) and (orientation: landscape) {
+            #main-menu { padding: 12px 16px; }
+            h1 { font-size: clamp(26px, 5vw, 42px); }
+            .lead { margin: 6px 0 12px; font-size: 13px; }
+            .cards { gap: 12px; margin-bottom: 10px; }
+            .card { padding: 12px 14px; }
+            .card-desc { margin-bottom: 10px; font-size: 12px; }
+            .card-cta { padding: 7px 10px; font-size: 13px; }
+        }
     </style>
 </head>
 <body>
+    <div id="rotate-overlay">
+        <div class="rot-icon">&#128241;</div>
+        <h2>MODO HORIZONTAL</h2>
+        <p>Gira tu dispositivo en posici&oacute;n horizontal para jugar ULTRANATOMIA.</p>
+    </div>
     <canvas id="three-canvas"></canvas>
 
     <main id="main-menu">

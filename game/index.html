@@ -40,9 +40,67 @@
             #top-actions { top: 46px; left: 10px; }
             #instructions { font-size: 11px; bottom: 8px; left: 10px; right: 10px; }
         }
+        #rotate-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: #0d0406;
+            color: #fff;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 24px;
+            touch-action: none;
+        }
+        #rotate-overlay .rot-icon {
+            font-size: 56px;
+            color: #ffd400;
+            margin-bottom: 14px;
+            display: inline-block;
+            animation: rotPhone 1.8s ease-in-out infinite;
+        }
+        #rotate-overlay h2 {
+            margin: 0 0 8px;
+            font-size: 22px;
+            letter-spacing: 3px;
+            color: #ffd400;
+        }
+        #rotate-overlay p {
+            margin: 0;
+            color: #ccc;
+            font-size: 14px;
+            max-width: 320px;
+            line-height: 1.5;
+        }
+        @keyframes rotPhone {
+            0%, 20% { transform: rotate(0deg); }
+            60%, 100% { transform: rotate(-90deg); }
+        }
+        @media (orientation: portrait) and (max-width: 900px) {
+            #rotate-overlay { display: flex; }
+        }
+        @media (max-height: 500px) and (orientation: landscape) {
+            #menu { padding: 8px 16px; }
+            #menu .badge { margin-bottom: 4px; font-size: 11px; }
+            #menu h1 { font-size: clamp(24px, 5vw, 38px); }
+            #menu p { margin: 4px 0 6px; font-size: 12px; }
+            #menu .mech-legend { margin: 2px 0 8px; gap: 6px; font-size: 11px; }
+            #menu button, #menu a.menu-link { padding: 8px 18px; margin: 3px; font-size: 15px; }
+            #menu a.menu-link.secondary { padding: 6px 14px; margin-top: 4px; font-size: 12px; }
+            #menu small { margin-top: 6px; font-size: 10px; }
+            #top-actions { top: 44px; left: 10px; }
+            #instructions { font-size: 10px; bottom: 4px; }
+        }
     </style>
 </head>
 <body>
+    <div id="rotate-overlay">
+        <div class="rot-icon">&#128241;</div>
+        <h2>MODO HORIZONTAL</h2>
+        <p>Gira tu dispositivo en posici&oacute;n horizontal para jugar ULTRANATOMIA.</p>
+    </div>
     <canvas id="three-canvas"></canvas>
     <div id="phaser-canvas"></div>
     <div id="top-actions">
@@ -863,7 +921,19 @@
             }
         });
 
-        document.getElementById('startRun').onclick = () => GameState.start();
+        function tryLockLandscape() {
+            if (window.innerWidth > 900 && window.innerHeight > 600) return;
+            const de = document.documentElement;
+            if (de.requestFullscreen && !document.fullscreenElement) {
+                de.requestFullscreen().then(() => {
+                    if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+                }).catch(() => {});
+            } else if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+        }
+
+        document.getElementById('startRun').onclick = () => { tryLockLandscape(); GameState.start(); };
         document.getElementById('btnRestart').onclick = (e) => { GameState.restart(); e.target.blur(); };
         document.getElementById('btnMenu').onclick = (e) => { GameState.toMenu(); e.target.blur(); };
 
@@ -875,7 +945,9 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            const dt = Math.min(clock.getDelta(), 0.05);
+            const rawDt = Math.min(clock.getDelta(), 0.05);
+            const isPortraitMobile = window.innerHeight > window.innerWidth && window.innerWidth <= 900;
+            const dt = isPortraitMobile ? 0 : rawDt;
             const sdt = GameState.update(dt);
             updateAnims(dt);
             animateObstacles(sdt);
