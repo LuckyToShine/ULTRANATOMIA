@@ -114,7 +114,7 @@
     </div>
     <canvas id="three-canvas"></canvas>
     <div id="phaser-canvas"></div>
-    <div id="instructions">Toca o pulsa 1-3: responder trivia &middot; QTE: botones táctiles / deslizar / flechas / WASD &middot; Esc o botón: cancelar (libre)</div>
+    <div id="instructions">Toca o pulsa 1-3: responder trivia &middot; QTE: toca o pulsa 1-4 para ordenar los pasos &middot; Esc o bot&oacute;n: cancelar (libre)</div>
 
     <div id="panel">
         <h3 id="panelToggle"><span>SANDBOX</span><span id="panelArrow">&#9662;</span></h3>
@@ -161,7 +161,7 @@
             <button id="startRun">CARRERA</button>
         </div>
         <a class="menu-link secondary" href="../">&larr; VOLVER AL MEN&Uacute; PRINCIPAL</a>
-        <small>Libre: prueba GOLPE, PARRY, DISPARO y QTE una por una desde el panel.<br>Carrera: 8 obst&aacute;culos en autom&aacute;tico con checkpoint, tiempo, estilo, precisi&oacute;n y rango D-S-P.<br>Compatible con teclado (1-3, flechas/WASD) y pantalla t&aacute;ctil (tocar opciones y botones QTE o deslizar).</small>
+        <small>Libre: prueba GOLPE, PARRY, DISPARO y QTE una por una desde el panel.<br>Carrera: 8 obst&aacute;culos en autom&aacute;tico con checkpoint, tiempo, estilo, precisi&oacute;n y rango D-S-P.<br>Compatible con teclado (1-3 en trivia, 1-4 en QTE) y pantalla t&aacute;ctil (tocar opciones y palabras en orden).</small>
     </div>
 
     <script>
@@ -202,11 +202,11 @@
                 { q: '¿Qué glándula produce la mayor parte del semen?', a: ['Vesículas seminales', 'Próstata', 'Epidídimo'] }
             ],
             qte: [
-                { q: 'Recorrido del espermatozoide al salir:', a: ['Testículo → Epidídimo → Conducto deferente → Uretra', 'Epidídimo → Testículo → Uretra → Conducto deferente', 'Uretra → Próstata → Testículo → Epidídimo'] },
-                { q: 'Orden de formación del espermatozoide:', a: ['Espermatogonia → Espermatocito → Espermátide', 'Espermátide → Espermatocito → Espermatogonia', 'Espermatocito → Espermatogonia → Espermátide'] },
-                { q: 'Fases del ciclo uterino desde el sangrado:', a: ['Menstrual → Proliferativa → Secretora', 'Proliferativa → Menstrual → Secretora', 'Secretora → Proliferativa → Menstrual'] },
-                { q: 'Orden de maduración del folículo ovárico:', a: ['Primordial → Primario → Secundario → De Graaf', 'De Graaf → Secundario → Primario → Primordial', 'Primario → Primordial → De Graaf → Secundario'] },
-                { q: 'Pasos de la fecundación en orden:', a: ['Capacitación → Reacción acrosómica → Fusión', 'Fusión → Capacitación → Reacción acrosómica', 'Reacción acrosómica → Fusión → Capacitación'] }
+                { q: 'Recorrido del espermatozoide al salir:', steps: ['Testículo', 'Epidídimo', 'Conducto deferente', 'Uretra'] },
+                { q: 'Orden de formación del espermatozoide:', steps: ['Espermatogonia', 'Espermatocito', 'Espermátide', 'Espermatozoide'] },
+                { q: 'Fases del ciclo uterino desde el sangrado:', steps: ['Menstrual', 'Proliferativa', 'Secretora'] },
+                { q: 'Orden de maduración del folículo ovárico:', steps: ['Primordial', 'Primario', 'Secundario', 'De Graaf'] },
+                { q: 'Pasos de la fecundación en orden:', steps: ['Capacitación', 'Reacción acrosómica', 'Fusión'] }
             ]
         };
 
@@ -219,11 +219,30 @@
             return a;
         }
 
+        function shuffleOrder(arr) {
+            const items = arr.map((t, order) => ({ t, order }));
+            let s = shuffle(items);
+            if (items.length > 1 && s.every((x, i) => x.order === i)) {
+                s = shuffle(items);
+                if (s.every((x, i) => x.order === i)) [s[0], s[1]] = [s[1], s[0]];
+            }
+            return s;
+        }
+
         // Mazo por mecánica: no repite pregunta hasta agotar el banco
         const decks = {};
         function drawQuestion(type) {
             if (!decks[type] || decks[type].length === 0) decks[type] = shuffle(BANK[type].map((_, i) => i));
             const item = BANK[type][decks[type].pop()];
+            if (type === 'qte') {
+                const steps = item.steps || item.a[0].split(/\s*→\s*/);
+                return {
+                    type,
+                    q: item.q,
+                    steps,
+                    words: shuffleOrder(steps)
+                };
+            }
             const opts = shuffle(item.a.map((t, i) => ({ t, ok: i === 0 })));
             return {
                 type,
@@ -246,18 +265,13 @@
         const RUN_SPEED = 14;
         const TRIGGER_DIST = 18;         // distancia a la que arranca el bullet time
         const STOP_DIST = 7;             // el jugador se detiene a esta distancia
-        const QTE_LEN = 5;
-        const QTE_STEP_TIME = 1.5;
+        const QTE_STEP_TIME = 3.5;
         const BASE_FOV = 75;
         const TRIVIA_FOV = 64;
         const RANKS = ['D', 'C', 'B', 'A', 'S'];
         const TIME_THRESH = [90, 120, 150, 190];       // S, A, B, C (segundos, menor es mejor)
         const STYLE_THRESH = [1250, 1000, 750, 450];   // S, A, B, C (mayor es mejor)
         const ACC_THRESH = [95, 85, 70, 50];           // S, A, B, C (%)
-        const QTE_KEYS = {
-            ArrowLeft: 'L', KeyA: 'L', ArrowRight: 'R', KeyD: 'R',
-            ArrowUp: 'U', KeyW: 'U', ArrowDown: 'D', KeyS: 'D'
-        };
 
         // ==========================================
         // 2. ENTORNO 3D (THREE.JS)
@@ -565,12 +579,12 @@
             },
 
             qte(o) {
-                const dirs = ['L', 'U', 'D', 'R'];
-                const seq = [];
-                for (let i = 0; i < QTE_LEN; i++) seq.push(dirs[Math.floor(Math.random() * 4)]);
-                GameState.qte = { o, seq, i: 0, time: QTE_STEP_TIME };
+                const qData = drawQuestion('qte');
+                const words = qData.words.map(w => ({ t: w.t, order: w.order, picked: false }));
+                const totalTime = words.length * QTE_STEP_TIME;
+                GameState.qte = { o, q: qData.q, steps: qData.steps, words, i: 0, time: totalTime, maxTime: totalTime, locked: false };
                 GameState.phase = 'qte';
-                emit('showQTE', { seq });
+                GameState.emitQTE();
             }
         };
 
@@ -701,7 +715,7 @@
             spawnMech(type) {
                 if (this.phase === 'menu') return;
                 if (this.mode !== 'free') this.start('free');
-                if (this.phase !== 'idle' && this.phase !== 'trivia') return;
+                if (this.phase !== 'idle' && this.phase !== 'trivia' && this.phase !== 'qte') return;
                 this.token++;
                 emit('hideTrivia');
                 emit('hideQTE');
@@ -723,10 +737,14 @@
 
             triggerTrivia(o) {
                 if (this.phase !== 'idle' && this.phase !== 'running') return;
-                this.phase = 'trivia';
                 this.current = o;
                 this.targetScale = this.bulletScale;
                 this.targetFov = TRIVIA_FOV;
+                if (o.type === 'qte') {
+                    EXEC.qte(o);
+                    return;
+                }
+                this.phase = 'trivia';
                 this.showQuestion();
             },
 
@@ -749,15 +767,37 @@
                 });
             },
 
+            emitQTE() {
+                const q = this.qte;
+                if (!q) return;
+                const nextBtnIdx = q.words.findIndex(w => w.order === q.i);
+                emit('showQTE', {
+                    q: q.q,
+                    words: q.words.map(w => w.t),
+                    picked: q.words.map(w => w.picked),
+                    chain: q.i > 0 ? q.steps.slice(0, q.i).join(' → ') : '',
+                    step: q.i,
+                    total: q.words.length,
+                    name: MECH.qte.name,
+                    tema: MECH.qte.tema,
+                    color: MECH.qte.css,
+                    hintIdx: this.showAnswer ? nextBtnIdx : -1,
+                    canCancel: this.mode === 'free',
+                    frac: Math.max(0, q.time / q.maxTime)
+                });
+            },
+
             cancelTrivia() {
-                if (this.phase !== 'trivia' || this.answerLock) return;
+                if ((this.phase !== 'trivia' || this.answerLock) && (this.phase !== 'qte' || (this.qte && this.qte.locked))) return;
                 lastUiAction = performance.now();
                 this.phase = 'idle';
                 this.current = null;
                 this.question = null;
+                this.qte = null;
                 this.targetScale = 1;
                 this.targetFov = BASE_FOV;
                 emit('hideTrivia');
+                emit('hideQTE');
             },
 
             answer(n) {
@@ -863,25 +903,51 @@
                 }
             },
 
-            // --- QTE ---
-            qteInput(key) {
+            // --- QTE (ORDENAR PALABRAS) ---
+            qteInput(btnIdx) {
                 const q = this.qte;
-                if (this.phase !== 'qte' || !q) return;
+                if (this.phase !== 'qte' || !q || q.locked) return;
+                if (btnIdx < 0 || btnIdx >= q.words.length) return;
+                const w = q.words[btnIdx];
+                if (w.picked) return;
                 lastUiAction = performance.now();
-                if (key !== q.seq[q.i]) return this.qteFail();
+
+                if (w.order !== q.i) {
+                    q.locked = true;
+                    const correctIdx = q.words.findIndex(item => item.order === q.i);
+                    emit('qteWrong', { btnIdx, correctIdx });
+                    return this.qteFail();
+                }
+
+                w.picked = true;
                 q.i++;
-                q.time = QTE_STEP_TIME;
-                this.player.z -= 1.2;
+                if (this.mode === 'run') {
+                    this.player.z = Math.max(q.o.z + STOP_DIST, this.player.z - 1.2);
+                }
                 flashRing(new THREE.Vector3(0, 2.5, this.player.z - 3), MECH.qte.color);
-                emit('qteStep', { i: q.i });
-                if (q.i >= q.seq.length) this.qteSuccess();
+                const nextBtnIdx = q.words.findIndex(item => item.order === q.i);
+                emit('qteStep', {
+                    i: q.i,
+                    btnIdx,
+                    chain: q.steps.slice(0, q.i).join(' → '),
+                    hintIdx: this.showAnswer ? nextBtnIdx : -1
+                });
+                if (q.i >= q.words.length) {
+                    q.locked = true;
+                    this.later(250, () => this.qteSuccess());
+                }
             },
 
             qteSuccess() {
+                if (!this.qte) return;
                 const o = this.qte.o;
                 this.qte = null;
                 this.phase = 'exec';
-                this.addStyle(100);
+                this.targetScale = 1;
+                this.targetFov = BASE_FOV;
+                this.stats.correct++;
+                this.addStyle((this.lastMech && this.lastMech !== 'qte' ? 150 : 100) + 100);
+                this.lastMech = 'qte';
                 emit('hideQTE');
                 emit('banner', { text: '¡QTE PERFECTO!', color: MECH.qte.css });
                 shake(0.5);
@@ -897,15 +963,19 @@
             },
 
             qteFail() {
+                if (!this.qte) return;
                 const o = this.qte.o;
                 this.qte = null;
                 this.phase = 'exec';
-                emit('hideQTE');
-                emit('banner', { text: 'QTE FALLIDO', color: '#ff4444' });
+                this.targetScale = 1;
+                this.targetFov = BASE_FOV;
+                this.stats.wrong++;
                 this.addStyle(-100);
                 this.damage(this.damagePct);
                 if (this.phase === 'dead') return;
-                this.later(500, () => {
+                this.later(450, () => {
+                    emit('hideQTE');
+                    emit('banner', { text: 'QTE FALLIDO', color: '#ff4444' });
                     burst(new THREE.Vector3(0, 3.2, o.z), 0x888888, 30, 8);
                     removeObstacle(o);
                     finishClear(o);
@@ -954,14 +1024,19 @@
                     const next = this.nextObstacle();
                     if (next && this.player.z - next.z <= TRIGGER_DIST) this.triggerTrivia(next);
                     else if (!next && this.player.z <= this.finishZ) this.finishRun();
-                } else if (this.phase === 'trivia' && this.mode === 'run') {
+                } else if ((this.phase === 'trivia' || this.phase === 'qte') && this.mode === 'run') {
                     this.player.z = Math.max(this.current.z + STOP_DIST, this.player.z - RUN_SPEED * sdt);
                 }
 
-                if (this.phase === 'qte' && this.qte) {
+                if (this.phase === 'qte' && this.qte && !this.qte.locked) {
                     this.qte.time -= dt;
-                    emit('qteTime', { frac: Math.max(0, this.qte.time / QTE_STEP_TIME) });
-                    if (this.qte.time <= 0) this.qteFail();
+                    emit('qteTime', { frac: Math.max(0, this.qte.time / this.qte.maxTime) });
+                    if (this.qte.time <= 0) {
+                        this.qte.locked = true;
+                        const correctIdx = this.qte.words.findIndex(item => item.order === this.qte.i);
+                        emit('qteWrong', { btnIdx: -1, correctIdx });
+                        this.qteFail();
+                    }
                 }
                 return sdt;
             },
@@ -1001,27 +1076,6 @@
             if (hits.length > 0 && hits[0].object.userData.obs) GameState.triggerTrivia(hits[0].object.userData.obs);
         });
 
-        // Soporte de gestos de deslizamiento (swipe) para QTE en móviles
-        let touchStartX = 0, touchStartY = 0, touchQteActive = false;
-        window.addEventListener('touchstart', (e) => {
-            if (GameState.phase !== 'qte' || !e.touches.length) return;
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-            touchQteActive = true;
-        }, { passive: true });
-
-        window.addEventListener('touchend', (e) => {
-            if (!touchQteActive || GameState.phase !== 'qte' || !e.changedTouches.length) return;
-            touchQteActive = false;
-            // Si el toque ya fue procesado por un botón direccional de Phaser, ignorar el swipe
-            if (performance.now() - lastUiAction < 150) return;
-            const dx = e.changedTouches[0].clientX - touchStartX;
-            const dy = e.changedTouches[0].clientY - touchStartY;
-            if (Math.hypot(dx, dy) < 28) return;
-            const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U');
-            GameState.qteInput(dir);
-        }, { passive: true });
-
         window.addEventListener('keydown', (e) => {
             if (e.repeat) return;
             const gs = GameState;
@@ -1030,10 +1084,11 @@
                 const m = /^(?:Digit|Numpad)([1-3])$/.exec(e.code);
                 if (m) gs.answer(Number(m[1]));
             } else if (gs.phase === 'qte') {
-                const k = QTE_KEYS[e.code];
-                if (k) {
+                if (e.code === 'Escape' && gs.mode === 'free') return gs.cancelTrivia();
+                const m = /^(?:Digit|Numpad)([1-4])$/.exec(e.code);
+                if (m) {
                     e.preventDefault();
-                    gs.qteInput(k);
+                    gs.qteInput(Number(m[1]) - 1);
                 }
             } else if (gs.phase === 'finished') {
                 if (e.code === 'KeyR' || e.code === 'Enter') gs.start('run');
@@ -1084,6 +1139,7 @@
             GameState.showAnswer = e.target.checked;
             e.target.blur();
             if (GameState.phase === 'trivia' && !GameState.answerLock) GameState.emitQuestion();
+            else if (GameState.phase === 'qte' && GameState.qte && !GameState.qte.locked) GameState.emitQTE();
         };
         $('btnRestart').onclick = (e) => { GameState.restart(); e.target.blur(); };
         $('btnMenu').onclick = (e) => { GameState.toMenu(); e.target.blur(); };
@@ -1151,8 +1207,6 @@
         // ==========================================
         // 8. INTERFAZ UI Y LÓGICA 2D (PHASER 3)
         // ==========================================
-        const ARROW = { L: '←', U: '↑', D: '↓', R: '→' };
-
         class UIScene extends Phaser.Scene {
             constructor() {
                 super('UIScene');
@@ -1234,43 +1288,67 @@
                 ]);
                 this.tri.setVisible(false);
 
-                // --- PANEL QTE CON BOTONES TÁCTILES ---
+                // --- PANEL QTE: ORDENAR PALABRAS ---
                 this.qteBox = this.add.container(0, 0);
-                this.qteBg = this.add.rectangle(0, 0, 520, 300, 0x000000, 0.88).setStrokeStyle(3, MECH.qte.color);
-                this.qteTitle = this.add.text(0, -118, '¡QTE! Repite la secuencia', F(19, { color: MECH.qte.css })).setOrigin(0.5);
-                this.qteArrows = [];
-                for (let i = 0; i < QTE_LEN; i++) {
-                    this.qteArrows.push(this.add.text((i - (QTE_LEN - 1) / 2) * 88, -50, '', F(52)).setOrigin(0.5));
-                }
-                this.qteBarBg = this.add.rectangle(-220, 8, 440, 14, 0x333333).setOrigin(0, 0.5);
-                this.qteBar = this.add.rectangle(-220, 8, 440, 14, MECH.qte.color).setOrigin(0, 0.5);
+                this.qteBg = this.add.rectangle(0, 0, 560, 420, 0x000000, 0.90).setStrokeStyle(4, MECH.qte.color);
+                this.qteHead = this.add.text(0, -182, 'QTE  ·  Procesos secuenciales', F(18, { color: MECH.qte.css })).setOrigin(0.5);
+                this.qtePrompt = this.add.text(0, -148, '', F(20, { align: 'center', wordWrap: { width: 510 } })).setOrigin(0.5, 0);
 
-                // Botones direccionales táctiles para el QTE
-                const qteDirs = [
-                    { k: 'L', label: '←', x: -165 },
-                    { k: 'U', label: '↑', x: -55 },
-                    { k: 'D', label: '↓', x: 55 },
-                    { k: 'R', label: '→', x: 165 }
+                this.qteBarBg = this.add.rectangle(-250, -94, 500, 12, 0x333333).setOrigin(0, 0.5);
+                this.qteBar = this.add.rectangle(-250, -94, 500, 12, MECH.qte.color).setOrigin(0, 0.5);
+
+                this.qteChainBg = this.add.rectangle(0, -50, 500, 46, 0x12081c, 0.95).setStrokeStyle(1.5, 0x5a2588);
+                this.qteChainTxt = this.add.text(0, -50, '', F(16, { color: '#d8b4ff', align: 'center', wordWrap: { width: 480 } })).setOrigin(0.5);
+
+                this.qteBtnBgs = [];
+                this.qteBtnTxts = [];
+                this.qteHintIdx = -1;
+                const qtePositions = [
+                    { x: -128, y: 18 },
+                    { x: 128, y: 18 },
+                    { x: -128, y: 96 },
+                    { x: 128, y: 96 }
                 ];
-                this.qteTouchItems = [];
-                qteDirs.forEach(d => {
-                    const btn = this.add.rectangle(d.x, 72, 98, 70, 0x1a0b2a, 0.95)
+                for (let i = 0; i < 4; i++) {
+                    const pos = qtePositions[i];
+                    const bg = this.add.rectangle(pos.x, pos.y, 244, 64, 0x1a0b2a, 0.95)
                         .setStrokeStyle(2, MECH.qte.color)
                         .setInteractive({ useHandCursor: true });
-                    const lbl = this.add.text(d.x, 72, d.label, F(38, { color: '#ffffff' })).setOrigin(0.5);
-                    btn.on('pointerdown', () => {
-                        btn.setFillStyle(0x4a1b7a, 1);
-                        GameState.qteInput(d.k);
+                    const txt = this.add.text(pos.x, pos.y, '', F(17, { align: 'center', wordWrap: { width: 224 } })).setOrigin(0.5);
+
+                    bg.on('pointerover', () => {
+                        if (GameState.phase === 'qte' && GameState.qte && !GameState.qte.locked && !bg.getData('picked')) {
+                            bg.setFillStyle(0x31144f, 1).setStrokeStyle(2, 0xffffff);
+                        }
                     });
-                    btn.on('pointerup', () => btn.setFillStyle(0x1a0b2a, 0.95));
-                    btn.on('pointerout', () => btn.setFillStyle(0x1a0b2a, 0.95));
-                    this.qteTouchItems.push(btn, lbl);
-                });
-                this.qteHint = this.add.text(0, 128, 'Toca las flechas, desliza o usa WASD / Flechas', F(13, { fontStyle: 'normal', color: '#aaaaaa' })).setOrigin(0.5);
+                    bg.on('pointerout', () => {
+                        if (GameState.phase === 'qte' && GameState.qte && !GameState.qte.locked && !bg.getData('picked')) {
+                            const isHint = this.qteHintIdx === i;
+                            bg.setFillStyle(0x1a0b2a, 0.95).setStrokeStyle(2, isHint ? 0x55aa55 : MECH.qte.color);
+                        }
+                    });
+                    bg.on('pointerdown', () => {
+                        GameState.qteInput(i);
+                    });
+
+                    this.qteBtnBgs.push(bg);
+                    this.qteBtnTxts.push(txt);
+                }
+
+                this.qteHint = this.add.text(0, 178, 'Toca las palabras en el orden correcto o pulsa [1-4]', F(13, { fontStyle: 'normal', color: '#aaaaaa' })).setOrigin(0.5);
+                this.qteCancelBtn = this.add.rectangle(170, 178, 160, 34, 0x221111, 0.95)
+                    .setStrokeStyle(1.5, 0x884444)
+                    .setInteractive({ useHandCursor: true });
+                this.qteCancelTxt = this.add.text(170, 178, 'CANCELAR [Esc]', F(13, { color: '#ffaaaa' })).setOrigin(0.5);
+                this.qteCancelBtn.on('pointerdown', () => GameState.cancelTrivia());
+                this.qteCancelBtn.on('pointerover', () => this.qteCancelBtn.setFillStyle(0x441818, 1));
+                this.qteCancelBtn.on('pointerout', () => this.qteCancelBtn.setFillStyle(0x221111, 0.95));
 
                 this.qteBox.add([
-                    this.qteBg, this.qteTitle, ...this.qteArrows,
-                    this.qteBarBg, this.qteBar, ...this.qteTouchItems, this.qteHint
+                    this.qteBg, this.qteHead, this.qtePrompt,
+                    this.qteBarBg, this.qteBar, this.qteChainBg, this.qteChainTxt,
+                    ...this.qteBtnBgs, ...this.qteBtnTxts,
+                    this.qteHint, this.qteCancelBtn, this.qteCancelTxt
                 ]);
                 this.qteBox.setVisible(false);
 
@@ -1344,17 +1422,76 @@
                     this.tweens.add({ targets: this.bannerText, alpha: 0, delay: 700, duration: 500 });
                 });
                 window.addEventListener('showQTE', (e) => {
-                    this.qteSeq = e.detail.seq;
-                    this.qteArrows.forEach((t, i) => t.setText(ARROW[this.qteSeq[i]]).setColor('#666666'));
-                    this.qteArrows[0].setColor('#ffffff');
-                    this.qteBar.width = 440;
+                    const d = e.detail;
+                    this.qteHintIdx = d.hintIdx !== undefined ? d.hintIdx : -1;
+                    this.qteHead.setText(d.name + '  ·  ' + d.tema).setColor(d.color);
+                    this.qtePrompt.setText(d.q);
+                    if (d.chain) {
+                        this.qteChainTxt.setText(d.chain).setColor('#00ff88');
+                    } else {
+                        this.qteChainTxt.setText('Selecciona el paso 1 de ' + d.total + '...').setColor('#b899d6');
+                    }
+                    this.qteBar.width = Math.max(0.01, 500 * (d.frac !== undefined ? d.frac : 1));
+                    const count = d.words.length;
+                    for (let i = 0; i < 4; i++) {
+                        const bg = this.qteBtnBgs[i];
+                        const txt = this.qteBtnTxts[i];
+                        if (i < count) {
+                            const x = count === 3 && i === 2 ? 0 : (i % 2 === 0 ? -128 : 128);
+                            const y = i < 2 ? 18 : 96;
+                            const isPicked = !!(d.picked && d.picked[i]);
+                            const isHint = !isPicked && this.qteHintIdx === i;
+                            bg.setPosition(x, y).setVisible(true).setData('picked', isPicked);
+                            txt.setPosition(x, y).setVisible(true).setText((i + 1) + '. ' + d.words[i]);
+                            if (isPicked) {
+                                bg.setFillStyle(0x0d3b14, 0.95).setStrokeStyle(2, 0x00ff00);
+                                txt.setColor('#00ff00');
+                            } else {
+                                bg.setFillStyle(0x1a0b2a, 0.95).setStrokeStyle(2, isHint ? 0x55aa55 : MECH.qte.color);
+                                txt.setColor(isHint ? '#aaffaa' : '#ffffff');
+                            }
+                        } else {
+                            bg.setVisible(false).setData('picked', true);
+                            txt.setVisible(false);
+                        }
+                    }
+                    this.qteHint.setText('Toca en el orden correcto o pulsa [1-' + count + ']');
+                    this.qteHint.setX(d.canCancel ? -80 : 0);
+                    this.qteCancelBtn.setVisible(!!d.canCancel);
+                    this.qteCancelTxt.setVisible(!!d.canCancel);
                     this.qteBox.setVisible(true);
                 });
                 window.addEventListener('qteStep', (e) => {
-                    const i = e.detail.i;
-                    this.qteArrows.forEach((t, k) => t.setColor(k < i ? '#00ff00' : (k === i ? '#ffffff' : '#666666')));
+                    const { btnIdx, chain, hintIdx } = e.detail;
+                    this.qteHintIdx = hintIdx !== undefined ? hintIdx : -1;
+                    const bg = this.qteBtnBgs[btnIdx];
+                    const txt = this.qteBtnTxts[btnIdx];
+                    if (bg && txt) {
+                        bg.setData('picked', true);
+                        bg.setFillStyle(0x0d3b14, 0.95).setStrokeStyle(2, 0x00ff00);
+                        txt.setColor('#00ff00');
+                    }
+                    for (let i = 0; i < 4; i++) {
+                        if (this.qteBtnBgs[i].visible && !this.qteBtnBgs[i].getData('picked')) {
+                            const isHint = this.qteHintIdx === i;
+                            this.qteBtnBgs[i].setStrokeStyle(2, isHint ? 0x55aa55 : MECH.qte.color);
+                            this.qteBtnTxts[i].setColor(isHint ? '#aaffaa' : '#ffffff');
+                        }
+                    }
+                    this.qteChainTxt.setText(chain).setColor('#00ff88');
                 });
-                window.addEventListener('qteTime', (e) => { this.qteBar.width = Math.max(0.01, 440 * e.detail.frac); });
+                window.addEventListener('qteWrong', (e) => {
+                    const { btnIdx, correctIdx } = e.detail;
+                    if (btnIdx >= 0 && this.qteBtnBgs[btnIdx]) {
+                        this.qteBtnBgs[btnIdx].setFillStyle(0x3b0d0d, 1).setStrokeStyle(2, 0xff3333);
+                        this.qteBtnTxts[btnIdx].setColor('#ff3333');
+                    }
+                    if (correctIdx >= 0 && this.qteBtnBgs[correctIdx]) {
+                        this.qteBtnBgs[correctIdx].setFillStyle(0x0d3b14, 1).setStrokeStyle(2, 0x00ff00);
+                        this.qteBtnTxts[correctIdx].setColor('#00ff00');
+                    }
+                });
+                window.addEventListener('qteTime', (e) => { this.qteBar.width = Math.max(0.01, 500 * e.detail.frac); });
                 window.addEventListener('hideQTE', () => this.qteBox.setVisible(false));
                 window.addEventListener('showDeath', () => { this.deathBg.setVisible(true); this.deathText.setVisible(true); });
                 window.addEventListener('hideDeath', () => { this.deathBg.setVisible(false); this.deathText.setVisible(false); });
@@ -1377,7 +1514,7 @@
 
                 this.bannerText.setPosition(w / 2, h * 0.20).setScale(Math.min(1, w / 520));
                 this.tri.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 560, (h - 24) / 430));
-                this.qteBox.setPosition(w / 2, h * 0.62).setScale(Math.min(1, (w - 16) / 520, (h - 40) / 310));
+                this.qteBox.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 560, (h - 24) / 430));
                 this.deathBg.setSize(w, h);
                 this.deathText.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 24) / 520));
                 this.res.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 540, (h - 24) / 440));
