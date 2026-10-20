@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ULTRANATOMIA - Demo</title>
+    <!-- Cargar Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Cargar Phaser 3 -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; color: #fff; user-select: none; -webkit-user-select: none; touch-action: none; }
+        #three-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; touch-action: none; }
+        /* Phaser UI encima de Three.js con soporte táctil y de ratón */
+        #phaser-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; touch-action: none; }
+        #instructions { position: absolute; bottom: 12px; left: 16px; right: 16px; z-index: 3; pointer-events: none; text-shadow: 1px 1px 2px black; font-size: 12px; line-height: 1.4; opacity: .85; }
+
+        /* Barra rápida de acciones en partida (Reiniciar / Menú) */
+        #top-actions { position: absolute; top: 54px; left: 14px; z-index: 4; display: flex; gap: 6px; }
+        #top-actions button, #top-actions a { font: inherit; font-size: 12px; background: rgba(17,17,17,.85); color: #ddd; border: 1px solid #666; padding: 5px 10px; cursor: pointer; text-decoration: none; }
+        #top-actions button:hover, #top-actions button:active, #top-actions a:hover, #top-actions a:active { background: #fff; color: #000; border-color: #fff; }
+
+        /* Menú de inicio de la Demo */
+        #menu { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,.88); text-align: center; padding: 16px; }
+        #menu.hidden { display: none; }
+        #menu .badge { font-size: 13px; letter-spacing: 3px; color: #ffd400; border: 1px solid #ffd400; padding: 3px 10px; margin-bottom: 10px; }
+        #menu h1 { font-size: clamp(30px, 7vw, 60px); letter-spacing: 6px; margin: 0; }
+        #menu p { max-width: 580px; color: #bbb; line-height: 1.5; font-size: clamp(13px, 2.5vw, 16px); }
+        #menu .mech-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 560px; margin: 4px 0 14px; font-size: 12px; }
+        #menu .mech-pill { padding: 4px 10px; border: 1px solid; font-weight: bold; }
+        #menu button, #menu a.menu-link { font: inherit; font-size: clamp(16px, 3.2vw, 20px); margin: 6px; padding: 12px 26px; cursor: pointer; background: #111; color: #fff; border: 2px solid #fff; text-decoration: none; display: inline-block; font-weight: bold; }
+        #menu button:hover, #menu button:active, #menu a.menu-link:hover, #menu a.menu-link:active { background: #fff; color: #000; }
+        #menu a.menu-link.secondary { border-color: #888; color: #ccc; font-size: clamp(13px, 2.5vw, 15px); padding: 9px 18px; font-weight: normal; margin-top: 8px; }
+        #menu a.menu-link.secondary:hover { border-color: #fff; background: #fff; color: #000; }
+        #menu small { color: #888; margin-top: 16px; max-width: 560px; line-height: 1.5; font-size: clamp(11px, 2vw, 13px); }
+
+        @media (max-width: 640px) {
+            #top-actions { top: 46px; left: 10px; }
+            #instructions { font-size: 11px; bottom: 8px; left: 10px; right: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="three-canvas"></canvas>
+    <div id="phaser-canvas"></div>
+    <div id="top-actions">
+        <button id="btnRestart">Reiniciar</button>
+        <button id="btnMenu">Men&uacute; Demo</button>
+        <a href="../">Inicio</a>
+    </div>
+    <div id="instructions">Toca o pulsa 1-4: responder trivia &middot; QTE: botones t&aacute;ctiles / deslizar / flechas / WASD</div>
+
+    <div id="menu">
+        <div class="badge">DEMO PRINCIPAL</div>
+        <h1>ULTRANATOMIA</h1>
+        <p>Supera los 8 obst&aacute;culos anat&oacute;micos a toda velocidad. Entra en bullet time, responde con precisi&oacute;n y encadena mec&aacute;nicas distintas para alcanzar el Rango P.</p>
+        <div class="mech-legend">
+            <span class="mech-pill" style="color:#ff3344;border-color:#ff3344">GOLPE &middot; Histolog&iacute;a</span>
+            <span class="mech-pill" style="color:#2a9dff;border-color:#2a9dff">PARRY &middot; Hormonas (+Vida)</span>
+            <span class="mech-pill" style="color:#ffd400;border-color:#ffd400">DISPARO &middot; Bioqu&iacute;mica</span>
+            <span class="mech-pill" style="color:#a23bff;border-color:#a23bff">QTE &middot; Secuencias</span>
+        </div>
+        <div>
+            <button id="startRun">INICIAR DEMO</button>
+        </div>
+        <a class="menu-link secondary" href="../">&larr; VOLVER AL MEN&Uacute; PRINCIPAL</a>
+        <small>Controles PC: teclas 1-4 para responder, flechas o WASD para el QTE.<br>Controles M&oacute;vil: toca la respuesta en pantalla y usa los botones direccionales o desliza en el QTE.</small>
+    </div>
+
+    <script>
+        // ==========================================
+        // 0. DATOS: MECÁNICAS Y BANCO DE PREGUNTAS
+        // ==========================================
+        const MECH = {
+            golpe:   { name: 'GOLPE',   color: 0xff3344, css: '#ff3344', tema: 'Estructura e histología' },
+            parry:   { name: 'PARRY',   color: 0x2a9dff, css: '#2a9dff', tema: 'Regulación hormonal' },
+            disparo: { name: 'DISPARO', color: 0xffd400, css: '#ffd400', tema: 'Transporte y bioquímica' },
+            qte:     { name: 'QTE',     color: 0xa23bff, css: '#a23bff', tema: 'Procesos secuenciales' }
+        };
+
+        // La primera opción de cada pregunta es la correcta; se barajan al mostrarlas.
+        const BANK = {
+            golpe: [
+                { q: '¿Cuál es la capa más interna del útero, la que se desprende durante la menstruación?', a: ['Endometrio', 'Miometrio', 'Perimetrio', 'Epitelio vaginal'] },
+                { q: '¿Qué célula forma la barrera hematotesticular mediante uniones estrechas?', a: ['Célula de Sertoli', 'Célula de Leydig', 'Espermatogonia', 'Célula mioide peritubular'] },
+                { q: '¿Cuál es la cápsula fibrosa gruesa que envuelve directamente al testículo?', a: ['Túnica albugínea', 'Túnica vaginal', 'Túnica dartos', 'Fascia espermática externa'] },
+                { q: '¿Qué célula del intersticio testicular sintetiza la testosterona?', a: ['Célula de Leydig', 'Célula de Sertoli', 'Espermátide', 'Célula mioide peritubular'] },
+                { q: '¿Qué capa del útero es una gruesa capa de músculo liso responsable de las contracciones del parto?', a: ['Miometrio', 'Endometrio', 'Perimetrio', 'Mucosa cervical'] },
+                { q: '¿Cuál es la capa serosa más externa del útero?', a: ['Perimetrio', 'Miometrio', 'Endometrio', 'Túnica albugínea'] }
+            ],
+            parry: [
+                { q: '¿Qué hormona tiene un pico que desencadena directamente la ovulación?', a: ['LH (hormona luteinizante)', 'Progesterona', 'Testosterona', 'Inhibina'] },
+                { q: 'La inhibina B secretada por las células de Sertoli retroalimenta negativamente a:', a: ['La FSH', 'La testosterona', 'La prolactina', 'La oxitocina'] },
+                { q: 'La testosterona ejerce retroalimentación negativa sobre:', a: ['El hipotálamo y la adenohipófisis', 'La neurohipófisis', 'El epidídimo', 'La próstata'] },
+                { q: '¿Qué hormona domina la fase lútea, secretada por el cuerpo lúteo?', a: ['Progesterona', 'FSH', 'GnRH', 'Prolactina'] },
+                { q: 'El pico preovulatorio de estradiol ejerce sobre la LH una retroalimentación:', a: ['Positiva', 'Negativa', 'Nula', 'Competitiva'] },
+                { q: 'En el testículo, ¿qué células responden principalmente a la LH?', a: ['Células de Leydig', 'Células de Sertoli', 'Espermatogonias', 'Células peritubulares'] }
+            ],
+            disparo: [
+                { q: '¿En qué estructura maduran y se almacenan los espermatozoides?', a: ['Epidídimo', 'Próstata', 'Vesícula seminal', 'Uretra'] },
+                { q: '¿Qué azúcar aportada por las vesículas seminales nutre al espermatozoide?', a: ['Fructosa', 'Lactosa', 'Sacarosa', 'Maltosa'] },
+                { q: '¿Dónde ocurre normalmente la fecundación?', a: ['Ampolla de la trompa de Falopio', 'Cavidad uterina', 'Vagina', 'Cérvix'] },
+                { q: '¿Qué estructura produce la enzima proteolítica (PSA) que licúa el coágulo seminal?', a: ['Próstata', 'Epidídimo', 'Glándula bulbouretral', 'Conducto deferente'] },
+                { q: '¿Qué mediador provoca la vasodilatación y la erección en los cuerpos cavernosos?', a: ['Óxido nítrico', 'Adrenalina', 'Angiotensina II', 'Endotelina'] },
+                { q: '¿Qué glándula aporta la mayor proporción del volumen del líquido seminal?', a: ['Vesículas seminales', 'Próstata', 'Glándulas bulbouretrales', 'Epidídimo'] }
+            ],
+            qte: [
+                { q: 'Orden correcto del recorrido del espermatozoide:', a: ['Túbulos seminíferos → Epidídimo → Conducto deferente → Uretra', 'Epidídimo → Túbulos seminíferos → Uretra → Conducto deferente', 'Uretra → Próstata → Testículo → Epidídimo', 'Conducto deferente → Uretra → Epidídimo → Testículo'] },
+                { q: 'Orden correcto de la espermatogénesis:', a: ['Espermatogonia → Espermatocito primario → Espermatocito secundario → Espermátide', 'Espermatocito primario → Espermatogonia → Espermátide → Espermatocito secundario', 'Espermátide → Espermatocito secundario → Espermatocito primario → Espermatogonia', 'Espermatogonia → Espermátide → Espermatocito primario → Espermatocito secundario'] },
+                { q: 'Fases del ciclo endometrial a partir del primer día de sangrado:', a: ['Menstrual → Proliferativa → Secretora', 'Proliferativa → Menstrual → Secretora', 'Secretora → Proliferativa → Menstrual', 'Menstrual → Secretora → Proliferativa'] },
+                { q: 'Orden de la foliculogénesis:', a: ['Primordial → Primario → Secundario (antral) → De Graaf', 'Primario → Primordial → De Graaf → Secundario (antral)', 'De Graaf → Secundario (antral) → Primario → Primordial', 'Primordial → Secundario (antral) → Primario → De Graaf'] },
+                { q: 'Secuencia de eventos de la fecundación:', a: ['Capacitación → Reacción acrosómica → Fusión con el ovocito → Reacción cortical', 'Reacción cortical → Capacitación → Reacción acrosómica → Fusión con el ovocito', 'Fusión con el ovocito → Capacitación → Reacción acrosómica → Reacción cortical', 'Reacción acrosómica → Reacción cortical → Capacitación → Fusión con el ovocito'] }
+            ]
+        };
+
+        function shuffle(arr) {
+            const a = arr.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        const decks = {};
+        function drawQuestion(type) {
+            if (!decks[type] || decks[type].length === 0) decks[type] = shuffle(BANK[type].map((_, i) => i));
+            const item = BANK[type][decks[type].pop()];
+            const opts = shuffle(item.a.map((t, i) => ({ t, ok: i === 0 })));
+            return {
+                type,
+                q: item.q,
+                options: opts.map((o, i) => (i + 1) + '. ' + o.t),
+                correct: opts.findIndex(o => o.ok) + 1
+            };
+        }
+
+        const emit = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }));
+        let lastUiAction = 0;
+
+        // ==========================================
+        // 1. CONSTANTES DE JUEGO
+        // ==========================================
+        const RUN_LEN = 8;
+        const CHECKPOINT_EVERY = 4;
+        const FIRST_Z = -40;
+        const SPACING = 40;
+        const RUN_SPEED = 14;
+        const TRIGGER_DIST = 18;
+        const STOP_DIST = 7;
+        const QTE_LEN = 5;
+        const QTE_STEP_TIME = 1.5;
+        const BASE_FOV = 75;
+        const TRIVIA_FOV = 64;
+        const RANKS = ['D', 'C', 'B', 'A', 'S'];
+        const TIME_THRESH = [90, 120, 150, 190];
+        const STYLE_THRESH = [1250, 1000, 750, 450];
+        const ACC_THRESH = [95, 85, 70, 50];
+        const QTE_KEYS = {
+            ArrowLeft: 'L', KeyA: 'L', ArrowRight: 'R', KeyD: 'R',
+            ArrowUp: 'U', KeyW: 'U', ArrowDown: 'D', KeyS: 'D'
+        };
+
+        // ==========================================
+        // 2. ENTORNO 3D (THREE.JS)
+        // ==========================================
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0d0406);
+        scene.fog = new THREE.Fog(0x0d0406, 10, 70);
+
+        const camera = new THREE.PerspectiveCamera(BASE_FOV, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2.2, 0);
+
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas'), antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        scene.add(new THREE.AmbientLight(0x604048));
+        const pointLight = new THREE.PointLight(0xffffff, 1.3, 70);
+        scene.add(pointLight);
+
+        const gridHelper = new THREE.GridHelper(60, 60, 0x555555, 0x222222);
+        scene.add(gridHelper);
+
+        const tube = new THREE.Mesh(
+            new THREE.CylinderGeometry(9, 9, 400, 24, 1, true),
+            new THREE.MeshPhongMaterial({ color: 0x2a0a10, emissive: 0x140407, side: THREE.BackSide })
+        );
+        tube.rotation.x = Math.PI / 2;
+        tube.position.y = 3;
+        scene.add(tube);
+
+        const RING_COUNT = 14, RING_GAP = 8;
+        const ringGeo = new THREE.TorusGeometry(9, 0.25, 8, 28);
+        const ringMat = new THREE.MeshPhongMaterial({ color: 0x5a1520, emissive: 0x2a0a10 });
+        const rings = [];
+        for (let i = 0; i < RING_COUNT; i++) {
+            const r = new THREE.Mesh(ringGeo, ringMat);
+            r.position.set(0, 3, 10 - i * RING_GAP);
+            scene.add(r);
+            rings.push(r);
+        }
+
+        const obstacles = [];
+        let finishMarker = null;
+
+        function buildObstacle(o) {
+            const g = o.group, c = MECH[o.type].color, p = o.parts;
+            const mat = (extra) => new THREE.MeshPhongMaterial(Object.assign({
+                color: c, emissive: c, emissiveIntensity: 0.25, transparent: true, opacity: 0.85, shininess: 60
+            }, extra));
+
+            if (o.type === 'golpe') {
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(11, 6.5, 1.2), mat());
+                wall.position.y = 3.25;
+                const cage = new THREE.Mesh(
+                    new THREE.BoxGeometry(11.3, 6.8, 1.5),
+                    new THREE.MeshBasicMaterial({ color: 0xffaaaa, wireframe: true, transparent: true, opacity: 0.35 })
+                );
+                cage.position.y = 3.25;
+                g.add(wall, cage);
+                p.wall = wall;
+            } else if (o.type === 'parry') {
+                const core = new THREE.Mesh(new THREE.OctahedronGeometry(1.4), mat());
+                core.position.y = 3.2;
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.15, 8, 32), mat({ opacity: 1 }));
+                ring.position.y = 3.2;
+                g.add(core, ring);
+                p.core = core;
+                p.ring = ring;
+            } else if (o.type === 'disparo') {
+                const gate = new THREE.Mesh(new THREE.BoxGeometry(11, 6.5, 0.8), mat({ opacity: 0.8 }));
+                gate.position.y = 3.25;
+                g.add(gate);
+                const target = new THREE.Group();
+                target.add(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffee88 })),
+                    new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.12, 8, 28), new THREE.MeshBasicMaterial({ color: c }))
+                );
+                target.position.set(0, 7.6, -2);
+                g.add(target);
+                p.gate = gate;
+                p.target = target;
+            } else {
+                const iris = new THREE.Group();
+                iris.add(
+                    new THREE.Mesh(new THREE.TorusGeometry(3.4, 0.8, 12, 36), mat({ opacity: 1 })),
+                    p.disc = new THREE.Mesh(new THREE.CircleGeometry(3.4, 32), mat({ opacity: 0.55, side: THREE.DoubleSide }))
+                );
+                iris.position.y = 3.2;
+                g.add(iris);
+                p.iris = iris;
+            }
+            g.traverse(m => { m.userData.obs = o; });
+        }
+
+        function disposeObject(obj) {
+            obj.traverse(c => {
+                if (c.geometry) c.geometry.dispose();
+                if (c.material) (Array.isArray(c.material) ? c.material : [c.material]).forEach(m => m.dispose());
+            });
+        }
+
+        function createObstacle(type, z, index) {
+            const o = { type, z, index, cleared: false, t: Math.random() * 6, group: new THREE.Group(), parts: {} };
+            o.group.position.set(0, 0, z);
+            buildObstacle(o);
+            scene.add(o.group);
+            obstacles.push(o);
+            return o;
+        }
+
+        function removeObstacle(o) {
+            scene.remove(o.group);
+            disposeObject(o.group);
+            const i = obstacles.indexOf(o);
+            if (i >= 0) obstacles.splice(i, 1);
+        }
+
+        function clearObstacles() {
+            obstacles.slice().forEach(removeObstacle);
+            if (finishMarker) {
+                scene.remove(finishMarker);
+                disposeObject(finishMarker);
+                finishMarker = null;
+            }
+        }
+
+        function animateObstacles(dt) {
+            obstacles.forEach(o => {
+                o.t += dt;
+                const p = o.parts;
+                if (p.core) {
+                    p.core.rotation.y += dt * 1.2;
+                    p.core.rotation.x += dt * 0.6;
+                    p.core.position.y = 3.2 + Math.sin(o.t * 2) * 0.4;
+                }
+                if (p.ring) p.ring.rotation.z += dt * 1.5;
+                if (p.target) p.target.rotation.y += dt * 2;
+                if (p.wall) p.wall.material.emissiveIntensity = 0.25 + 0.15 * Math.sin(o.t * 4);
+                if (p.iris && !o.opening) p.iris.scale.setScalar(1 + 0.08 * Math.sin(o.t * 5));
+            });
+        }
+
+        // --- Efectos ---
+        const fx = [];
+        const shardGeo = new THREE.BoxGeometry(0.35, 0.35, 0.35);
+
+        function spawnShard(pos, vel, color, life) {
+            const mesh = new THREE.Mesh(shardGeo, new THREE.MeshBasicMaterial({ color, transparent: true }));
+            mesh.position.copy(pos);
+            scene.add(mesh);
+            fx.push({
+                mesh, vel, life, max: life, grav: true, grow: 0,
+                spin: new THREE.Vector3(Math.random() * 8, Math.random() * 8, Math.random() * 8)
+            });
+        }
+
+        function burst(pos, color, n, speed) {
+            for (let i = 0; i < n; i++) {
+                const v = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.1, Math.random() - 0.5).normalize().multiplyScalar(speed * (0.4 + Math.random() * 0.6));
+                spawnShard(pos, v, color, 0.8 + Math.random() * 0.8);
+            }
+        }
+
+        function flashRing(pos, color) {
+            const mesh = new THREE.Mesh(
+                new THREE.RingGeometry(0.6, 0.9, 32),
+                new THREE.MeshBasicMaterial({ color, transparent: true, side: THREE.DoubleSide })
+            );
+            mesh.position.copy(pos);
+            scene.add(mesh);
+            fx.push({ mesh, vel: new THREE.Vector3(), spin: new THREE.Vector3(), life: 0.5, max: 0.5, grav: false, grow: 7 });
+        }
+
+        function updateFx(dt) {
+            for (let i = fx.length - 1; i >= 0; i--) {
+                const f = fx[i];
+                f.life -= dt;
+                if (f.life <= 0) {
+                    scene.remove(f.mesh);
+                    f.mesh.material.dispose();
+                    if (f.mesh.geometry !== shardGeo) f.mesh.geometry.dispose();
+                    fx.splice(i, 1);
+                    continue;
+                }
+                if (f.grav) f.vel.y -= 14 * dt;
+                f.mesh.position.addScaledVector(f.vel, dt);
+                f.mesh.rotation.x += f.spin.x * dt;
+                f.mesh.rotation.y += f.spin.y * dt;
+                f.mesh.rotation.z += f.spin.z * dt;
+                if (f.grow) f.mesh.scale.addScalar(f.grow * dt);
+                f.mesh.material.opacity = f.life / f.max;
+            }
+        }
+
+        function clearFx() {
+            fx.forEach(f => { scene.remove(f.mesh); f.mesh.material.dispose(); });
+            fx.length = 0;
+        }
+
+        function glowSphere(color, r) {
+            const m = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), new THREE.MeshBasicMaterial({ color }));
+            scene.add(m);
+            return m;
+        }
+
+        function dropMesh(m) {
+            scene.remove(m);
+            disposeObject(m);
+        }
+
+        const anims = [];
+        function anim(dur, fn, done) {
+            anims.push({ t: 0, dur, fn, done, tk: GameState.token });
+        }
+        function updateAnims(dt) {
+            for (let i = anims.length - 1; i >= 0; i--) {
+                const a = anims[i];
+                if (a.tk !== GameState.token) { anims.splice(i, 1); continue; }
+                a.t += dt;
+                const k = Math.min(1, a.t / a.dur);
+                a.fn(k);
+                if (k >= 1) {
+                    anims.splice(i, 1);
+                    if (a.done) a.done();
+                }
+            }
+        }
+
+        // ==========================================
+        // 3. EJECUCIÓN DE CADA MECÁNICA
+        // ==========================================
+        let shakeAmt = 0;
+        const shake = (n) => { shakeAmt = Math.max(shakeAmt, n); };
+
+        const EXEC = {
+            golpe(o) {
+                emit('banner', { text: '¡GOLPE!', color: MECH.golpe.css });
+                const fist = glowSphere(MECH.golpe.color, 0.45);
+                const from = new THREE.Vector3(0.7, 1.6, GameState.player.z - 1.5);
+                const to = new THREE.Vector3(0, 3, o.z + 0.9);
+                anim(0.28, k => fist.position.lerpVectors(from, to, k * k), () => {
+                    dropMesh(fist);
+                    for (let i = 0; i < 70; i++) {
+                        const pos = new THREE.Vector3((Math.random() - 0.5) * 11, 0.3 + Math.random() * 6, o.z + (Math.random() - 0.5) * 0.8);
+                        const vel = new THREE.Vector3((Math.random() - 0.5) * 8, 2 + Math.random() * 8, (Math.random() - 0.3) * 12);
+                        spawnShard(pos, vel, 0xff3344, 0.8 + Math.random() * 0.8);
+                    }
+                    shake(0.7);
+                    removeObstacle(o);
+                    finishClear(o);
+                });
+            },
+
+            parry(o) {
+                emit('banner', { text: '¡PARRY!', color: MECH.parry.css });
+                const turret = new THREE.Vector3(0, 3.2, o.z);
+                const hit = new THREE.Vector3(0, 2.5, GameState.player.z - 2.5);
+                const bolt = glowSphere(0x66ff88, 0.55);
+                bolt.position.copy(turret);
+                anim(0.7, k => bolt.position.lerpVectors(turret, hit, k), () => {
+                    flashRing(hit, 0x2a9dff);
+                    shake(0.4);
+                    bolt.material.color.set(MECH.parry.color);
+                    GameState.health = GameState.maxHealth;
+                    emit('updateHealth', GameState.health);
+                    GameState.addStyle(100);
+                    emit('banner', { text: '¡PARRY! VITALIDAD 100%', color: MECH.parry.css });
+                    anim(0.4, k => bolt.position.lerpVectors(hit, turret, k), () => {
+                        dropMesh(bolt);
+                        burst(turret, MECH.parry.color, 60, 12);
+                        shake(0.5);
+                        removeObstacle(o);
+                        finishClear(o);
+                    });
+                });
+            },
+
+            disparo(o) {
+                emit('banner', { text: '¡DISPARO!', color: MECH.disparo.css });
+                const targetPos = new THREE.Vector3().copy(o.group.position).add(o.parts.target.position);
+                const from = new THREE.Vector3(0.4, 1.6, GameState.player.z - 1);
+                const bolt = glowSphere(0xffffaa, 0.25);
+                anim(0.35, k => bolt.position.lerpVectors(from, targetPos, k), () => {
+                    dropMesh(bolt);
+                    burst(targetPos, MECH.disparo.color, 40, 10);
+                    flashRing(targetPos, MECH.disparo.color);
+                    o.group.remove(o.parts.target);
+                    disposeObject(o.parts.target);
+                    delete o.parts.target;
+                    const gate = o.parts.gate;
+                    anim(0.9, k => {
+                        gate.position.y = 3.25 + k * 8;
+                        gate.material.opacity = 0.8 * (1 - k * 0.8);
+                    }, () => {
+                        removeObstacle(o);
+                        finishClear(o);
+                    });
+                });
+            },
+
+            qte(o) {
+                const dirs = ['L', 'U', 'D', 'R'];
+                const seq = [];
+                for (let i = 0; i < QTE_LEN; i++) seq.push(dirs[Math.floor(Math.random() * 4)]);
+                GameState.qte = { o, seq, i: 0, time: QTE_STEP_TIME };
+                GameState.phase = 'qte';
+                emit('showQTE', { seq });
+            }
+        };
+
+        function finishClear(o) {
+            o.cleared = true;
+            GameState.onCleared(o);
+        }
+
+        // ==========================================
+        // 4. GESTOR DE ESTADO GLOBAL
+        // ==========================================
+        const GameState = {
+            mode: 'run',
+            phase: 'menu',
+            health: 100,
+            maxHealth: 100,
+            bulletScale: 0.12,
+            damagePct: 25,
+            stats: { correct: 0, wrong: 0, deaths: 0 },
+            style: 0,
+            styleAtCp: 0,
+            lastMech: null,
+            runTime: 0,
+            plan: [],
+            cpIdx: 0,
+            cpZ: 0,
+            finishZ: 0,
+            timeScale: 1,
+            targetScale: 1,
+            fov: BASE_FOV,
+            targetFov: BASE_FOV,
+            player: { z: 0 },
+            current: null,
+            question: null,
+            answerLock: false,
+            qte: null,
+            token: 0,
+
+            later(ms, fn) {
+                const tk = this.token;
+                setTimeout(() => { if (tk === this.token) fn(); }, ms);
+            },
+
+            resetAll() {
+                this.token++;
+                clearObstacles();
+                clearFx();
+                anims.length = 0;
+                this.health = this.maxHealth;
+                this.stats = { correct: 0, wrong: 0, deaths: 0 };
+                this.style = 0;
+                this.styleAtCp = 0;
+                this.lastMech = null;
+                this.runTime = 0;
+                this.cpIdx = 0;
+                this.cpZ = 0;
+                this.player.z = 0;
+                this.timeScale = this.targetScale = 1;
+                this.targetFov = BASE_FOV;
+                this.current = null;
+                this.question = null;
+                this.answerLock = false;
+                this.qte = null;
+                emit('hideTrivia');
+                emit('hideQTE');
+                emit('hideDeath');
+                emit('hideResults');
+                emit('updateHealth', this.health);
+            },
+
+            start() {
+                this.resetAll();
+                this.mode = 'run';
+                document.getElementById('menu').classList.add('hidden');
+                this.buildRun();
+                this.phase = 'running';
+                emit('banner', { text: '¡CORRE!', color: '#ffffff' });
+            },
+
+            toMenu() {
+                this.resetAll();
+                this.phase = 'menu';
+                document.getElementById('menu').classList.remove('hidden');
+            },
+
+            restart() {
+                if (this.phase === 'menu') return;
+                this.start();
+            },
+
+            makePlan() {
+                const types = Object.keys(MECH);
+                let best = null;
+                for (let tries = 0; tries < 50; tries++) {
+                    const p = shuffle(types.concat(types));
+                    let ok = true;
+                    for (let i = 1; i < p.length; i++) if (p[i] === p[i - 1]) ok = false;
+                    if (ok) return p;
+                    best = p;
+                }
+                return best;
+            },
+
+            zFor(i) { return FIRST_Z - i * SPACING; },
+
+            buildRun() {
+                this.plan = this.makePlan();
+                this.plan.slice(0, RUN_LEN).forEach((type, i) => createObstacle(type, this.zFor(i), i));
+                this.finishZ = this.zFor(RUN_LEN - 1) - 35;
+                finishMarker = new THREE.Mesh(
+                    new THREE.TorusGeometry(7.5, 0.5, 8, 40),
+                    new THREE.MeshBasicMaterial({ color: 0xffffff })
+                );
+                finishMarker.position.set(0, 3, this.finishZ);
+                scene.add(finishMarker);
+            },
+
+            nextObstacle() {
+                let best = null;
+                obstacles.forEach(o => { if (!o.cleared && (!best || o.index < best.index)) best = o; });
+                return best;
+            },
+
+            triggerTrivia(o) {
+                if (this.phase !== 'running') return;
+                this.phase = 'trivia';
+                this.current = o;
+                this.targetScale = this.bulletScale;
+                this.targetFov = TRIVIA_FOV;
+                this.showQuestion();
+            },
+
+            showQuestion() {
+                this.question = drawQuestion(this.current.type);
+                this.answerLock = false;
+                this.emitQuestion();
+            },
+
+            emitQuestion() {
+                const m = MECH[this.current.type];
+                emit('showTrivia', {
+                    q: this.question.q,
+                    options: this.question.options,
+                    name: m.name,
+                    tema: m.tema,
+                    color: m.css
+                });
+            },
+
+            answer(n) {
+                if (this.phase !== 'trivia' || this.answerLock) return;
+                lastUiAction = performance.now();
+                const type = this.current.type;
+                const ok = n === this.question.correct;
+                this.answerLock = true;
+                emit('triviaFeedback', { picked: n, correct: this.question.correct });
+
+                if (ok) {
+                    this.stats.correct++;
+                    this.addStyle(this.lastMech && this.lastMech !== type ? 150 : 100);
+                    this.lastMech = type;
+                    this.later(450, () => {
+                        emit('hideTrivia');
+                        this.phase = 'exec';
+                        this.targetScale = type === 'qte' ? 0.5 : 1;
+                        this.targetFov = BASE_FOV;
+                        EXEC[type](this.current);
+                    });
+                } else {
+                    this.stats.wrong++;
+                    this.addStyle(-150);
+                    this.damage(this.damagePct);
+                    if (this.phase === 'dead') return;
+                    this.later(1500, () => this.showQuestion());
+                }
+            },
+
+            addStyle(n) {
+                this.style = Math.max(0, this.style + n);
+            },
+
+            damage(pct) {
+                this.health = Math.max(0, this.health - this.maxHealth * pct / 100);
+                emit('updateHealth', this.health);
+                shake(0.5);
+                if (this.health <= 0) this.die();
+            },
+
+            die() {
+                this.token++;
+                this.phase = 'dead';
+                this.stats.deaths++;
+                this.qte = null;
+                this.answerLock = false;
+                emit('hideTrivia');
+                emit('hideQTE');
+                emit('showDeath');
+                this.later(1500, () => this.respawn());
+            },
+
+            respawn() {
+                this.health = this.maxHealth;
+                emit('updateHealth', this.health);
+                emit('hideDeath');
+                this.timeScale = this.targetScale = 1;
+                this.targetFov = BASE_FOV;
+                this.current = null;
+                this.question = null;
+                clearObstacles();
+                this.player.z = this.cpZ;
+                this.style = this.styleAtCp;
+                this.lastMech = null;
+                for (let i = this.cpIdx; i < RUN_LEN; i++) createObstacle(this.plan[i], this.zFor(i), i);
+                finishMarker = new THREE.Mesh(
+                    new THREE.TorusGeometry(7.5, 0.5, 8, 40),
+                    new THREE.MeshBasicMaterial({ color: 0xffffff })
+                );
+                finishMarker.position.set(0, 3, this.finishZ);
+                scene.add(finishMarker);
+                this.phase = 'running';
+                emit('banner', { text: 'CHECKPOINT', color: '#ffffff' });
+            },
+
+            onCleared(o) {
+                this.current = null;
+                this.question = null;
+                this.targetScale = 1;
+                this.targetFov = BASE_FOV;
+                this.phase = 'running';
+                const done = o.index + 1;
+                if (done % CHECKPOINT_EVERY === 0 && done < RUN_LEN) {
+                    this.cpIdx = done;
+                    this.cpZ = this.player.z;
+                    this.styleAtCp = this.style;
+                    emit('banner', { text: 'CHECKPOINT', color: '#ffffff' });
+                }
+            },
+
+            // --- QTE ---
+            qteInput(key) {
+                const q = this.qte;
+                if (this.phase !== 'qte' || !q) return;
+                lastUiAction = performance.now();
+                if (key !== q.seq[q.i]) return this.qteFail();
+                q.i++;
+                q.time = QTE_STEP_TIME;
+                this.player.z -= 1.2;
+                flashRing(new THREE.Vector3(0, 2.5, this.player.z - 3), MECH.qte.color);
+                emit('qteStep', { i: q.i });
+                if (q.i >= q.seq.length) this.qteSuccess();
+            },
+
+            qteSuccess() {
+                const o = this.qte.o;
+                this.qte = null;
+                this.phase = 'exec';
+                this.addStyle(100);
+                emit('hideQTE');
+                emit('banner', { text: '¡QTE PERFECTO!', color: MECH.qte.css });
+                shake(0.5);
+                o.opening = true;
+                anim(0.5, k => {
+                    o.parts.iris.scale.setScalar(1 + k * 1.6);
+                    o.parts.disc.material.opacity = 0.55 * (1 - k);
+                }, () => {
+                    burst(new THREE.Vector3(0, 3.2, o.z), MECH.qte.color, 60, 12);
+                    removeObstacle(o);
+                    finishClear(o);
+                });
+            },
+
+            qteFail() {
+                const o = this.qte.o;
+                this.qte = null;
+                this.phase = 'exec';
+                emit('hideQTE');
+                emit('banner', { text: 'QTE FALLIDO', color: '#ff4444' });
+                this.addStyle(-100);
+                this.damage(this.damagePct);
+                if (this.phase === 'dead') return;
+                this.later(500, () => {
+                    burst(new THREE.Vector3(0, 3.2, o.z), 0x888888, 30, 8);
+                    removeObstacle(o);
+                    finishClear(o);
+                });
+            },
+
+            accuracy() {
+                const t = this.stats.correct + this.stats.wrong;
+                return t === 0 ? 100 : this.stats.correct / t * 100;
+            },
+
+            finishRun() {
+                this.phase = 'finished';
+                this.targetScale = 1;
+                const rankLow = (v, th) => v <= th[0] ? 4 : v <= th[1] ? 3 : v <= th[2] ? 2 : v <= th[3] ? 1 : 0;
+                const rankHigh = (v, th) => v >= th[0] ? 4 : v >= th[1] ? 3 : v >= th[2] ? 2 : v >= th[3] ? 1 : 0;
+                const acc = this.accuracy();
+                const tR = rankLow(this.runTime, TIME_THRESH);
+                const sR = rankHigh(this.style, STYLE_THRESH);
+                const aR = rankHigh(acc, ACC_THRESH);
+                const perfect = tR === 4 && sR === 4 && acc === 100 && this.stats.deaths === 0;
+                const overall = perfect ? 'P' : RANKS[Math.floor((tR + sR + aR) / 3)];
+                emit('showResults', {
+                    rows: [
+                        ['TIEMPO', fmtTime(this.runTime), RANKS[tR]],
+                        ['ESTILO', this.style + ' pts', RANKS[sR]],
+                        ['PRECISIÓN', acc.toFixed(1) + '%  (' + this.stats.correct + '/' + (this.stats.correct + this.stats.wrong) + ')', RANKS[aR]],
+                        ['MUERTES', String(this.stats.deaths), this.stats.deaths === 0 ? '-' : 'sin Rango P']
+                    ],
+                    rank: overall
+                });
+            },
+
+            update(dt) {
+                this.timeScale += (this.targetScale - this.timeScale) * Math.min(1, dt * 8);
+                this.fov += (this.targetFov - this.fov) * Math.min(1, dt * 6);
+                const sdt = dt * this.timeScale;
+
+                const active = ['running', 'trivia', 'exec', 'qte'].includes(this.phase);
+                if (active) this.runTime += dt;
+
+                if (this.phase === 'running') {
+                    this.player.z -= RUN_SPEED * sdt;
+                    const next = this.nextObstacle();
+                    if (next && this.player.z - next.z <= TRIGGER_DIST) this.triggerTrivia(next);
+                    else if (!next && this.player.z <= this.finishZ) this.finishRun();
+                } else if (this.phase === 'trivia') {
+                    this.player.z = Math.max(this.current.z + STOP_DIST, this.player.z - RUN_SPEED * sdt);
+                }
+
+                if (this.phase === 'qte' && this.qte) {
+                    this.qte.time -= dt;
+                    emit('qteTime', { frac: Math.max(0, this.qte.time / QTE_STEP_TIME) });
+                    if (this.qte.time <= 0) this.qteFail();
+                }
+                return sdt;
+            },
+
+            hud() {
+                return {
+                    time: this.runTime,
+                    style: this.style,
+                    progress: (RUN_LEN - obstacles.filter(o => !o.cleared).length) + '/' + RUN_LEN
+                };
+            }
+        };
+
+        function fmtTime(s) {
+            const m = Math.floor(s / 60);
+            return String(m).padStart(2, '0') + ':' + (s - m * 60).toFixed(1).padStart(4, '0');
+        }
+
+        // ==========================================
+        // 5. ENTRADA (TECLADO / TÁCTIL)
+        // ==========================================
+        let touchStartX = 0, touchStartY = 0, touchQteActive = false;
+        window.addEventListener('touchstart', (e) => {
+            if (GameState.phase !== 'qte' || !e.touches.length) return;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchQteActive = true;
+        }, { passive: true });
+
+        window.addEventListener('touchend', (e) => {
+            if (!touchQteActive || GameState.phase !== 'qte' || !e.changedTouches.length) return;
+            touchQteActive = false;
+            if (performance.now() - lastUiAction < 150) return;
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            if (Math.hypot(dx, dy) < 28) return;
+            const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U');
+            GameState.qteInput(dir);
+        }, { passive: true });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            const gs = GameState;
+            if (gs.phase === 'trivia') {
+                const m = /^(?:Digit|Numpad)([1-4])$/.exec(e.code);
+                if (m) gs.answer(Number(m[1]));
+            } else if (gs.phase === 'qte') {
+                const k = QTE_KEYS[e.code];
+                if (k) {
+                    e.preventDefault();
+                    gs.qteInput(k);
+                }
+            } else if (gs.phase === 'finished') {
+                if (e.code === 'KeyR' || e.code === 'Enter') gs.start();
+                else if (e.code === 'KeyM') gs.toMenu();
+            }
+        });
+
+        document.getElementById('startRun').onclick = () => GameState.start();
+        document.getElementById('btnRestart').onclick = (e) => { GameState.restart(); e.target.blur(); };
+        document.getElementById('btnMenu').onclick = (e) => { GameState.toMenu(); e.target.blur(); };
+
+        // ==========================================
+        // 6. BUCLE DE RENDER
+        // ==========================================
+        const clock = new THREE.Clock();
+        let hudTimer = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.05);
+            const sdt = GameState.update(dt);
+            updateAnims(dt);
+            animateObstacles(sdt);
+            updateFx(sdt);
+
+            const pz = GameState.player.z;
+
+            rings.forEach(r => { while (r.position.z > pz + 10) r.position.z -= RING_COUNT * RING_GAP; });
+            tube.position.z = pz - 150;
+            gridHelper.position.z = Math.round(pz);
+            pointLight.position.set(0, 6, pz - 6);
+
+            const running = GameState.phase === 'running';
+            const bob = running ? Math.sin(performance.now() * 0.012) * 0.08 : 0;
+            shakeAmt *= Math.max(0, 1 - dt * 6);
+            camera.position.set(
+                (Math.random() - 0.5) * shakeAmt,
+                2.2 + bob + (Math.random() - 0.5) * shakeAmt,
+                pz
+            );
+            camera.lookAt(0, 2.6, pz - 20);
+            if (Math.abs(camera.fov - GameState.fov) > 0.01) {
+                camera.fov = GameState.fov;
+                camera.updateProjectionMatrix();
+            }
+
+            hudTimer += dt;
+            if (hudTimer > 0.1) {
+                hudTimer = 0;
+                emit('updateHud', GameState.hud());
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // ==========================================
+        // 7. INTERFAZ UI Y LÓGICA 2D (PHASER 3)
+        // ==========================================
+        const ARROW = { L: '←', U: '↑', D: '↓', R: '→' };
+
+        class UIScene extends Phaser.Scene {
+            constructor() {
+                super('UIScene');
+            }
+
+            create() {
+                const F = (size, extra) => Object.assign({
+                    fontFamily: '"Courier New", Courier, monospace', fontSize: size + 'px', color: '#ffffff', fontStyle: 'bold'
+                }, extra || {});
+
+                // --- HUD ESTÁNDAR ---
+                this.hudLeft = this.add.container(14, 16);
+                this.hpBg = this.add.rectangle(0, 0, 260, 28, 0x440000).setOrigin(0, 0);
+                this.hpBar = this.add.rectangle(0, 0, 260, 28, 0xff0000).setOrigin(0, 0);
+                this.hpLabel = this.add.text(8, 5, 'VITALIDAD', F(17));
+                this.hudLeft.add([this.hpBg, this.hpBar, this.hpLabel]);
+                this.hpProxy = { v: 1 };
+
+                this.styleText = this.add.text(0, 16, 'ESTILO: 0', F(22, { color: '#ffd700' })).setOrigin(1, 0);
+                this.timeText = this.add.text(0, 44, '00:00.0', F(18)).setOrigin(1, 0);
+                this.progText = this.add.text(0, 68, 'OBSTÁCULOS 0/8', F(15, { color: '#aaaaaa' })).setOrigin(1, 0);
+                this.bannerText = this.add.text(0, 0, '', F(32, { align: 'center' })).setOrigin(0.5).setAlpha(0);
+
+                // --- PANEL DE TRIVIA CON SOPORTE TÁCTIL Y RATÓN ---
+                this.tri = this.add.container(0, 0);
+                this.triBg = this.add.rectangle(0, 0, 820, 520, 0x000000, 0.90).setStrokeStyle(4, 0xffffff);
+                this.triHead = this.add.text(0, -230, '', F(20)).setOrigin(0.5);
+                this.qText = this.add.text(0, -195, '', F(22, { align: 'center', wordWrap: { width: 760 } })).setOrigin(0.5, 0);
+
+                this.optionBgs = [];
+                this.optionTexts = [];
+
+                for (let i = 0; i < 4; i++) {
+                    const oy = -75 + i * 68;
+                    const bg = this.add.rectangle(0, oy, 760, 56, 0x161616, 0.95)
+                        .setStrokeStyle(2, 0x444444)
+                        .setInteractive({ useHandCursor: true });
+
+                    const txt = this.add.text(-360, oy, '', F(19, { fontStyle: 'normal', color: '#ffffff', wordWrap: { width: 720 } }))
+                        .setOrigin(0, 0.5);
+
+                    bg.on('pointerover', () => {
+                        if (GameState.phase === 'trivia' && !GameState.answerLock) {
+                            bg.setFillStyle(0x282828, 1).setStrokeStyle(2, 0xbbbbbb);
+                        }
+                    });
+                    bg.on('pointerout', () => {
+                        if (GameState.phase === 'trivia' && !GameState.answerLock) {
+                            bg.setFillStyle(0x161616, 0.95).setStrokeStyle(2, 0x444444);
+                        }
+                    });
+                    bg.on('pointerdown', () => {
+                        GameState.answer(i + 1);
+                    });
+
+                    this.optionBgs.push(bg);
+                    this.optionTexts.push(txt);
+                }
+
+                this.triHint = this.add.text(0, 224, 'Toca una opción o pulsa [1-4]', F(14, { fontStyle: 'normal', color: '#999999' })).setOrigin(0.5);
+                this.tri.add([this.triBg, this.triHead, this.qText, ...this.optionBgs, ...this.optionTexts, this.triHint]);
+                this.tri.setVisible(false);
+
+                // --- PANEL QTE CON BOTONES TÁCTILES ---
+                this.qteBox = this.add.container(0, 0);
+                this.qteBg = this.add.rectangle(0, 0, 600, 310, 0x000000, 0.88).setStrokeStyle(3, MECH.qte.color);
+                this.qteTitle = this.add.text(0, -122, '¡QTE! Repite la secuencia', F(20, { color: MECH.qte.css })).setOrigin(0.5);
+                this.qteArrows = [];
+                for (let i = 0; i < QTE_LEN; i++) {
+                    this.qteArrows.push(this.add.text((i - (QTE_LEN - 1) / 2) * 100, -52, '', F(56)).setOrigin(0.5));
+                }
+                this.qteBarBg = this.add.rectangle(-250, 8, 500, 14, 0x333333).setOrigin(0, 0.5);
+                this.qteBar = this.add.rectangle(-250, 8, 500, 14, MECH.qte.color).setOrigin(0, 0.5);
+
+                const qteDirs = [
+                    { k: 'L', label: '←', x: -180 },
+                    { k: 'U', label: '↑', x: -60 },
+                    { k: 'D', label: '↓', x: 60 },
+                    { k: 'R', label: '→', x: 180 }
+                ];
+                this.qteTouchItems = [];
+                qteDirs.forEach(d => {
+                    const btn = this.add.rectangle(d.x, 76, 104, 72, 0x1a0b2a, 0.95)
+                        .setStrokeStyle(2, MECH.qte.color)
+                        .setInteractive({ useHandCursor: true });
+                    const lbl = this.add.text(d.x, 76, d.label, F(40, { color: '#ffffff' })).setOrigin(0.5);
+                    btn.on('pointerdown', () => {
+                        btn.setFillStyle(0x4a1b7a, 1);
+                        GameState.qteInput(d.k);
+                    });
+                    btn.on('pointerup', () => btn.setFillStyle(0x1a0b2a, 0.95));
+                    btn.on('pointerout', () => btn.setFillStyle(0x1a0b2a, 0.95));
+                    this.qteTouchItems.push(btn, lbl);
+                });
+                this.qteHint = this.add.text(0, 134, 'Toca las flechas, desliza o usa WASD / Flechas', F(13, { fontStyle: 'normal', color: '#aaaaaa' })).setOrigin(0.5);
+
+                this.qteBox.add([
+                    this.qteBg, this.qteTitle, ...this.qteArrows,
+                    this.qteBarBg, this.qteBar, ...this.qteTouchItems, this.qteHint
+                ]);
+                this.qteBox.setVisible(false);
+
+                // --- MUERTE ---
+                this.deathBg = this.add.rectangle(0, 0, 10, 10, 0x660000, 0.55).setOrigin(0, 0).setVisible(false);
+                this.deathText = this.add.text(0, 0, 'VITALIDAD AGOTADA\nReiniciando desde el checkpoint...', F(32, { align: 'center' })).setOrigin(0.5).setVisible(false);
+
+                // --- RESULTADOS CON BOTONES TÁCTILES ---
+                this.res = this.add.container(0, 0);
+                this.resBg = this.add.rectangle(0, 0, 760, 500, 0x000000, 0.92).setStrokeStyle(4, 0xffffff);
+                this.resTitle = this.add.text(0, -205, 'DEMO COMPLETADA', F(28)).setOrigin(0.5);
+                this.resRows = this.add.text(-330, -145, '', F(24, { lineSpacing: 18 }));
+                this.resRank = this.add.text(0, 100, '', F(104, { color: '#ffd700' })).setOrigin(0.5);
+
+                this.resRetryBtn = this.add.rectangle(-135, 198, 230, 48, 0x161616, 0.95)
+                    .setStrokeStyle(2, 0xffffff)
+                    .setInteractive({ useHandCursor: true });
+                this.resRetryTxt = this.add.text(-135, 198, 'REPETIR [R]', F(18)).setOrigin(0.5);
+                this.resRetryBtn.on('pointerdown', () => { lastUiAction = performance.now(); GameState.start(); });
+                this.resRetryBtn.on('pointerover', () => this.resRetryBtn.setFillStyle(0x333333, 1));
+                this.resRetryBtn.on('pointerout', () => this.resRetryBtn.setFillStyle(0x161616, 0.95));
+
+                this.resMenuBtn = this.add.rectangle(135, 198, 230, 48, 0x161616, 0.95)
+                    .setStrokeStyle(2, 0xaaaaaa)
+                    .setInteractive({ useHandCursor: true });
+                this.resMenuTxt = this.add.text(135, 198, 'MENÚ [M]', F(18)).setOrigin(0.5);
+                this.resMenuBtn.on('pointerdown', () => { lastUiAction = performance.now(); GameState.toMenu(); });
+                this.resMenuBtn.on('pointerover', () => this.resMenuBtn.setFillStyle(0x333333, 1));
+                this.resMenuBtn.on('pointerout', () => this.resMenuBtn.setFillStyle(0x161616, 0.95));
+
+                this.res.add([
+                    this.resBg, this.resTitle, this.resRows, this.resRank,
+                    this.resRetryBtn, this.resRetryTxt, this.resMenuBtn, this.resMenuTxt
+                ]);
+                this.res.setVisible(false);
+
+                this.layout();
+                this.scale.on('resize', this.layout, this);
+
+                // --- LISTENERS EXTERNOS ---
+                window.addEventListener('showTrivia', (e) => this.displayTrivia(e.detail));
+                window.addEventListener('triviaFeedback', (e) => {
+                    const { picked, correct } = e.detail;
+                    const ok = picked === correct;
+                    this.optionTexts[picked - 1].setColor(ok ? '#00ff00' : '#ff3333');
+                    this.optionBgs[picked - 1].setFillStyle(ok ? 0x0d3b14 : 0x3b0d0d, 1).setStrokeStyle(2, ok ? 0x00ff00 : 0xff3333);
+                    if (!ok) {
+                        this.optionTexts[correct - 1].setColor('#00ff00');
+                        this.optionBgs[correct - 1].setFillStyle(0x0d3b14, 1).setStrokeStyle(2, 0x00ff00);
+                    }
+                });
+                window.addEventListener('hideTrivia', () => this.tri.setVisible(false));
+                window.addEventListener('updateHealth', (e) => {
+                    const frac = Math.max(0, e.detail / 100);
+                    this.tweens.add({
+                        targets: this.hpProxy,
+                        v: frac,
+                        duration: 200,
+                        onUpdate: () => { this.hpBar.width = Math.max(0.01, 260 * this.hpProxy.v); }
+                    });
+                });
+                window.addEventListener('updateHud', (e) => {
+                    const h = e.detail;
+                    this.styleText.setText('ESTILO: ' + h.style);
+                    this.timeText.setText(fmtTime(h.time));
+                    this.progText.setText('OBSTÁCULOS ' + h.progress);
+                });
+                window.addEventListener('banner', (e) => {
+                    this.bannerText.setText(e.detail.text).setColor(e.detail.color).setAlpha(1);
+                    this.tweens.killTweensOf(this.bannerText);
+                    this.tweens.add({ targets: this.bannerText, alpha: 0, delay: 700, duration: 500 });
+                });
+                window.addEventListener('showQTE', (e) => {
+                    this.qteSeq = e.detail.seq;
+                    this.qteArrows.forEach((t, i) => t.setText(ARROW[this.qteSeq[i]]).setColor('#666666'));
+                    this.qteArrows[0].setColor('#ffffff');
+                    this.qteBar.width = 500;
+                    this.qteBox.setVisible(true);
+                });
+                window.addEventListener('qteStep', (e) => {
+                    const i = e.detail.i;
+                    this.qteArrows.forEach((t, k) => t.setColor(k < i ? '#00ff00' : (k === i ? '#ffffff' : '#666666')));
+                });
+                window.addEventListener('qteTime', (e) => { this.qteBar.width = Math.max(0.01, 500 * e.detail.frac); });
+                window.addEventListener('hideQTE', () => this.qteBox.setVisible(false));
+                window.addEventListener('showDeath', () => { this.deathBg.setVisible(true); this.deathText.setVisible(true); });
+                window.addEventListener('hideDeath', () => { this.deathBg.setVisible(false); this.deathText.setVisible(false); });
+                window.addEventListener('showResults', (e) => {
+                    const lines = e.detail.rows.map(r => r[0].padEnd(11) + r[1].padEnd(18) + r[2]);
+                    this.resRows.setText(lines.join('\n'));
+                    this.resRank.setText('RANGO ' + e.detail.rank);
+                    this.res.setVisible(true);
+                });
+                window.addEventListener('hideResults', () => this.res.setVisible(false));
+            }
+
+            layout() {
+                const w = this.scale.width, h = this.scale.height;
+                const hudScale = Math.min(1, w / 520);
+                this.hudLeft.setPosition(14, 14).setScale(hudScale);
+                this.styleText.setPosition(w - 14, 14).setScale(hudScale);
+                this.timeText.setPosition(w - 14, 14 + 28 * hudScale).setScale(hudScale);
+                this.progText.setPosition(w - 14, 14 + 52 * hudScale).setScale(hudScale);
+
+                this.bannerText.setPosition(w / 2, h * 0.20).setScale(Math.min(1, w / 600));
+                this.tri.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 820, (h - 24) / 520));
+                this.qteBox.setPosition(w / 2, h * 0.62).setScale(Math.min(1, (w - 16) / 600, (h - 40) / 340));
+                this.deathBg.setSize(w, h);
+                this.deathText.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 24) / 620));
+                this.res.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 760, (h - 24) / 500));
+            }
+
+            displayTrivia(d) {
+                this.triHead.setText(d.name + '  ·  ' + d.tema).setColor(d.color);
+                this.triBg.setStrokeStyle(4, Phaser.Display.Color.HexStringToColor(d.color).color);
+                this.qText.setText(d.q);
+                for (let i = 0; i < 4; i++) {
+                    this.optionTexts[i].setText(d.options[i]);
+                    this.optionTexts[i].setColor('#ffffff');
+                    this.optionBgs[i].setFillStyle(0x161616, 0.95).setStrokeStyle(2, 0x444444);
+                }
+                this.tri.setVisible(true);
+            }
+        }
+
+        const phaserConfig = {
+            type: Phaser.CANVAS,
+            parent: 'phaser-canvas',
+            width: window.innerWidth,
+            height: window.innerHeight,
+            transparent: true,
+            input: { keyboard: false, mouse: true, touch: true, gamepad: false },
+            scene: [UIScene]
+        };
+        const phaserGame = new Phaser.Game(phaserConfig);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            phaserGame.scale.resize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
