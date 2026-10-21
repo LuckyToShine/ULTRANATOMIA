@@ -274,12 +274,54 @@
         const ACC_THRESH = [95, 85, 70, 50];           // S, A, B, C (%)
 
         // ==========================================
-        // 2. ENTORNO 3D (THREE.JS)
+        // 2. ENTORNO 3D (THREE.JS): CAPAS ANATÓMICAS Y MODELOS
         // ==========================================
+        const LAYERS = [
+            {
+                id: 0,
+                title: 'CAPA I · CONDUCTOS MASCULINOS',
+                sub: 'Epidídimo → Conducto Deferente → Uretra',
+                bg: 0x0d0406, tube: 0x2a0a10, tubeEm: 0x140407,
+                ring: 0x6a1824, ringEm: 0x2e0810, light: 0xff5566,
+                propColor: 0x992233, css: '#ff4455'
+            },
+            {
+                id: 1,
+                title: 'CAPA II · CANAL VAGINAL Y CÉRVIX',
+                sub: 'Barrera Ácida (pH 4) y Criptas Cervicales',
+                bg: 0x120904, tube: 0x331a08, tubeEm: 0x180b02,
+                ring: 0x8a4b14, ringEm: 0x3b1c05, light: 0xffaa44,
+                propColor: 0xd4882a, css: '#ffaa33'
+            },
+            {
+                id: 2,
+                title: 'CAPA III · CAVIDAD UTERINA',
+                sub: 'Endometrio Vascular y Patrullas Leucocitarias',
+                bg: 0x140308, tube: 0x3b0716, tubeEm: 0x1c0209,
+                ring: 0x9e143b, ringEm: 0x450618, light: 0xff3366,
+                propColor: 0xd91c4b, css: '#ff3366'
+            },
+            {
+                id: 3,
+                title: 'CAPA IV · TROMPA DE FALOPIO (AMPOLLA)',
+                sub: 'Epitelio Ciliado → Encuentro con el Ovocito II',
+                bg: 0x090414, tube: 0x1e0d3a, tubeEm: 0x0c041c,
+                ring: 0x6e2ec9, ringEm: 0x2b0e59, light: 0xc888ff,
+                propColor: 0x9d55ff, css: '#c888ff'
+            }
+        ];
+
+        function layerIndexAtZ(z) {
+            if (z > -100) return 0;
+            if (z > -180) return 1;
+            if (z > -260) return 2;
+            return 3;
+        }
+
         const DPR = Math.min(window.devicePixelRatio || 1, 3);
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0d0406);
-        scene.fog = new THREE.Fog(0x0d0406, 10, 70);
+        scene.background = new THREE.Color(LAYERS[0].bg);
+        scene.fog = new THREE.Fog(LAYERS[0].bg, 10, 72);
 
         const camera = new THREE.PerspectiveCamera(BASE_FOV, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 2.2, 0);
@@ -289,84 +331,288 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
 
         // Luces
-        scene.add(new THREE.AmbientLight(0x604048));
-        const pointLight = new THREE.PointLight(0xffffff, 1.3, 70);
+        const ambientLight = new THREE.AmbientLight(0x684852);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(LAYERS[0].light, 1.4, 72);
         scene.add(pointLight);
 
         // Suelo (Grid anatómico/cibernético)
-        const gridHelper = new THREE.GridHelper(60, 60, 0x555555, 0x222222);
+        const gridHelper = new THREE.GridHelper(60, 60, 0x55333a, 0x221216);
         scene.add(gridHelper);
 
-        // Túnel orgánico + costillas que dan sensación de velocidad
+        // Túnel orgánico + anillos peristálticos y cilios
+        const tubeMat = new THREE.MeshPhongMaterial({ color: LAYERS[0].tube, emissive: LAYERS[0].tubeEm, side: THREE.BackSide, shininess: 25 });
         const tube = new THREE.Mesh(
-            new THREE.CylinderGeometry(9, 9, 400, 24, 1, true),
-            new THREE.MeshPhongMaterial({ color: 0x2a0a10, emissive: 0x140407, side: THREE.BackSide })
+            new THREE.CylinderGeometry(9, 9, 400, 28, 1, true),
+            tubeMat
         );
         tube.rotation.x = Math.PI / 2;
         tube.position.y = 3;
         scene.add(tube);
 
-        const RING_COUNT = 14, RING_GAP = 8;
-        const ringGeo = new THREE.TorusGeometry(9, 0.25, 8, 28);
-        const ringMat = new THREE.MeshPhongMaterial({ color: 0x5a1520, emissive: 0x2a0a10 });
+        const RING_COUNT = 16, RING_GAP = 7.5;
+        const ringGeo = new THREE.TorusGeometry(8.9, 0.28, 10, 32);
+        const ringMat = new THREE.MeshPhongMaterial({ color: LAYERS[0].ring, emissive: LAYERS[0].ringEm, shininess: 45 });
+        const ciliumGeo = new THREE.ConeGeometry(0.18, 1.35, 6);
+        const ciliumMat = new THREE.MeshPhongMaterial({ color: LAYERS[0].propColor, emissive: 0x220810, transparent: true, opacity: 0.85 });
         const rings = [];
+
         for (let i = 0; i < RING_COUNT; i++) {
+            const grp = new THREE.Group();
             const r = new THREE.Mesh(ringGeo, ringMat);
-            r.position.set(0, 3, 10 - i * RING_GAP);
-            scene.add(r);
-            rings.push(r);
+            grp.add(r);
+            const cilia = [];
+            for (let k = 0; k < 10; k++) {
+                const ang = (k / 10) * Math.PI * 2 + (i % 2) * 0.31;
+                const c = new THREE.Mesh(ciliumGeo, ciliumMat);
+                const rad = 8.4;
+                c.position.set(Math.cos(ang) * rad, Math.sin(ang) * rad, 0);
+                c.rotation.z = ang + Math.PI / 2;
+                grp.add(c);
+                cilia.push({ mesh: c, baseZ: ang + Math.PI / 2, phase: k * 0.7 + i * 0.4 });
+            }
+            grp.position.set(0, 3, 10 - i * RING_GAP);
+            grp.userData = { phase: i * 0.55, cilia };
+            scene.add(grp);
+            rings.push(grp);
         }
+
+        // Vista en primera persona: Acrosoma y flagelo del espermatozoide jugador
+        const playerAvatar = new THREE.Group();
+        const acroMat = new THREE.MeshPhongMaterial({
+            color: 0x88eeff, emissive: 0x1a5577, transparent: true, opacity: 0.75, shininess: 90
+        });
+        const acroTip = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.75, 12), acroMat);
+        acroTip.rotation.x = -Math.PI / 2;
+        acroTip.position.set(0, -0.52, -1.35);
+        const acroRing = new THREE.Mesh(
+            new THREE.TorusGeometry(0.21, 0.035, 8, 20),
+            new THREE.MeshBasicMaterial({ color: 0xbbffff, transparent: true, opacity: 0.85 })
+        );
+        acroRing.position.set(0, -0.52, -1.05);
+        playerAvatar.add(acroTip, acroRing);
+
+        const tailSegments = [];
+        const tailMat = new THREE.MeshBasicMaterial({ color: 0x66ddff, transparent: true, opacity: 0.55 });
+        for (let i = 0; i < 6; i++) {
+            const seg = new THREE.Mesh(new THREE.SphereGeometry(0.085 - i * 0.009, 8, 8), tailMat);
+            seg.position.set(0, -0.56 - i * 0.02, -0.85 + i * 0.14);
+            playerAvatar.add(seg);
+            tailSegments.push(seg);
+        }
+        scene.add(playerAvatar);
 
         // Obstáculos
         const obstacles = [];
         let finishMarker = null;
 
+        function buildFinishOocyte(z) {
+            const g = new THREE.Group();
+            g.position.set(0, 3.2, z);
+
+            const core = new THREE.Mesh(
+                new THREE.SphereGeometry(2.6, 28, 22),
+                new THREE.MeshPhongMaterial({ color: 0xffdd66, emissive: 0xffaa22, emissiveIntensity: 0.65, shininess: 90 })
+            );
+            const zona = new THREE.Mesh(
+                new THREE.IcosahedronGeometry(3.6, 2),
+                new THREE.MeshPhongMaterial({ color: 0xffe899, emissive: 0x885511, wireframe: true, transparent: true, opacity: 0.55 })
+            );
+            const coronaRing = new THREE.Mesh(
+                new THREE.TorusGeometry(4.8, 0.22, 12, 40),
+                new THREE.MeshBasicMaterial({ color: 0xffffcc, transparent: true, opacity: 0.85 })
+            );
+
+            const coronaCells = new THREE.Group();
+            const cellGeo = new THREE.SphereGeometry(0.42, 10, 10);
+            const cellMat = new THREE.MeshPhongMaterial({ color: 0xffb84d, emissive: 0xaa4400, shininess: 60 });
+            for (let i = 0; i < 18; i++) {
+                const phi = Math.acos(1 - 2 * (i + 0.5) / 18);
+                const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+                const r = 4.15;
+                const cell = new THREE.Mesh(cellGeo, cellMat);
+                cell.position.set(
+                    r * Math.sin(phi) * Math.cos(theta),
+                    r * Math.sin(phi) * Math.sin(theta),
+                    r * Math.cos(phi)
+                );
+                coronaCells.add(cell);
+            }
+
+            g.add(core, zona, coronaRing, coronaCells);
+            g.userData = { core, zona, coronaRing, coronaCells, t: 0 };
+            scene.add(g);
+            return g;
+        }
+
         function buildObstacle(o) {
             const g = o.group, c = MECH[o.type].color, p = o.parts;
             const mat = (extra) => new THREE.MeshPhongMaterial(Object.assign({
-                color: c, emissive: c, emissiveIntensity: 0.25, transparent: true, opacity: 0.85, shininess: 60
+                color: c, emissive: c, emissiveIntensity: 0.28, transparent: true, opacity: 0.88, shininess: 65
             }, extra));
 
             if (o.type === 'golpe') {
-                const wall = new THREE.Mesh(new THREE.BoxGeometry(11, 6.5, 1.2), mat());
-                wall.position.y = 3.25;
+                const wallGroup = new THREE.Group();
+                wallGroup.position.y = 3.25;
+                const cells = [];
+                const colGeo = new THREE.CylinderGeometry(0.88, 0.88, 6.4, 8);
+                const nucGeo = new THREE.SphereGeometry(0.52, 12, 10);
+                const nucMat = new THREE.MeshPhongMaterial({ color: 0xffb3c1, emissive: 0xaa1133, shininess: 80 });
+                const cellMat = mat({ opacity: 0.82 });
+
+                for (let i = -2; i <= 2; i++) {
+                    const col = new THREE.Group();
+                    col.position.x = i * 2.05;
+                    const body = new THREE.Mesh(colGeo, cellMat);
+                    const nuc = new THREE.Mesh(nucGeo, nucMat);
+                    nuc.scale.set(0.85, 1.35, 0.85);
+                    nuc.position.set(0, (i % 2 === 0 ? 0.6 : -0.6), 0.45);
+                    col.add(body, nuc);
+                    wallGroup.add(col);
+                    cells.push({ col, nuc, phase: i * 0.8 });
+                }
+
+                const junctionGeo = new THREE.CylinderGeometry(0.12, 0.12, 10.6, 8);
+                junctionGeo.rotateZ(Math.PI / 2);
+                const jMat = new THREE.MeshBasicMaterial({ color: 0xffaaaa, transparent: true, opacity: 0.75 });
+                const jTop = new THREE.Mesh(junctionGeo, jMat);
+                jTop.position.set(0, 1.8, 0.5);
+                const jBot = new THREE.Mesh(junctionGeo, jMat);
+                jBot.position.set(0, -1.8, 0.5);
+
                 const cage = new THREE.Mesh(
-                    new THREE.BoxGeometry(11.3, 6.8, 1.5),
-                    new THREE.MeshBasicMaterial({ color: 0xffaaaa, wireframe: true, transparent: true, opacity: 0.35 })
+                    new THREE.BoxGeometry(11.2, 6.6, 1.4),
+                    new THREE.MeshBasicMaterial({ color: 0xff8899, wireframe: true, transparent: true, opacity: 0.3 })
                 );
-                cage.position.y = 3.25;
-                g.add(wall, cage);
-                p.wall = wall;
+                wallGroup.add(jTop, jBot, cage);
+                g.add(wallGroup);
+                p.wall = cellMat;
+                p.wallGroup = wallGroup;
+                p.cells = cells;
+
             } else if (o.type === 'parry') {
-                const core = new THREE.Mesh(new THREE.OctahedronGeometry(1.4), mat());
-                core.position.y = 3.2;
-                const ring = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.15, 8, 32), mat({ opacity: 1 }));
+                const coreGroup = new THREE.Group();
+                coreGroup.position.y = 3.2;
+
+                const mainLobe = new THREE.Mesh(new THREE.IcosahedronGeometry(1.25, 1), mat({ opacity: 0.92 }));
+                const subLobe1 = new THREE.Mesh(new THREE.SphereGeometry(0.78, 12, 10), mat({ opacity: 0.85 }));
+                subLobe1.position.set(0.85, 0.45, 0.3);
+                const subLobe2 = new THREE.Mesh(new THREE.SphereGeometry(0.72, 12, 10), mat({ opacity: 0.85 }));
+                subLobe2.position.set(-0.8, -0.4, 0.35);
+                coreGroup.add(mainLobe, subLobe1, subLobe2);
+
+                const vesicles = new THREE.Group();
+                const vesGeo = new THREE.SphereGeometry(0.28, 10, 10);
+                const vesMat = new THREE.MeshBasicMaterial({ color: 0x99eeff });
+                for (let i = 0; i < 6; i++) {
+                    const v = new THREE.Mesh(vesGeo, vesMat);
+                    const ang = (i / 6) * Math.PI * 2;
+                    v.position.set(Math.cos(ang) * 2.0, Math.sin(ang) * 2.0, Math.sin(ang * 2) * 0.45);
+                    vesicles.add(v);
+                }
+                coreGroup.add(vesicles);
+
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(2.5, 0.16, 10, 36), mat({ opacity: 1 }));
                 ring.position.y = 3.2;
-                g.add(core, ring);
-                p.core = core;
-                p.ring = ring;
-            } else if (o.type === 'disparo') {
-                const gate = new THREE.Mesh(new THREE.BoxGeometry(11, 6.5, 0.8), mat({ opacity: 0.8 }));
-                gate.position.y = 3.25;
-                g.add(gate);
-                const target = new THREE.Group();
-                target.add(
-                    new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffee88 })),
-                    new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.12, 8, 28), new THREE.MeshBasicMaterial({ color: c }))
+                const ring2 = new THREE.Mesh(
+                    new THREE.TorusGeometry(3.0, 0.08, 8, 32),
+                    new THREE.MeshBasicMaterial({ color: 0x88ddff, transparent: true, opacity: 0.6 })
                 );
-                target.position.set(0, 7.6, -2);
+                ring2.position.y = 3.2;
+                ring2.rotation.x = Math.PI / 3;
+
+                g.add(coreGroup, ring, ring2);
+                p.core = coreGroup;
+                p.vesicles = vesicles;
+                p.ring = ring;
+                p.ring2 = ring2;
+
+            } else if (o.type === 'disparo') {
+                const gate = new THREE.Group();
+                gate.position.y = 3.25;
+                const gateMat = mat({ opacity: 0.78 });
+                const membrane = new THREE.Mesh(new THREE.BoxGeometry(11, 6.4, 0.45), gateMat);
+                gate.add(membrane);
+
+                const strandGeo = new THREE.CylinderGeometry(0.11, 0.11, 11.8, 6);
+                const strandMat = new THREE.MeshPhongMaterial({ color: 0xffe666, emissive: 0x664400, transparent: true, opacity: 0.85 });
+                for (let i = -2; i <= 2; i++) {
+                    const s1 = new THREE.Mesh(strandGeo, strandMat);
+                    s1.position.set(0, i * 1.1, 0.28);
+                    s1.rotation.z = Math.PI / 2 + 0.22;
+                    const s2 = new THREE.Mesh(strandGeo, strandMat);
+                    s2.position.set(0, i * 1.1, -0.28);
+                    s2.rotation.z = Math.PI / 2 - 0.22;
+                    gate.add(s1, s2);
+                }
+                g.add(gate);
+
+                const target = new THREE.Group();
+                const bulb = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.95, 16, 14),
+                    new THREE.MeshPhongMaterial({ color: 0xffee77, emissive: 0xffaa00, emissiveIntensity: 0.6, shininess: 90 })
+                );
+                const acini = [];
+                const lobGeo = new THREE.SphereGeometry(0.42, 10, 10);
+                const lobMat = new THREE.MeshPhongMaterial({ color: 0xffcc22, emissive: 0x885500 });
+                for (let i = 0; i < 6; i++) {
+                    const ang = (i / 6) * Math.PI * 2;
+                    const lob = new THREE.Mesh(lobGeo, lobMat);
+                    lob.position.set(Math.cos(ang) * 1.05, Math.sin(ang) * 1.05, 0);
+                    target.add(lob);
+                    acini.push(lob);
+                }
+                const targetRing = new THREE.Mesh(
+                    new THREE.TorusGeometry(1.55, 0.12, 8, 28),
+                    new THREE.MeshBasicMaterial({ color: 0xffffff })
+                );
+                const stalk = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.16, 0.28, 2.2, 8),
+                    strandMat
+                );
+                stalk.position.set(0, -1.4, 0);
+                target.add(bulb, targetRing, stalk);
+                target.position.set(0, 7.5, -1.8);
                 g.add(target);
+
                 p.gate = gate;
+                p.gateMat = gateMat;
                 p.target = target;
+                p.acini = acini;
+
             } else {
                 const iris = new THREE.Group();
-                iris.add(
-                    new THREE.Mesh(new THREE.TorusGeometry(3.4, 0.8, 12, 36), mat({ opacity: 1 })),
-                    p.disc = new THREE.Mesh(new THREE.CircleGeometry(3.4, 32), mat({ opacity: 0.55, side: THREE.DoubleSide }))
-                );
                 iris.position.y = 3.2;
+
+                const outerRing = new THREE.Mesh(new THREE.TorusGeometry(3.8, 0.65, 12, 36), mat({ opacity: 0.95 }));
+                const innerRing = new THREE.Mesh(
+                    new THREE.TorusGeometry(2.35, 0.35, 10, 32),
+                    new THREE.MeshPhongMaterial({ color: 0xd488ff, emissive: 0x6a1bb8, shininess: 80 })
+                );
+                const disc = new THREE.Mesh(
+                    new THREE.CircleGeometry(3.5, 32),
+                    mat({ opacity: 0.55, side: THREE.DoubleSide })
+                );
+
+                const valves = [];
+                const valveGeo = new THREE.ConeGeometry(0.38, 1.75, 8);
+                for (let i = 0; i < 8; i++) {
+                    const ang = (i / 8) * Math.PI * 2;
+                    const vMat = new THREE.MeshPhongMaterial({ color: 0xc877ff, emissive: 0x4a0e88, shininess: 70 });
+                    const v = new THREE.Mesh(valveGeo, vMat);
+                    const rad = 2.65;
+                    v.position.set(Math.cos(ang) * rad, Math.sin(ang) * rad, 0.25);
+                    v.rotation.z = ang + Math.PI / 2;
+                    iris.add(v);
+                    valves.push({ mesh: v, ang, baseR: rad });
+                }
+
+                iris.add(outerRing, innerRing, disc);
                 g.add(iris);
                 p.iris = iris;
+                p.innerRing = innerRing;
+                p.disc = disc;
+                p.valves = valves;
             }
             g.traverse(m => { m.userData.obs = o; });
         }
@@ -408,15 +654,49 @@
                 o.t += dt;
                 const p = o.parts;
                 if (p.core) {
-                    p.core.rotation.y += dt * 1.2;
-                    p.core.rotation.x += dt * 0.6;
-                    p.core.position.y = 3.2 + Math.sin(o.t * 2) * 0.4;
+                    p.core.rotation.y += dt * 1.1;
+                    p.core.rotation.x = Math.sin(o.t * 1.5) * 0.25;
+                    p.core.position.y = 3.2 + Math.sin(o.t * 2.2) * 0.38;
+                }
+                if (p.vesicles) {
+                    p.vesicles.rotation.z -= dt * 2.2;
+                    p.vesicles.rotation.y += dt * 1.4;
                 }
                 if (p.ring) p.ring.rotation.z += dt * 1.5;
-                if (p.target) p.target.rotation.y += dt * 2;
-                if (p.wall) p.wall.material.emissiveIntensity = 0.25 + 0.15 * Math.sin(o.t * 4);
-                if (p.iris && !o.opening) p.iris.scale.setScalar(1 + 0.08 * Math.sin(o.t * 5));
+                if (p.ring2) {
+                    p.ring2.rotation.y += dt * 1.8;
+                    p.ring2.rotation.z -= dt * 0.9;
+                }
+                if (p.target) {
+                    p.target.rotation.y += dt * 1.8;
+                    p.target.position.y = 7.5 + Math.sin(o.t * 3) * 0.22;
+                }
+                if (p.wall) {
+                    p.wall.emissiveIntensity = 0.25 + 0.15 * Math.sin(o.t * 4);
+                }
+                if (p.cells) {
+                    p.cells.forEach(c => {
+                        const s = 1 + 0.06 * Math.sin(o.t * 3.5 + c.phase);
+                        c.col.scale.set(s, 1, s);
+                        c.nuc.position.y = (c.phase % 1.6 === 0 ? 0.6 : -0.6) + Math.sin(o.t * 2.5 + c.phase) * 0.25;
+                    });
+                }
+                if (p.iris && !o.opening) {
+                    p.iris.scale.setScalar(1 + 0.06 * Math.sin(o.t * 4.5));
+                    if (p.innerRing) p.innerRing.rotation.z -= dt * 1.2;
+                }
             });
+
+            if (finishMarker && finishMarker.userData) {
+                const u = finishMarker.userData;
+                u.t += dt;
+                u.core.scale.setScalar(1 + 0.06 * Math.sin(u.t * 3));
+                u.zona.rotation.y += dt * 0.5;
+                u.zona.rotation.x += dt * 0.3;
+                u.coronaRing.rotation.z -= dt * 0.8;
+                u.coronaCells.rotation.y -= dt * 0.7;
+                u.coronaCells.rotation.z += dt * 0.4;
+            }
         }
 
         // --- Efectos: fragmentos, destellos, proyectiles ---
@@ -568,9 +848,10 @@
                     disposeObject(o.parts.target);
                     delete o.parts.target;
                     const gate = o.parts.gate;
+                    const gateMat = o.parts.gateMat;
                     anim(0.9, k => {
                         gate.position.y = 3.25 + k * 8;
-                        gate.material.opacity = 0.8 * (1 - k * 0.8);
+                        if (gateMat) gateMat.opacity = 0.78 * (1 - k * 0.8);
                     }, () => {
                         removeObstacle(o);
                         finishClear(o);
@@ -614,6 +895,7 @@
             cpIdx: 0,
             cpZ: 0,
             finishZ: 0,
+            layerIdx: 0,
             timeScale: 1,
             targetScale: 1,
             fov: BASE_FOV,
@@ -644,6 +926,7 @@
                 this.runTime = 0;
                 this.cpIdx = 0;
                 this.cpZ = 0;
+                this.layerIdx = 0;
                 this.player.z = 0;
                 this.timeScale = this.targetScale = 1;
                 this.targetFov = BASE_FOV;
@@ -667,7 +950,8 @@
                 if (mode === 'run') {
                     this.buildRun();
                     this.phase = 'running';
-                    emit('banner', { text: '¡CORRE!', color: '#ffffff' });
+                    const l0 = LAYERS[0];
+                    emit('banner', { text: l0.title + '\n' + l0.sub, color: l0.css });
                 } else {
                     this.phase = 'idle';
                     emit('banner', { text: 'Elige una mecánica en el panel', color: '#ffffff' });
@@ -704,12 +988,7 @@
                 this.plan = this.makePlan();
                 this.plan.slice(0, RUN_LEN).forEach((type, i) => createObstacle(type, this.zFor(i), i));
                 this.finishZ = this.zFor(RUN_LEN - 1) - 35;
-                finishMarker = new THREE.Mesh(
-                    new THREE.TorusGeometry(7.5, 0.5, 8, 40),
-                    new THREE.MeshBasicMaterial({ color: 0xffffff })
-                );
-                finishMarker.position.set(0, 3, this.finishZ);
-                scene.add(finishMarker);
+                finishMarker = buildFinishOocyte(this.finishZ);
             },
 
             spawnMech(type) {
@@ -864,17 +1143,13 @@
                 clearObstacles();
                 if (this.mode === 'run') {
                     this.player.z = this.cpZ;
+                    this.layerIdx = layerIndexAtZ(this.player.z);
                     this.style = this.styleAtCp;
                     this.lastMech = null;
                     for (let i = this.cpIdx; i < RUN_LEN; i++) createObstacle(this.plan[i], this.zFor(i), i);
-                    finishMarker = new THREE.Mesh(
-                        new THREE.TorusGeometry(7.5, 0.5, 8, 40),
-                        new THREE.MeshBasicMaterial({ color: 0xffffff })
-                    );
-                    finishMarker.position.set(0, 3, this.finishZ);
-                    scene.add(finishMarker);
+                    finishMarker = buildFinishOocyte(this.finishZ);
                     this.phase = 'running';
-                    emit('banner', { text: 'CHECKPOINT', color: '#ffffff' });
+                    emit('banner', { text: 'CHECKPOINT · ' + LAYERS[this.layerIdx].title, color: '#ffffff' });
                 } else {
                     this.phase = 'idle';
                     if (this.lastSpawn) {
@@ -896,7 +1171,7 @@
                         this.cpIdx = done;
                         this.cpZ = this.player.z;
                         this.styleAtCp = this.style;
-                        emit('banner', { text: 'CHECKPOINT', color: '#ffffff' });
+                        emit('banner', { text: 'CHECKPOINT · CÉRVIX SUPERADO', color: '#ffffff' });
                     }
                 } else {
                     this.phase = 'idle';
@@ -925,6 +1200,19 @@
                     this.player.z = Math.max(q.o.z + STOP_DIST, this.player.z - 1.2);
                 }
                 flashRing(new THREE.Vector3(0, 2.5, this.player.z - 3), MECH.qte.color);
+
+                if (q.o.parts.valves) {
+                    const frac = q.i / q.words.length;
+                    q.o.parts.valves.forEach((v, idx) => {
+                        const r = v.baseR + frac * 1.1;
+                        v.mesh.position.set(Math.cos(v.ang) * r, Math.sin(v.ang) * r, 0.25);
+                        if (idx / q.o.parts.valves.length < frac) {
+                            v.mesh.material.color.setHex(0x66ffaa);
+                            v.mesh.material.emissive.setHex(0x118844);
+                        }
+                    });
+                }
+
                 const nextBtnIdx = q.words.findIndex(item => item.order === q.i);
                 emit('qteStep', {
                     i: q.i,
@@ -1021,6 +1309,12 @@
 
                 if (this.mode === 'run' && this.phase === 'running') {
                     this.player.z -= RUN_SPEED * sdt;
+                    const newLayer = layerIndexAtZ(this.player.z);
+                    if (newLayer !== this.layerIdx) {
+                        this.layerIdx = newLayer;
+                        const L = LAYERS[newLayer];
+                        emit('banner', { text: L.title + '\n' + L.sub, color: L.css });
+                    }
                     const next = this.nextObstacle();
                     if (next && this.player.z - next.z <= TRIGGER_DIST) this.triggerTrivia(next);
                     else if (!next && this.player.z <= this.finishZ) this.finishRun();
@@ -1042,11 +1336,14 @@
             },
 
             hud() {
+                const L = LAYERS[this.layerIdx] || LAYERS[0];
                 return {
                     time: this.runTime,
                     style: this.style,
                     mode: this.mode,
                     progress: this.mode === 'run' ? (RUN_LEN - obstacles.filter(o => !o.cleared).length) + '/' + RUN_LEN : '',
+                    layer: this.mode === 'run' ? L.title : '',
+                    layerColor: L.css,
                     stats: this.stats,
                     acc: this.accuracy()
                 };
@@ -1161,6 +1458,8 @@
         // ==========================================
         const clock = new THREE.Clock();
         let hudTimer = 0;
+        let swimTime = 0;
+        const tmpColor = new THREE.Color();
 
         function animate() {
             requestAnimationFrame(animate);
@@ -1168,13 +1467,33 @@
             const isPortraitMobile = window.innerHeight > window.innerWidth && window.innerWidth <= 900;
             const dt = isPortraitMobile ? 0 : rawDt;
             const sdt = GameState.update(dt);
+            swimTime += sdt;
             updateAnims(dt);
             animateObstacles(sdt);
             updateFx(sdt);
 
             const pz = GameState.player.z;
 
-            rings.forEach(r => { while (r.position.z > pz + 10) r.position.z -= RING_COUNT * RING_GAP; });
+            const L = LAYERS[GameState.layerIdx] || LAYERS[0];
+            const lerpK = Math.min(1, dt * 3.5);
+            scene.background.lerp(tmpColor.setHex(L.bg), lerpK);
+            scene.fog.color.copy(scene.background);
+            tubeMat.color.lerp(tmpColor.setHex(L.tube), lerpK);
+            tubeMat.emissive.lerp(tmpColor.setHex(L.tubeEm), lerpK);
+            ringMat.color.lerp(tmpColor.setHex(L.ring), lerpK);
+            ringMat.emissive.lerp(tmpColor.setHex(L.ringEm), lerpK);
+            ciliumMat.color.lerp(tmpColor.setHex(L.propColor), lerpK);
+            pointLight.color.lerp(tmpColor.setHex(L.light), lerpK);
+
+            rings.forEach(r => {
+                while (r.position.z > pz + 10) r.position.z -= RING_COUNT * RING_GAP;
+                const u = r.userData;
+                const pulse = 1 + 0.045 * Math.sin(swimTime * 3.2 + u.phase);
+                r.scale.set(pulse, pulse, 1);
+                u.cilia.forEach(c => {
+                    c.mesh.rotation.z = c.baseZ + Math.sin(swimTime * 5 + c.phase) * 0.28;
+                });
+            });
             tube.position.z = pz - 150;
             gridHelper.position.z = Math.round(pz);
             pointLight.position.set(0, 6, pz - 6);
@@ -1188,6 +1507,16 @@
                 pz
             );
             camera.lookAt(0, 2.6, pz - 20);
+
+            playerAvatar.position.copy(camera.position);
+            const whip = Math.sin(swimTime * 16) * 0.06;
+            acroTip.position.x = whip * 0.5;
+            acroRing.position.x = whip * 0.5;
+            tailSegments.forEach((seg, idx) => {
+                seg.position.x = Math.sin(swimTime * 16 - (idx + 1) * 0.65) * (0.04 + idx * 0.022);
+                seg.position.y = -0.56 - idx * 0.02 + Math.cos(swimTime * 16 - idx * 0.5) * 0.015;
+            });
+
             if (Math.abs(camera.fov - GameState.fov) > 0.01) {
                 camera.fov = GameState.fov;
                 camera.updateProjectionMatrix();
@@ -1232,7 +1561,8 @@
                 this.styleText = this.add.text(0, 18, 'ESTILO: 0', F(22, { color: '#ffd700' })).setOrigin(1, 0);
                 this.timeText = this.add.text(0, 46, '', F(18)).setOrigin(1, 0);
                 this.progText = this.add.text(0, 70, '', F(15, { color: '#aaaaaa' })).setOrigin(1, 0);
-                this.bannerText = this.add.text(0, 0, '', F(32, { align: 'center' })).setOrigin(0.5).setAlpha(0);
+                this.layerText = this.add.text(0, 90, '', F(12, { color: '#ff8899' })).setOrigin(1, 0);
+                this.bannerText = this.add.text(0, 0, '', F(28, { align: 'center', lineSpacing: 6 })).setOrigin(0.5).setAlpha(0);
 
                 // --- PANEL DE TRIVIA CON SOPORTE TÁCTIL Y RATÓN ---
                 this.tri = this.add.container(0, 0);
@@ -1415,11 +1745,15 @@
                     this.styleText.setText('ESTILO: ' + h.style);
                     this.timeText.setText(h.mode === 'run' ? fmtTime(h.time) : '');
                     this.progText.setText(h.mode === 'run' ? 'OBSTÁCULOS ' + h.progress : (h.mode === 'free' ? 'MODO LIBRE' : ''));
+                    if (this.layerText) {
+                        this.layerText.setText(h.layerName || '');
+                        if (h.layerColor) this.layerText.setColor(h.layerColor);
+                    }
                 });
                 window.addEventListener('banner', (e) => {
                     this.bannerText.setText(e.detail.text).setColor(e.detail.color).setAlpha(1);
                     this.tweens.killTweensOf(this.bannerText);
-                    this.tweens.add({ targets: this.bannerText, alpha: 0, delay: 700, duration: 500 });
+                    this.tweens.add({ targets: this.bannerText, alpha: 0, delay: 900, duration: 500 });
                 });
                 window.addEventListener('showQTE', (e) => {
                     const d = e.detail;
@@ -1511,6 +1845,7 @@
                 this.styleText.setPosition(w - 14, 16).setScale(hudScale);
                 this.timeText.setPosition(w - 14, 16 + 28 * hudScale).setScale(hudScale);
                 this.progText.setPosition(w - 14, 16 + 52 * hudScale).setScale(hudScale);
+                if (this.layerText) this.layerText.setPosition(w - 14, 16 + 72 * hudScale).setScale(hudScale);
 
                 this.bannerText.setPosition(w / 2, h * 0.20).setScale(Math.min(1, w / 520));
                 this.tri.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 560, (h - 24) / 430));
