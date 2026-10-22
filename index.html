@@ -63,10 +63,10 @@
         }
         .cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 20px;
             width: 100%;
-            max-width: 680px;
+            max-width: 1000px;
             margin-bottom: 24px;
         }
         .card {
@@ -90,6 +90,10 @@
             border-color: #ff3344;
             box-shadow: 0 0 18px rgba(255, 51, 68, 0.12);
         }
+        .card.free {
+            border-color: #2a9dff;
+            box-shadow: 0 0 18px rgba(42, 157, 255, 0.12);
+        }
         .card:hover, .card:active {
             transform: translateY(-3px);
             background: rgba(28, 28, 28, 0.95);
@@ -99,6 +103,9 @@
         }
         .card.sandbox:hover, .card.sandbox:active {
             box-shadow: 0 0 26px rgba(255, 51, 68, 0.35);
+        }
+        .card.free:hover, .card.free:active {
+            box-shadow: 0 0 26px rgba(42, 157, 255, 0.35);
         }
         .card-header {
             display: flex;
@@ -113,6 +120,7 @@
         }
         .card.demo .card-title { color: #ffd400; }
         .card.sandbox .card-title { color: #ff3344; }
+        .card.free .card-title { color: #2a9dff; }
         .card-route {
             font-size: 11px;
             color: #888;
@@ -138,12 +146,17 @@
         }
         .card.demo .card-cta { color: #ffd400; }
         .card.sandbox .card-cta { color: #ff3344; }
+        .card.free .card-cta { color: #2a9dff; }
         .card.demo:hover .card-cta, .card.demo:active .card-cta {
             background: #ffd400;
             color: #000;
         }
         .card.sandbox:hover .card-cta, .card.sandbox:active .card-cta {
             background: #ff3344;
+            color: #000;
+        }
+        .card.free:hover .card-cta, .card.free:active .card-cta {
+            background: #2a9dff;
             color: #000;
         }
         .footer-note {
@@ -239,10 +252,21 @@
                 </div>
                 <span class="card-cta">ABRIR SANDBOX &rarr;</span>
             </a>
+
+            <a class="card free" href="free/">
+                <div>
+                    <div class="card-header">
+                        <span class="card-title">MODO LIBRE</span>
+                        <span class="card-route">/free</span>
+                    </div>
+                    <p class="card-desc">Exploraci&oacute;n en primera persona: mu&eacute;vete con libertad por las 4 capas, dispara y golpea a las c&eacute;lulas, devuelve hormonas con PARRY y llega al Ovocito II a tu ritmo.</p>
+                </div>
+                <span class="card-cta">ENTRAR AL MODO LIBRE &rarr;</span>
+            </a>
         </div>
 
         <small class="footer-note">
-            Compatible con <strong>PC</strong> (teclado 1-4 y rat&oacute;n) y <strong>M&oacute;vil / Tablet</strong> (controles t&aacute;ctiles en preguntas y QTE).
+            Compatible con <strong>PC</strong> (teclado 1-4, rat&oacute;n y WASD en Modo Libre) y <strong>M&oacute;vil / Tablet</strong> (controles t&aacute;ctiles en preguntas y QTE).
         </small>
     </main>
 
