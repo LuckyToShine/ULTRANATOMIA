@@ -1,176 +1,217 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ULTRANATOMIA - Menú Principal</title>
-    <!-- Cargar Three.js para el fondo 3D animado -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <title>ULTRANATOMIA - Main Menu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Base terminal styling */
         body {
-            margin: 0;
-            overflow-x: hidden;
-            overflow-y: auto;
-            background-color: #0d0406;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'VT323', monospace;
+            background-color: #000;
             color: #fff;
+            overflow: hidden; /* Prevents scrollbars */
             user-select: none;
             -webkit-user-select: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            height: 100dvh;
+            margin: 0;
+            padding: 1rem;
         }
-        #three-canvas {
-            position: fixed;
+
+        @media (min-width: 768px) {
+            body {
+                padding: 2rem;
+            }
+        }
+
+        /* Screen Frame: strictly 16:9 aspect ratio, bounded by both width and height */
+        .screen-frame {
+            container-type: size;
+            width: min(100%, calc((100vh - 2rem) * 16 / 9));
+            width: min(100%, calc((100dvh - 2rem) * 16 / 9));
+            max-height: calc(100vh - 2rem);
+            max-height: calc(100dvh - 2rem);
+            aspect-ratio: 16 / 9;
+        }
+
+        @media (min-width: 768px) {
+            .screen-frame {
+                width: min(100%, calc((100vh - 4rem) * 16 / 9));
+                width: min(100%, calc((100dvh - 4rem) * 16 / 9));
+                max-height: calc(100vh - 4rem);
+                max-height: calc(100dvh - 4rem);
+            }
+        }
+
+        /* Scanlines Effect */
+        .scanlines::before {
+            content: " ";
+            display: block;
+            position: absolute;
             top: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 1;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 100;
+            background-size: 100% 4px, 3px 100%;
             pointer-events: none;
         }
-        #main-menu {
-            position: relative;
-            z-index: 10;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(circle at center, rgba(13, 4, 6, 0.55) 0%, rgba(0, 0, 0, 0.90) 100%);
-            text-align: center;
-            padding: 28px 16px;
+
+        /* Screen Glow / Vignette */
+        .screen-glow {
+            box-shadow: inset 0 0 100px rgba(255,255,255,0.05);
         }
-        .subtitle-tag {
-            font-size: 12px;
-            letter-spacing: 4px;
-            color: #ff3344;
-            border: 1px solid #ff3344;
-            padding: 4px 12px;
-            margin-bottom: 12px;
-            background: rgba(255, 51, 68, 0.08);
+
+        /* Main Game Title Styling */
+        .game-title {
+            transform: scaleY(1.4);
+            transform-origin: left bottom;
+            letter-spacing: -2px;
+            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+            font-size: clamp(3rem, 7vw, 7rem);
+            font-size: clamp(3rem, 11cqh, 8rem);
+            line-height: 0.9;
         }
-        h1 {
-            font-size: clamp(34px, 8vw, 72px);
-            letter-spacing: clamp(4px, 1vw, 8px);
-            margin: 0;
-            text-shadow: 0 0 24px rgba(255, 51, 68, 0.55);
+
+        /* Fluid sizing helpers for menu elements */
+        .menu-left-col {
+            padding: clamp(16px, 3vw, 48px);
+            padding: clamp(16px, 4.5cqh, 60px);
         }
-        .lead {
-            max-width: 600px;
-            color: #ccc;
-            line-height: 1.5;
-            margin: 12px 0 28px;
-            font-size: clamp(14px, 2.5vw, 16px);
+
+        .menu-diag-text {
+            font-size: clamp(11px, 1.4vw, 20px);
+            font-size: clamp(11px, 2.2cqh, 24px);
+            line-height: 1.25;
+            margin-top: clamp(8px, 1.5vw, 24px);
+            margin-top: clamp(8px, 2.2cqh, 30px);
         }
-        .cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-            width: 100%;
-            max-width: 1000px;
-            margin-bottom: 24px;
+
+        .menu-btn-group {
+            gap: clamp(6px, 1vw, 14px);
+            gap: clamp(6px, 1.6cqh, 16px);
+            margin-top: clamp(10px, 1.8vw, 28px);
+            margin-top: clamp(10px, 2.5cqh, 32px);
         }
-        .card {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            background: rgba(12, 12, 12, 0.88);
-            border: 2px solid #fff;
-            padding: 22px 20px;
-            text-decoration: none;
+
+        .menu-socials-text {
+            font-size: clamp(11px, 1.2vw, 18px);
+            font-size: clamp(11px, 1.8cqh, 20px);
+            margin-bottom: clamp(4px, 0.5vw, 8px);
+            margin-bottom: clamp(4px, 0.8cqh, 8px);
+        }
+
+        .menu-socials-links {
+            font-size: clamp(14px, 1.8vw, 24px);
+            font-size: clamp(14px, 2.5cqh, 28px);
+            gap: clamp(10px, 1.5vw, 24px);
+            gap: clamp(10px, 2cqw, 24px);
+        }
+
+        /* Retro Button Styling */
+        .retro-btn {
+            border: 3px solid #fff;
+            border-radius: 12px;
+            background: transparent;
             color: #fff;
-            transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+            transition: all 0.1s;
+            box-shadow: inset 0px 0px 0px 0px #fff;
+            text-shadow: 1px 1px 0px #000;
+            position: relative;
+            overflow: hidden;
+            display: block;
+            text-decoration: none;
             cursor: pointer;
-            text-align: left;
+            pointer-events: auto;
+            font-size: clamp(1.25rem, 2.5vw, 2.5rem);
+            font-size: clamp(1.25rem, 4.2cqh, 3rem);
+            padding: 6px 20px;
+            padding: clamp(4px, 1cqh, 10px) clamp(14px, 2.8cqw, 32px);
         }
-        .card.demo {
-            border-color: #ffd400;
-            box-shadow: 0 0 18px rgba(255, 212, 0, 0.12);
+
+        .retro-btn:hover, .retro-btn:focus {
+            background: #fff;
+            color: #000;
+            cursor: pointer;
+            text-shadow: none;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+            outline: none;
+            text-decoration: none;
         }
-        .card.sandbox {
-            border-color: #ff3344;
-            box-shadow: 0 0 18px rgba(255, 51, 68, 0.12);
+
+        .retro-btn:active {
+            transform: scale(0.98);
         }
-        .card.fps {
-            border-color: #2a9dff;
-            box-shadow: 0 0 18px rgba(42, 157, 255, 0.12);
+
+        /* C++ Background Text */
+        .bg-code {
+            color: rgba(255, 255, 255, 0.2);
+            text-shadow: none;
+            pointer-events: none;
+            font-size: clamp(9px, 1vw, 14px);
+            font-size: clamp(9px, 1.6cqh, 16px);
         }
-        .card:hover, .card:active {
-            transform: translateY(-3px);
-            background: rgba(28, 28, 28, 0.95);
+
+        /* Schematic SVG Styling */
+        .schematic-line {
+            stroke: #fff;
+            fill: none;
+            stroke-width: 2;
+            shape-rendering: crispEdges; /* Gives it a pixelated/sharp look */
         }
-        .card.demo:hover, .card.demo:active {
-            box-shadow: 0 0 26px rgba(255, 212, 0, 0.35);
+        
+        .schematic-dash {
+            stroke: #fff;
+            fill: none;
+            stroke-width: 2;
+            stroke-dasharray: 4, 4;
+            shape-rendering: crispEdges;
         }
-        .card.sandbox:hover, .card.sandbox:active {
-            box-shadow: 0 0 26px rgba(255, 51, 68, 0.35);
+
+        .schematic-fill {
+            fill: #fff;
+            shape-rendering: crispEdges;
         }
-        .card.fps:hover, .card.fps:active {
-            box-shadow: 0 0 26px rgba(42, 157, 255, 0.35);
-        }
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .card-title {
-            font-size: 22px;
-            font-weight: bold;
-            letter-spacing: 2px;
-        }
-        .card.demo .card-title { color: #ffd400; }
-        .card.sandbox .card-title { color: #ff3344; }
-        .card.fps .card-title { color: #2a9dff; }
-        .card-route {
-            font-size: 11px;
-            color: #888;
-            border: 1px solid #444;
-            padding: 2px 6px;
-        }
-        .card-desc {
-            color: #bbb;
-            font-size: 13px;
-            line-height: 1.5;
-            margin: 0 0 18px;
-        }
-        .card-cta {
-            display: inline-block;
-            width: 100%;
-            text-align: center;
-            padding: 10px 14px;
-            font-weight: bold;
-            font-size: 15px;
+
+        .hud-text {
+            font-family: 'VT323', monospace;
+            fill: #fff;
+            font-size: 14px;
             letter-spacing: 1px;
-            border: 1.5px solid currentColor;
-            background: #111;
         }
-        .card.demo .card-cta { color: #ffd400; }
-        .card.sandbox .card-cta { color: #ff3344; }
-        .card.fps .card-cta { color: #2a9dff; }
-        .card.demo:hover .card-cta, .card.demo:active .card-cta {
-            background: #ffd400;
-            color: #000;
+        
+        .hud-text-dim {
+            fill: #888;
         }
-        .card.sandbox:hover .card-cta, .card.sandbox:active .card-cta {
-            background: #ff3344;
-            color: #000;
+
+        .hud-line {
+            stroke: #888;
+            stroke-width: 1;
+            fill: none;
+            shape-rendering: crispEdges;
         }
-        .card.fps:hover .card-cta, .card.fps:active .card-cta {
-            background: #2a9dff;
-            color: #000;
-        }
-        .footer-note {
-            color: #888;
-            max-width: 580px;
-            line-height: 1.5;
-            font-size: 12px;
-        }
+
+        /* Rotate overlay for mobile portrait orientation */
         #rotate-overlay {
             display: none;
             position: fixed;
             inset: 0;
             z-index: 9999;
-            background: #0d0406;
+            background: #000;
             color: #fff;
             flex-direction: column;
             align-items: center;
@@ -178,26 +219,27 @@
             text-align: center;
             padding: 24px;
             touch-action: none;
+            font-family: 'VT323', monospace;
         }
         #rotate-overlay .rot-icon {
             font-size: 56px;
-            color: #ff3344;
+            color: #fff;
             margin-bottom: 14px;
             display: inline-block;
             animation: rotPhone 1.8s ease-in-out infinite;
         }
         #rotate-overlay h2 {
             margin: 0 0 8px;
-            font-size: 22px;
+            font-size: 32px;
             letter-spacing: 3px;
-            color: #ff3344;
+            color: #fff;
         }
         #rotate-overlay p {
             margin: 0;
-            color: #ccc;
-            font-size: 14px;
-            max-width: 320px;
-            line-height: 1.5;
+            color: #aaa;
+            font-size: 20px;
+            max-width: 340px;
+            line-height: 1.4;
         }
         @keyframes rotPhone {
             0%, 20% { transform: rotate(0deg); }
@@ -206,155 +248,213 @@
         @media (orientation: portrait) and (max-width: 900px) {
             #rotate-overlay { display: flex; }
         }
-        @media (max-height: 500px) and (orientation: landscape) {
-            #main-menu { padding: 12px 16px; }
-            h1 { font-size: clamp(26px, 5vw, 42px); }
-            .lead { margin: 6px 0 12px; font-size: 13px; }
-            .cards { gap: 12px; margin-bottom: 10px; }
-            .card { padding: 12px 14px; }
-            .card-desc { margin-bottom: 10px; font-size: 12px; }
-            .card-cta { padding: 7px 10px; font-size: 13px; }
-        }
     </style>
 </head>
-<body>
+<body class="bg-black">
+
+    <!-- Rotate Prompt on Mobile Portrait -->
     <div id="rotate-overlay">
         <div class="rot-icon">&#128241;</div>
         <h2>MODO HORIZONTAL</h2>
         <p>Gira tu dispositivo en posici&oacute;n horizontal para jugar ULTRANATOMIA.</p>
     </div>
-    <canvas id="three-canvas"></canvas>
 
-    <main id="main-menu">
-        <div class="subtitle-tag">PROYECTO DE BIOLOG&Iacute;A &middot; SISTEMA REPRODUCTOR</div>
-        <h1>ULTRANATOMIA</h1>
-        <p class="lead">Traves&iacute;a anat&oacute;mica en bullet time hacia el Ovocito II. Atraviesa las 4 capas del sistema reproductor (Conductos Masculinos, C&eacute;rvix, Cavidad Uterina y Ampolla Tub&aacute;rica) superando barreras histol&oacute;gicas, hormonales, bioqu&iacute;micas y secuenciales.</p>
+    <!-- Screen Frame: Strictly 16:9 Aspect Ratio -->
+    <div class="screen-frame relative max-w-[1920px] aspect-video border-[6px] border-white rounded-[2rem] overflow-hidden bg-black flex flex-row scanlines screen-glow">
+        
+        <!-- Background Code Text Layer -->
+        <div class="absolute top-4 left-6 z-0 bg-code leading-tight tracking-wider whitespace-pre font-mono">
+#INCLUDE { above, so } FROM "dHJPc21|Z2lzDHVz";
+#INCLUDE { permutation, transmutation, exhalation } FROM "cHJpbwNpCgxl"
 
-        <div class="cards">
-            <a class="card demo" href="game/">
-                <div>
-                    <div class="card-header">
-                        <span class="card-title">JUGAR DEMO</span>
-                        <span class="card-route">/game</span>
-                    </div>
-                    <p class="card-desc">Modo Carrera completo: recorre las 4 capas anat&oacute;micas, supera 16 barreras celulares y derrota al Jefe Ovocito II con puntuaci&oacute;n de estilo y rango final (D a S / P).</p>
-                </div>
-                <span class="card-cta">ENTRAR A LA DEMO &rarr;</span>
-            </a>
+void* bio_draw(int abc, void* xyz);
+void* rect_fill(int x, int y, int w, int h, color c);
+typedef struct { float x, y, z; } Vertex;
 
-            <a class="card sandbox" href="sandbox/">
-                <div>
-                    <div class="card-header">
-                        <span class="card-title">SANDBOX</span>
-                        <span class="card-route">/sandbox</span>
-                    </div>
-                    <p class="card-desc">Laboratorio de pruebas: ensaya GOLPE (Epitelio), PARRY (N&uacute;cleo Endocrino), DISPARO (Gl&aacute;ndula Mucosa) y QTE (Esf&iacute;nter / Corona Radiata) por separado.</p>
-                </div>
-                <span class="card-cta">ABRIR SANDBOX &rarr;</span>
-            </a>
+typedef form = matter(fluid);
 
-            <a class="card fps" href="fps/">
-                <div>
-                    <div class="card-header">
-                        <span class="card-title">MODO FPS</span>
-                        <span class="card-route">/fps</span>
-                    </div>
-                    <p class="card-desc">Acci&oacute;n en primera persona: mu&eacute;vete con libertad por las 4 capas, dispara y golpea a las c&eacute;lulas, devuelve hormonas con PARRY y enfr&eacute;ntate al Jefe Ovocito II.</p>
-                </div>
-                <span class="card-cta">ENTRAR AL MODO FPS &rarr;</span>
-            </a>
+#INCLUDE "EARLY_ACCESS READY" FROM "d29tg=="
+
+typedef leaf = matter(dna);
+struct branch {
+    leaf* p;
+};
         </div>
 
-        <small class="footer-note">
-            Compatible con <strong>PC</strong> (teclado 1-4, rat&oacute;n y WASD en Modo FPS) y <strong>M&oacute;vil / Tablet</strong> (controles t&aacute;ctiles en preguntas y QTE).
-        </small>
-    </main>
+        <!-- LEFT COLUMN (55%) -->
+        <div class="relative z-10 w-[55%] h-full flex flex-col justify-between menu-left-col">
+            
+            <!-- Top: Title & Logs -->
+            <div class="mt-2 md:mt-4">
+                <h1 class="game-title font-bold text-white mb-4 uppercase block">
+                    ULTRANATOMIA
+                </h1>
+                
+                <div class="text-zinc-300 tracking-widest font-mono menu-diag-text">
+                    <p>SYSTEM SPERMATOZOON INITIALIZED</p>
+                    <p>DIAGNOSTICS...OK</p>
+                    <p>STANDBY - WAIT FOR WAKE</p>
+                </div>
+            </div>
+
+            <!-- Middle: Main Menu Buttons -->
+            <div class="flex flex-col menu-btn-group w-3/4 max-w-[400px]">
+                <a href="game/" class="retro-btn font-bold uppercase tracking-widest text-left">
+                    GAME
+                </a>
+                <a href="fps/" class="retro-btn font-bold uppercase tracking-widest text-left">
+                    FPS
+                </a>
+                <a href="sandbox/" class="retro-btn font-bold uppercase tracking-widest text-left">
+                    SANDBOX
+                </a>
+                <a href="https://github.com/LuckyToShine/ULTRANATOMIA" target="_blank" rel="noopener noreferrer" class="retro-btn font-bold uppercase tracking-widest text-left">
+                    GITHUB
+                </a>
+            </div>
+
+            <!-- Bottom: Socials -->
+            <div class="mt-auto pt-4 md:pt-6">
+                <p class="text-zinc-400 menu-socials-text">INIT SOCIALS...OK</p>
+                <div class="flex menu-socials-links text-white">
+                    <a href="#" class="border-b-2 border-white pb-1 hover:bg-white hover:text-black transition-colors px-1 uppercase">DISCORD</a>
+                    <a href="#" class="border-b-2 border-white pb-1 hover:bg-white hover:text-black transition-colors px-1 uppercase">TWITTER</a>
+                    <a href="#" class="border-b-2 border-white pb-1 hover:bg-white hover:text-black transition-colors px-1 uppercase">YOUTUBE</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN (45%) - The 1-bit Schematic Character -->
+        <div class="relative z-10 w-[45%] h-full flex items-center justify-center p-4">
+            
+            <svg viewBox="0 0 1000 1000" class="w-full h-full">
+                
+                <!-- BACKGROUND HUD GRIDS / CROSSHAIRS -->
+                <g opacity="0.3">
+                    <line x1="100" y1="500" x2="900" y2="500" class="schematic-dash" stroke-width="1"/>
+                    <line x1="500" y1="100" x2="500" y2="900" class="schematic-dash" stroke-width="1"/>
+                    <circle cx="500" cy="500" r="300" class="hud-line" />
+                    <circle cx="500" cy="500" r="200" class="hud-line" stroke-dasharray="10 10"/>
+                </g>
+
+                <!-- HUD ANNOTATIONS -->
+                <!-- Top Right -->
+                <text x="680" y="240" class="hud-text">ACROSOME PAYLOAD MODULE</text>
+                <text x="680" y="255" class="hud-text hud-text-dim">STATUS CHECK...</text>
+                <text x="680" y="270" class="hud-text hud-text-dim">MEMBRANE PENETRATION: READY</text>
+                <polyline points="670,245 580,245 520,290" class="hud-line" />
+                <rect x="515" y="285" width="10" height="10" class="schematic-fill" />
+
+                <!-- Mid Right -->
+                <text x="750" y="440" class="hud-text">MITOCHONDRIAL ENGINE</text>
+                <text x="750" y="455" class="hud-text hud-text-dim">ATP SYNTHESIS: NOMINAL</text>
+                <text x="750" y="470" class="hud-text hud-text-dim">CONTINUOUS PROPULSION: OK</text>
+                <polyline points="740,445 620,445 530,490" class="hud-line" />
+                <rect x="525" y="485" width="10" height="10" class="schematic-fill" />
+
+                <!-- Bottom Right -->
+                <text x="700" y="700" class="hud-text">VECTOR REDIRECTION SYSTEM</text>
+                <text x="700" y="715" class="hud-text hud-text-dim">"WHIPLASH" PROGRAM... FOUND</text>
+                <polyline points="690,705 580,705 540,650" class="hud-line" />
+                <rect x="535" y="645" width="10" height="10" class="schematic-fill" />
+
+                <!-- Mid Left -->
+                <text x="320" y="380" class="hud-text" text-anchor="end">GENETIC CORE (NUCLEUS)</text>
+                <text x="320" y="395" class="hud-text hud-text-dim" text-anchor="end">DATA INTEGRITY: 100%</text>
+                <polyline points="330,385 410,385 460,350" class="hud-line" />
+                <rect x="455" y="345" width="10" height="10" class="schematic-fill" />
+                
+                <!-- Bottom Left -->
+                <text x="360" y="600" class="hud-text" text-anchor="end">FLAGELLUM PROPULSION</text>
+                <text x="360" y="615" class="hud-text hud-text-dim" text-anchor="end">INERTIA CORRECTION: OK</text>
+                <polyline points="370,605 440,605 470,630" class="hud-line" />
+                <rect x="465" y="625" width="10" height="10" class="schematic-fill" />
+
+                <!-- MAIN CHARACTER: SCHEMATIC SPERMATOZOON -->
+                <g transform="translate(0, -30)">
+                    
+                    <!-- Head: Outer Shell (Acrosome armor) -->
+                    <!-- Angular, blocky teardrop shape -->
+                    <polygon points="500,160 550,250 560,380 500,440 440,380 450,250" class="schematic-line" stroke-width="4" />
+                    <!-- Inner structural lines -->
+                    <polygon points="500,180 530,260 540,370 500,410 460,370 470,260" class="schematic-dash" />
+                    
+                    <!-- Nucleus (Core module) -->
+                    <rect x="480" y="270" width="40" height="90" class="schematic-line" />
+                    <rect x="485" y="275" width="30" height="80" class="schematic-fill" opacity="0.2"/>
+                    <!-- Core details -->
+                    <line x1="480" y1="315" x2="520" y2="315" class="schematic-line" />
+                    <circle cx="500" cy="315" r="8" class="schematic-fill" />
+
+                    <!-- Armor paneling / Wings (Inspired by V1) -->
+                    <!-- Top stabilizers -->
+                    <polygon points="450,280 340,240 360,260 450,300" class="schematic-line" />
+                    <polygon points="550,280 660,240 640,260 550,300" class="schematic-line" />
+                    <!-- Lower stabilizers -->
+                    <polygon points="440,360 300,390 320,410 440,390" class="schematic-line" />
+                    <polygon points="560,360 700,390 680,410 560,390" class="schematic-line" />
+                    <!-- Stabilizer details (dots) -->
+                    <rect x="345" y="245" width="6" height="6" class="schematic-fill" />
+                    <rect x="649" y="245" width="6" height="6" class="schematic-fill" />
+                    <rect x="310" y="393" width="6" height="6" class="schematic-fill" />
+                    <rect x="684" y="393" width="6" height="6" class="schematic-fill" />
+
+                    <!-- Neck (Connecting joint) -->
+                    <rect x="475" y="440" width="50" height="20" class="schematic-line" />
+                    <line x1="480" y1="450" x2="520" y2="450" class="schematic-line" />
+                    <rect x="485" y="460" width="30" height="15" class="schematic-fill" />
+
+                    <!-- Midpiece (Mitochondrial engine block) -->
+                    <polygon points="470,475 530,475 520,580 480,580" class="schematic-line" stroke-width="3" />
+                    <!-- Engine coils / horizontal ribbing -->
+                    <line x1="478" y1="490" x2="522" y2="490" class="schematic-line" />
+                    <line x1="476" y1="510" x2="524" y2="510" class="schematic-line" />
+                    <line x1="474" y1="530" x2="526" y2="530" class="schematic-line" />
+                    <line x1="476" y1="550" x2="524" y2="550" class="schematic-line" />
+                    
+                    <!-- Base of Midpiece -->
+                    <polygon points="470,580 530,580 510,610 490,610" class="schematic-line" />
+                    <circle cx="500" cy="595" r="6" class="schematic-fill" />
+
+                    <!-- Tail (Flagellum - Mechanical Whip) -->
+                    <!-- Angular spine -->
+                    <polyline points="500,610 500,650 460,720 540,820 480,920 530,1020" class="schematic-line" stroke-width="4" />
+                    <!-- Outer wireframe of the tail -->
+                    <polyline points="490,610 490,645 450,715 530,815 470,915 520,1015" class="schematic-dash" stroke-width="1" />
+                    <polyline points="510,610 510,655 470,725 550,825 490,925 540,1025" class="schematic-dash" stroke-width="1" />
+                    
+                    <!-- Mechanical nodes/joints along the tail -->
+                    <!-- Joint 1 -->
+                    <rect x="490" y="640" width="20" height="10" class="schematic-fill" transform="rotate(30, 500, 645)" />
+                    <!-- Joint 2 -->
+                    <rect x="450" y="710" width="20" height="10" class="schematic-line" fill="#000" transform="rotate(-40, 460, 715)" />
+                    <circle cx="460" cy="720" r="4" class="schematic-fill" />
+                    <!-- Joint 3 -->
+                    <rect x="530" y="810" width="20" height="10" class="schematic-line" fill="#000" transform="rotate(40, 540, 815)" />
+                    <circle cx="540" cy="820" r="4" class="schematic-fill" />
+                    <!-- Joint 4 -->
+                    <rect x="470" y="910" width="20" height="10" class="schematic-line" fill="#000" transform="rotate(-30, 480, 915)" />
+                    <circle cx="480" cy="920" r="4" class="schematic-fill" />
+
+                </g>
+            </svg>
+        </div>
+
+    </div>
 
     <script>
-        // Fondo 3D animado del túnel orgánico de ULTRANATOMIA
-        const DPR = Math.min(window.devicePixelRatio || 1, 3);
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0d0406);
-        scene.fog = new THREE.Fog(0x0d0406, 10, 70);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 2.2, 0);
-
-        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas'), antialias: true });
-        renderer.setPixelRatio(DPR);
-        renderer.setSize(window.innerWidth, window.innerHeight);
-
-        scene.add(new THREE.AmbientLight(0x604048));
-        const pointLight = new THREE.PointLight(0xff4455, 1.3, 70);
-        scene.add(pointLight);
-
-        const gridHelper = new THREE.GridHelper(60, 60, 0x555555, 0x222222);
-        scene.add(gridHelper);
-
-        const tube = new THREE.Mesh(
-            new THREE.CylinderGeometry(9, 9, 400, 24, 1, true),
-            new THREE.MeshPhongMaterial({ color: 0x2a0a10, emissive: 0x140407, side: THREE.BackSide })
-        );
-        tube.rotation.x = Math.PI / 2;
-        tube.position.y = 3;
-        scene.add(tube);
-
-        const RING_COUNT = 14, RING_GAP = 8;
-        const ringGeo = new THREE.TorusGeometry(9, 0.28, 10, 28);
-        const ringMat = new THREE.MeshPhongMaterial({ color: 0x5a1520, emissive: 0x2a0a10 });
-        const ciliumGeo = new THREE.ConeGeometry(0.14, 1.3, 5);
-        const ciliumMat = new THREE.MeshPhongMaterial({ color: 0xff6688, emissive: 0x330812 });
-        const rings = [];
-        const ciliaList = [];
-        for (let i = 0; i < RING_COUNT; i++) {
-            const r = new THREE.Mesh(ringGeo, ringMat);
-            r.position.set(0, 3, 10 - i * RING_GAP);
-            for (let c = 0; c < 8; c++) {
-                const ang = (c / 8) * Math.PI * 2 + (i % 2) * 0.4;
-                const cil = new THREE.Mesh(ciliumGeo, ciliumMat);
-                cil.position.set(Math.cos(ang) * 8.4, Math.sin(ang) * 8.4, 0);
-                cil.rotation.z = ang + Math.PI / 2;
-                r.add(cil);
-                ciliaList.push({ mesh: cil, baseRotZ: cil.rotation.z, phase: i * 0.7 + c });
+        // Keyboard navigation shortcuts
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (e.key === '1') {
+                window.location.href = 'game/';
+            } else if (e.key === '2') {
+                window.location.href = 'fps/';
+            } else if (e.key === '3') {
+                window.location.href = 'sandbox/';
+            } else if (e.key === '4') {
+                window.open('https://github.com/LuckyToShine/ULTRANATOMIA', '_blank', 'noopener,noreferrer');
             }
-            scene.add(r);
-            rings.push(r);
-        }
-
-        const clock = new THREE.Clock();
-        let pz = 0;
-
-        function animate() {
-            requestAnimationFrame(animate);
-            const dt = Math.min(clock.getDelta(), 0.05);
-            pz -= 8 * dt;
-            const t = performance.now() * 0.001;
-
-            rings.forEach((r, idx) => {
-                while (r.position.z > pz + 10) r.position.z -= RING_COUNT * RING_GAP;
-                const pulse = 1 + Math.sin(t * 2.5 + idx * 0.6) * 0.04;
-                r.scale.set(pulse, pulse, 1);
-            });
-            for (let i = 0; i < ciliaList.length; i++) {
-                const c = ciliaList[i];
-                c.mesh.rotation.z = c.baseRotZ + Math.sin(t * 3.2 + c.phase) * 0.22;
-            }
-            tube.position.z = pz - 150;
-            gridHelper.position.z = Math.round(pz);
-            pointLight.position.set(0, 6, pz - 6);
-
-            camera.position.set(Math.sin(t * 0.6) * 0.6, 2.2 + Math.cos(t * 1.1) * 0.15, pz);
-            camera.lookAt(0, 2.6, pz - 20);
-
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3));
-            renderer.setSize(window.innerWidth, window.innerHeight);
         });
     </script>
 </body>
