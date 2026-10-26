@@ -161,7 +161,7 @@
             <button id="startRun">CARRERA</button>
         </div>
         <a class="menu-link secondary" href="../">&larr; VOLVER AL MEN&Uacute; PRINCIPAL</a>
-        <small>Libre: prueba GOLPE, PARRY, DISPARO y QTE una por una desde el panel.<br>Carrera: 8 obst&aacute;culos en autom&aacute;tico con checkpoint, tiempo, estilo, precisi&oacute;n y rango D-S-P.<br>Compatible con teclado (1-3 en trivia, 1-4 en QTE) y pantalla t&aacute;ctil (tocar opciones y palabras en orden).</small>
+        <small>Libre: prueba GOLPE, PARRY, DISPARO y QTE una por una desde el panel.<br>Carrera: 16 obst&aacute;culos en autom&aacute;tico por las 4 capas anat&oacute;micas con checkpoint, tiempo, estilo, precisi&oacute;n y rango D-S-P.<br>Compatible con teclado (1-3 en trivia, 1-4 en QTE) y pantalla t&aacute;ctil (tocar opciones y palabras en orden).</small>
     </div>
 
     <script>
@@ -178,35 +178,73 @@
         // La primera opción de cada pregunta es la correcta; se barajan al mostrarlas.
         const BANK = {
             golpe: [
-                { q: '¿Qué capa del útero se desprende en la menstruación?', a: ['Endometrio', 'Miometrio', 'Perimetrio'] },
-                { q: '¿Qué célula forma la barrera del testículo?', a: ['Célula de Sertoli', 'Célula de Leydig', 'Espermatogonia'] },
-                { q: '¿Qué capa fibrosa envuelve al testículo?', a: ['Túnica albugínea', 'Túnica vaginal', 'Túnica dartos'] },
-                { q: '¿Qué célula del testículo produce testosterona?', a: ['Célula de Leydig', 'Célula de Sertoli', 'Espermátide'] },
-                { q: '¿Qué capa muscular del útero se contrae en el parto?', a: ['Miometrio', 'Endometrio', 'Perimetrio'] },
-                { q: '¿Cuál es la capa más externa del útero?', a: ['Perimetrio', 'Miometrio', 'Endometrio'] }
+                // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
+                { layer: 0, q: '¿Qué célula forma la barrera hematotesticular?', a: ['Célula de Sertoli', 'Célula de Leydig', 'Espermatogonia'] },
+                { layer: 0, q: '¿Qué capa fibrosa densa envuelve directamente al testículo?', a: ['Túnica albugínea', 'Túnica vaginal', 'Músculo cremáster'] },
+                { layer: 0, q: '¿Qué célula intersticial del testículo produce testosterona?', a: ['Célula de Leydig', 'Célula de Sertoli', 'Célula mioide'] },
+                { layer: 0, q: '¿Qué epitelio reviste el conducto del epidídimo?', a: ['Pseudoestratificado con estereocilios', 'Plano simple', 'Transicional urotelial'] },
+                // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
+                { layer: 1, q: '¿Qué epitelio reviste la mucosa del canal vaginal?', a: ['Estratificado plano no queratinizado', 'Cilíndrico simple ciliado', 'Cúbico simple'] },
+                { layer: 1, q: '¿Qué estructura del cérvix almacena y filtra espermatozoides?', a: ['Criptas cervicales endocervicales', 'Glándulas de Skene', 'Folículos de Naboth'] },
+                { layer: 1, q: '¿Qué porción estrecha conecta la vagina con la cavidad uterina?', a: ['Cérvix (cuello uterino)', 'Istmo tubárico', 'Fondo uterino'] },
+                // CAPA III · CAVIDAD UTERINA (layer: 2)
+                { layer: 2, q: '¿Qué capa interna del útero se desprende en la menstruación?', a: ['Endometrio funcional', 'Miometrio', 'Perimetrio'] },
+                { layer: 2, q: '¿Qué capa muscular gruesa del útero se contrae en el parto?', a: ['Miometrio', 'Endometrio basal', 'Perimetrio'] },
+                { layer: 2, q: '¿Cuál es la cubierta serosa más externa del útero?', a: ['Perimetrio', 'Miometrio', 'Endometrio'] },
+                // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
+                { layer: 3, q: '¿Qué envoltura celular rodea directamente la zona pelúcida del Ovocito II?', a: ['Corona radiata', 'Teca externa', 'Cuerpo albicans'] },
+                { layer: 3, q: '¿Qué prolongaciones de la trompa capturan al ovocito al ovular?', a: ['Fimbrias del infundíbulo', 'Criptas cervicales', 'Vellosidades coriónicas'] },
+                { layer: 3, q: '¿En qué región amplia de la trompa de Falopio se halla el Ovocito II?', a: ['Ampolla tubárica', 'Porción intramural', 'Orificio cervical interno'] }
             ],
             parry: [
-                { q: '¿Qué hormona provoca directamente la ovulación?', a: ['LH', 'Progesterona', 'Testosterona'] },
-                { q: '¿A qué hormona frena la inhibina B?', a: ['FSH', 'Testosterona', 'Oxitocina'] },
-                { q: '¿Dónde hace control negativo la testosterona?', a: ['Hipotálamo e hipófisis', 'Epidídimo', 'Próstata'] },
-                { q: '¿Qué hormona produce el cuerpo lúteo?', a: ['Progesterona', 'FSH', 'Prolactina'] },
-                { q: 'Antes de ovular, el estradiol estimula a la LH de forma:', a: ['Positiva', 'Negativa', 'Nula'] },
-                { q: '¿Qué células del testículo activan la hormona LH?', a: ['Células de Leydig', 'Células de Sertoli', 'Espermatogonias'] }
+                // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
+                { layer: 0, q: '¿A qué hormona hipofisaria frena la inhibina B de las células de Sertoli?', a: ['FSH', 'Oxitocina', 'Prolactina'] },
+                { layer: 0, q: '¿Dónde ejerce retroalimentación negativa la testosterona?', a: ['Hipotálamo e hipófisis', 'Epidídimo y uretra', 'Próstata y vesículas'] },
+                { layer: 0, q: '¿Qué células del testículo son activadas directamente por la LH?', a: ['Células de Leydig', 'Células de Sertoli', 'Espermatogonias'] },
+                // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
+                { layer: 1, q: '¿Qué hormona vuelve el moco cervical fluido y filante al ovular?', a: ['Estradiol (estrógenos)', 'Progesterona', 'Prolactina'] },
+                { layer: 1, q: '¿Qué hormona espesa el moco cervical formando un tapón viscoso?', a: ['Progesterona', 'LH', 'FSH'] },
+                { layer: 1, q: '¿Qué compuestos del semen estimulan contracciones en cérvix y útero?', a: ['Prostaglandinas', 'Inhibinas', 'Androstenediona'] },
+                // CAPA III · CAVIDAD UTERINA (layer: 2)
+                { layer: 2, q: '¿Qué hormona del cuerpo lúteo prepara el endometrio secretor?', a: ['Progesterona', 'FSH', 'Inhibina B'] },
+                { layer: 2, q: '¿Qué hormona estimula la regeneración proliferativa del endometrio?', a: ['Estradiol', 'Oxitocina', 'Relaxina'] },
+                { layer: 2, q: '¿Qué hormona neurohipofisaria provoca contracciones del miometrio?', a: ['Oxitocina', 'Prolactina', 'GnRH'] },
+                // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
+                { layer: 3, q: '¿Qué pico hormonal desencadena la liberación del Ovocito II?', a: ['Pico de LH', 'Caída de FSH', 'Pico de aldosterona'] },
+                { layer: 3, q: 'Antes de ovular, el estradiol elevado regula a la LH de forma:', a: ['Positiva', 'Negativa', 'Nula'] },
+                { layer: 3, q: '¿En qué fase meiótica espera el Ovocito II en la trompa al ser fecundado?', a: ['Metafase II', 'Profase I', 'Telofase I'] }
             ],
             disparo: [
-                { q: '¿Dónde maduran y se guardan los espermatozoides?', a: ['Epidídimo', 'Próstata', 'Uretra'] },
-                { q: '¿Qué azúcar da energía al espermatozoide?', a: ['Fructosa', 'Lactosa', 'Glucosa'] },
-                { q: '¿Dónde ocurre normalmente la fecundación?', a: ['Trompa de Falopio', 'Útero', 'Vagina'] },
-                { q: '¿Qué glándula hace más líquido al semen (PSA)?', a: ['Próstata', 'Epidídimo', 'Testículo'] },
-                { q: '¿Qué gas relaja los vasos para lograr la erección?', a: ['Óxido nítrico', 'Oxígeno', 'Adrenalina'] },
-                { q: '¿Qué glándula produce la mayor parte del semen?', a: ['Vesículas seminales', 'Próstata', 'Epidídimo'] }
+                // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
+                { layer: 0, q: '¿Dónde maduran y adquieren movilidad los espermatozoides?', a: ['Epidídimo', 'Próstata', 'Vesículas seminales'] },
+                { layer: 0, q: '¿Qué azúcar de las vesículas seminales da energía al espermatozoide?', a: ['Fructosa', 'Lactosa', 'Galactosa'] },
+                { layer: 0, q: '¿Qué glándula secreta PSA para licuar el coágulo seminal?', a: ['Próstata', 'Epidídimo', 'Glándula bulbouretral'] },
+                // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
+                { layer: 1, q: '¿Qué protege al espermatozoide frente al pH ácido (~4) vaginal?', a: ['Fluido seminal alcalino', 'Ácido láctico vaginal', 'Moco progestagénico'] },
+                { layer: 1, q: '¿Qué bacterias mantienen el pH ácido protector de la vagina?', a: ['Lactobacilos (bacilos de Döderlein)', 'Escherichia coli', 'Estreptococos'] },
+                { layer: 1, q: '¿Qué pH aproximado tiene el fluido seminal para neutralizar la vagina?', a: ['Alcalino (7.2 a 8.0)', 'Muy ácido (3.5 a 4.0)', 'Ácido moderado (5.0)'] },
+                // CAPA III · CAVIDAD UTERINA (layer: 2)
+                { layer: 2, q: '¿Qué cambio funcional sufre el espermatozoide en el útero para poder fecundar?', a: ['Capacitación espermática', 'Espermiogénesis', 'Meiosis II'] },
+                { layer: 2, q: '¿Qué células inmunes patrullan la cavidad uterina fagocitando gametos?', a: ['Leucocitos (neutrófilos y macrófagos)', 'Eritrocitos', 'Adipocitos'] },
+                { layer: 2, q: '¿Qué lípido pierde la membrana del espermatozoide durante la capacitación uterina?', a: ['Colesterol', 'Glucógeno', 'Colágeno'] },
+                // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
+                { layer: 3, q: '¿En qué órgano ocurre habitualmente la fecundación del Ovocito II?', a: ['Trompa de Falopio (ampolla)', 'Fondo del útero', 'Canal endocervical'] },
+                { layer: 3, q: '¿Qué glucoproteína de la zona pelúcida une al espermatozoide e induce reacción acrosómica?', a: ['ZP3', 'Albúmina', 'Fibrina'] },
+                { layer: 3, q: '¿Qué enzima acrosómica digiere el ácido hialurónico de la corona radiata?', a: ['Hialuronidasa', 'Amilasa', 'Pepsina'] }
             ],
             qte: [
-                { q: 'Recorrido del espermatozoide al salir:', steps: ['Testículo', 'Epidídimo', 'Conducto deferente', 'Uretra'] },
-                { q: 'Orden de formación del espermatozoide:', steps: ['Espermatogonia', 'Espermatocito', 'Espermátide', 'Espermatozoide'] },
-                { q: 'Fases del ciclo uterino desde el sangrado:', steps: ['Menstrual', 'Proliferativa', 'Secretora'] },
-                { q: 'Orden de maduración del folículo ovárico:', steps: ['Primordial', 'Primario', 'Secundario', 'De Graaf'] },
-                { q: 'Pasos de la fecundación en orden:', steps: ['Capacitación', 'Reacción acrosómica', 'Fusión'] }
+                // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
+                { layer: 0, q: 'Recorrido del espermatozoide por los conductos masculinos:', steps: ['Túbulo seminífero', 'Epidídimo', 'Conducto deferente', 'Uretra'] },
+                { layer: 0, q: 'Orden de diferenciación en la espermatogénesis:', steps: ['Espermatogonia', 'Espermatocito', 'Espermátide', 'Espermatozoide'] },
+                // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
+                { layer: 1, q: 'Paso del espermatozoide del canal vaginal al cérvix:', steps: ['Vagina ácida', 'Orificio cervical externo', 'Canal endocervical', 'Orificio cervical interno'] },
+                { layer: 1, q: 'Superación de la barrera ácida y mucosa cervical:', steps: ['Inseminación vaginal', 'Tampón alcalino seminal', 'Filtrado en moco cervical', 'Reserva en criptas'] },
+                // CAPA III · CAVIDAD UTERINA (layer: 2)
+                { layer: 2, q: 'Fases del ciclo endometrial uterino desde el sangrado:', steps: ['Fase menstrual', 'Fase proliferativa', 'Fase secretora'] },
+                { layer: 2, q: 'Capas de la pared uterina desde la luz hacia el exterior:', steps: ['Endometrio funcional', 'Endometrio basal', 'Miometrio', 'Perimetrio'] },
+                // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
+                { layer: 3, q: 'Segmentos de la trompa desde el útero hacia el ovario:', steps: ['Porción intramural', 'Istmo tubárico', 'Ampolla tubárica', 'Infundíbulo y fimbrias'] },
+                { layer: 3, q: 'Pasos finales de la fecundación del Ovocito II:', steps: ['Corona radiata', 'Zona pelúcida (ZP3)', 'Fusión de membranas', 'Singamia pronuclear'] }
             ]
         };
 
@@ -229,15 +267,27 @@
             return s;
         }
 
-        // Mazo por mecánica: no repite pregunta hasta agotar el banco
+        // Mazo por mecánica y capa: no repite pregunta hasta agotar el banco
         const decks = {};
-        function drawQuestion(type) {
-            if (!decks[type] || decks[type].length === 0) decks[type] = shuffle(BANK[type].map((_, i) => i));
-            const item = BANK[type][decks[type].pop()];
+        function drawQuestion(type, layerIdx) {
+            const hasLayer = layerIdx !== undefined && layerIdx !== null;
+            const key = hasLayer ? (type + '_' + layerIdx) : type;
+            if (!decks[key] || decks[key].length === 0) {
+                let indices = [];
+                if (hasLayer) {
+                    BANK[type].forEach((item, i) => {
+                        if (item.layer === layerIdx) indices.push(i);
+                    });
+                }
+                if (indices.length === 0) indices = BANK[type].map((_, i) => i);
+                decks[key] = shuffle(indices);
+            }
+            const item = BANK[type][decks[key].pop()];
             if (type === 'qte') {
                 const steps = item.steps || item.a[0].split(/\s*→\s*/);
                 return {
                     type,
+                    layer: item.layer,
                     q: item.q,
                     steps,
                     words: shuffleOrder(steps)
@@ -246,6 +296,7 @@
             const opts = shuffle(item.a.map((t, i) => ({ t, ok: i === 0 })));
             return {
                 type,
+                layer: item.layer,
                 q: item.q,
                 options: opts.map((o, i) => (i + 1) + '. ' + o.t),
                 correct: opts.findIndex(o => o.ok) + 1
@@ -258,7 +309,7 @@
         // ==========================================
         // 1. CONSTANTES DE JUEGO
         // ==========================================
-        const RUN_LEN = 8;               // obstáculos por carrera
+        const RUN_LEN = 16;              // obstáculos por carrera
         const CHECKPOINT_EVERY = 4;
         const FIRST_Z = -40;
         const SPACING = 40;
@@ -269,8 +320,8 @@
         const BASE_FOV = 75;
         const TRIVIA_FOV = 64;
         const RANKS = ['D', 'C', 'B', 'A', 'S'];
-        const TIME_THRESH = [90, 120, 150, 190];       // S, A, B, C (segundos, menor es mejor)
-        const STYLE_THRESH = [1250, 1000, 750, 450];   // S, A, B, C (mayor es mejor)
+        const TIME_THRESH = [180, 240, 300, 380];       // S, A, B, C (segundos, menor es mejor)
+        const STYLE_THRESH = [2500, 2000, 1500, 900];   // S, A, B, C (mayor es mejor)
         const ACC_THRESH = [95, 85, 70, 50];           // S, A, B, C (%)
 
         // ==========================================
@@ -312,9 +363,9 @@
         ];
 
         function layerIndexAtZ(z) {
-            if (z > -100) return 0;
-            if (z > -180) return 1;
-            if (z > -260) return 2;
+            if (z > -180) return 0;
+            if (z > -340) return 1;
+            if (z > -500) return 2;
             return 3;
         }
 
@@ -860,7 +911,9 @@
             },
 
             qte(o) {
-                const qData = drawQuestion('qte');
+                const layer = GameState.mode === 'run' ? Math.min(3, Math.floor((o.index || 0) / 4)) : undefined;
+                if (layer !== undefined) GameState.layerIdx = layer;
+                const qData = drawQuestion('qte', layer);
                 const words = qData.words.map(w => ({ t: w.t, order: w.order, picked: false }));
                 const totalTime = words.length * QTE_STEP_TIME;
                 GameState.qte = { o, q: qData.q, steps: qData.steps, words, i: 0, time: totalTime, maxTime: totalTime, locked: false };
@@ -971,15 +1024,19 @@
 
             makePlan() {
                 const types = Object.keys(MECH);
-                let best = null;
-                for (let tries = 0; tries < 50; tries++) {
-                    const p = shuffle(types.concat(types));
-                    let ok = true;
-                    for (let i = 1; i < p.length; i++) if (p[i] === p[i - 1]) ok = false;
-                    if (ok) return p;
-                    best = p;
+                const plan = [];
+                for (let layer = 0; layer < 4; layer++) {
+                    let seg = shuffle(types);
+                    for (let tries = 0; tries < 25; tries++) {
+                        if (plan.length === 0 || seg[0] !== plan[plan.length - 1]) break;
+                        seg = shuffle(types);
+                    }
+                    if (plan.length > 0 && seg[0] === plan[plan.length - 1]) {
+                        [seg[0], seg[1]] = [seg[1], seg[0]];
+                    }
+                    plan.push(...seg);
                 }
-                return best;
+                return plan;
             },
 
             zFor(i) { return FIRST_Z - i * SPACING; },
@@ -1017,6 +1074,9 @@
             triggerTrivia(o) {
                 if (this.phase !== 'idle' && this.phase !== 'running') return;
                 this.current = o;
+                if (this.mode === 'run') {
+                    this.layerIdx = Math.min(3, Math.floor((o.index || 0) / 4));
+                }
                 this.targetScale = this.bulletScale;
                 this.targetFov = TRIVIA_FOV;
                 if (o.type === 'qte') {
@@ -1028,7 +1088,11 @@
             },
 
             showQuestion() {
-                this.question = drawQuestion(this.current.type);
+                const layer = this.mode === 'run' && this.current
+                    ? Math.min(3, Math.floor((this.current.index || 0) / 4))
+                    : undefined;
+                if (layer !== undefined) this.layerIdx = layer;
+                this.question = drawQuestion(this.current.type, layer);
                 this.answerLock = false;
                 this.emitQuestion();
             },
@@ -1171,7 +1235,8 @@
                         this.cpIdx = done;
                         this.cpZ = this.player.z;
                         this.styleAtCp = this.style;
-                        emit('banner', { text: 'CHECKPOINT · CÉRVIX SUPERADO', color: '#ffffff' });
+                        const clearedLayer = LAYERS[Math.floor((done - 1) / CHECKPOINT_EVERY)];
+                        emit('banner', { text: 'CHECKPOINT · ' + clearedLayer.title + ' SUPERADA', color: '#ffffff' });
                     }
                 } else {
                     this.phase = 'idle';

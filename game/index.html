@@ -113,7 +113,7 @@
     <div id="menu">
         <div class="badge">DEMO PRINCIPAL</div>
         <h1>ULTRANATOMIA</h1>
-        <p>Supera los 8 obst&aacute;culos anat&oacute;micos a toda velocidad. Entra en bullet time, responde con precisi&oacute;n y encadena mec&aacute;nicas distintas para alcanzar el Rango P.</p>
+        <p>Supera los 16 obst&aacute;culos anat&oacute;micos a trav&eacute;s de las 4 capas y derrota al Jefe Final: el Ovocito II. Entra en bullet time, responde en menos de 5 segundos y encadena mec&aacute;nicas para alcanzar el Rango P.</p>
         <div class="mech-legend">
             <span class="mech-pill" style="color:#ff3344;border-color:#ff3344">GOLPE &middot; Histolog&iacute;a</span>
             <span class="mech-pill" style="color:#2a9dff;border-color:#2a9dff">PARRY &middot; Hormonas (+Vida)</span>
@@ -138,38 +138,83 @@
             qte:     { name: 'QTE',     color: 0xa23bff, css: '#a23bff', tema: 'Procesos secuenciales' }
         };
 
+        const BOSS_PHASES = [
+            { type: 'disparo', title: 'FASE 1/4 · CORONA RADIATA', tema: 'Hialuronidasa y dispersión folicular', color: '#ffd400', hex: 0xffd400 },
+            { type: 'golpe',   title: 'FASE 2/4 · ZONA PELÚCIDA (ZP3)', tema: 'Reconocimiento y perforación acrosómica', color: '#ff3344', hex: 0xff3344 },
+            { type: 'parry',   title: 'FASE 3/4 · REACCIÓN CORTICAL', tema: 'Bloqueo de la polispermia y ondas de Ca²⁺', color: '#2a9dff', hex: 0x2a9dff },
+            { type: 'qte',     title: 'FASE 4/4 · SINGAMIA Y FECUNDACIÓN', tema: 'Secuencia final de fusión pronuclear', color: '#a23bff', hex: 0xa23bff }
+        ];
+
         // La primera opción de cada pregunta es la correcta; se barajan al mostrarlas.
+        // Cada pregunta pertenece obligatoriamente a una capa anatómica (layer: 0..3).
         const BANK = {
             golpe: [
-                { q: '¿Qué capa del útero se desprende en la menstruación?', a: ['Endometrio', 'Miometrio', 'Perimetrio'] },
-                { q: '¿Qué célula forma la barrera del testículo?', a: ['Célula de Sertoli', 'Célula de Leydig', 'Espermatogonia'] },
-                { q: '¿Qué capa fibrosa envuelve al testículo?', a: ['Túnica albugínea', 'Túnica vaginal', 'Túnica dartos'] },
-                { q: '¿Qué célula del testículo produce testosterona?', a: ['Célula de Leydig', 'Célula de Sertoli', 'Espermátide'] },
-                { q: '¿Qué capa muscular del útero se contrae en el parto?', a: ['Miometrio', 'Endometrio', 'Perimetrio'] },
-                { q: '¿Cuál es la capa más externa del útero?', a: ['Perimetrio', 'Miometrio', 'Endometrio'] }
+                // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
+                { layer: 0, q: '¿Qué célula forma la barrera hematotesticular?', a: ['Célula de Sertoli', 'Célula de Leydig', 'Espermatogonia'] },
+                { layer: 0, q: '¿Qué capa fibrosa densa envuelve al testículo?', a: ['Túnica albugínea', 'Túnica vaginal', 'Túnica dartos'] },
+                { layer: 0, q: '¿Qué epitelio con estereocilios tapiza el epidídimo?', a: ['Pseudoestratificado cilíndrico', 'Plano simple', 'Transicional'] },
+                // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
+                { layer: 1, q: '¿Qué epitelio protege la mucosa del canal vaginal?', a: ['Plano estratificado no queratinizado', 'Cilíndrico ciliado', 'Cúbico simple'] },
+                { layer: 1, q: '¿Qué estructuras del endocérvix almacenan y filtran espermatozoides?', a: ['Criptas cervicales', 'Glándulas de Tyson', 'Folículos de Graaf'] },
+                { layer: 1, q: '¿Cómo se llama la zona de transición epitelial del cérvix?', a: ['Unión escamocolumnar', 'Lámina basal', 'Túnica albugínea'] },
+                // CAPA III · CAVIDAD UTERINA (layer: 2)
+                { layer: 2, q: '¿Qué capa del útero se desprende en la menstruación?', a: ['Endometrio', 'Miometrio', 'Perimetrio'] },
+                { layer: 2, q: '¿Qué capa muscular gruesa del útero se contrae en el parto?', a: ['Miometrio', 'Endometrio', 'Perimetrio'] },
+                { layer: 2, q: '¿Cuál es la cubierta serosa más externa del útero?', a: ['Perimetrio', 'Miometrio', 'Endometrio'] },
+                // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
+                { layer: 3, q: '¿Qué matriz glicoproteica rodea directamente al Ovocito II?', a: ['Zona pelúcida', 'Teca interna', 'Túnica albugínea'] },
+                { layer: 3, q: '¿Qué capa de células foliculares envuelve por fuera a la zona pelúcida?', a: ['Corona radiata', 'Cuerpo albicans', 'Miometrio'] },
+                { layer: 3, q: '¿Qué células del epitelio tubárico impulsan al ovocito hacia el útero?', a: ['Células ciliadas', 'Células de Sertoli', 'Células de Leydig'] }
             ],
             parry: [
-                { q: '¿Qué hormona provoca directamente la ovulación?', a: ['LH', 'Progesterona', 'Testosterona'] },
-                { q: '¿A qué hormona frena la inhibina B?', a: ['FSH', 'Testosterona', 'Oxitocina'] },
-                { q: '¿Dónde hace control negativo la testosterona?', a: ['Hipotálamo e hipófisis', 'Epidídimo', 'Próstata'] },
-                { q: '¿Qué hormona produce el cuerpo lúteo?', a: ['Progesterona', 'FSH', 'Prolactina'] },
-                { q: 'Antes de ovular, el estradiol estimula a la LH de forma:', a: ['Positiva', 'Negativa', 'Nula'] },
-                { q: '¿Qué células del testículo activan la hormona LH?', a: ['Células de Leydig', 'Células de Sertoli', 'Espermatogonias'] }
+                // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
+                { layer: 0, q: '¿Qué célula intersticial del testículo produce testosterona?', a: ['Célula de Leydig', 'Célula de Sertoli', 'Espermatocito'] },
+                { layer: 0, q: '¿A qué hormona hipofisaria frena la inhibina B de Sertoli?', a: ['FSH', 'Oxitocina', 'Prolactina'] },
+                { layer: 0, q: '¿Dónde ejerce retroalimentación negativa la testosterona?', a: ['Hipotálamo e hipófisis', 'Epidídimo y uretra', 'Próstata y cérvix'] },
+                // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
+                { layer: 1, q: '¿Qué hormona vuelve el moco cervical fluido y filante al ovular?', a: ['Estradiol', 'Progesterona', 'Testosterona'] },
+                { layer: 1, q: '¿Qué hormona espesa el moco cervical formando un tapón denso?', a: ['Progesterona', 'FSH', 'LH'] },
+                { layer: 1, q: '¿Qué hormona estimula el glucógeno vaginal para mantener el pH ácido?', a: ['Estrógenos', 'Andrógenos', 'Oxitocina'] },
+                // CAPA III · CAVIDAD UTERINA (layer: 2)
+                { layer: 2, q: '¿Qué hormona del cuerpo lúteo prepara el endometrio secretor?', a: ['Progesterona', 'FSH', 'Prolactina'] },
+                { layer: 2, q: '¿Qué hormona regenera la capa funcional del endometrio tras menstruar?', a: ['Estradiol', 'Oxitocina', 'Inhibina'] },
+                { layer: 2, q: '¿Qué hormona embrionaria rescata al cuerpo lúteo tras la implantación?', a: ['hCG', 'FSH', 'LH'] },
+                // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
+                { layer: 3, q: '¿Qué pico hormonal desencadena directamente la ovulación hacia la trompa?', a: ['Pico de LH', 'Pico de progesterona', 'Pico de prolactina'] },
+                { layer: 3, q: 'Antes de ovular, el estradiol alto ejerce sobre la LH un control:', a: ['Positivo', 'Negativo', 'Nulo'] },
+                { layer: 3, q: '¿Qué ión se libera en onda en el ovocito para bloquear la polispermia?', a: ['Calcio (Ca²⁺)', 'Sodio (Na⁺)', 'Hierro (Fe²⁺)'] }
             ],
             disparo: [
-                { q: '¿Dónde maduran y se guardan los espermatozoides?', a: ['Epidídimo', 'Próstata', 'Uretra'] },
-                { q: '¿Qué azúcar da energía al espermatozoide?', a: ['Fructosa', 'Lactosa', 'Glucosa'] },
-                { q: '¿Dónde ocurre normalmente la fecundación?', a: ['Trompa de Falopio', 'Útero', 'Vagina'] },
-                { q: '¿Qué glándula hace más líquido al semen (PSA)?', a: ['Próstata', 'Epidídimo', 'Testículo'] },
-                { q: '¿Qué gas relaja los vasos para lograr la erección?', a: ['Óxido nítrico', 'Oxígeno', 'Adrenalina'] },
-                { q: '¿Qué glándula produce la mayor parte del semen?', a: ['Vesículas seminales', 'Próstata', 'Epidídimo'] }
+                // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
+                { layer: 0, q: '¿Dónde maduran y adquieren movilidad los espermatozoides?', a: ['Epidídimo', 'Próstata', 'Uretra esponjosa'] },
+                { layer: 0, q: '¿Qué azúcar de las vesículas seminales da energía al espermatozoide?', a: ['Fructosa', 'Lactosa', 'Galactosa'] },
+                { layer: 0, q: '¿Qué glándula secreta el antígeno prostático (PSA) que licúa el semen?', a: ['Próstata', 'Epidídimo', 'Glándula de Bartholin'] },
+                // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
+                { layer: 1, q: '¿Qué bacterias producen ácido láctico manteniendo el pH vaginal (~4)?', a: ['Lactobacilos (Döderlein)', 'Escherichia coli', 'Estreptococos'] },
+                { layer: 1, q: '¿Qué característica del semen neutraliza la acidez de la vagina?', a: ['Su pH alcalino seminal', 'Su acidez láctica', 'Las enzimas lisosomales'] },
+                { layer: 1, q: '¿Qué glicoproteína forma la red fibrilar del moco cervical?', a: ['Mucina cervical', 'Hemoglobina', 'Queratina'] },
+                // CAPA III · CAVIDAD UTERINA (layer: 2)
+                { layer: 2, q: '¿Qué arterias del endometrio nutren la mucosa y sangran al menstruar?', a: ['Arterias espirales', 'Arterias arqueadas', 'Arterias ilíacas'] },
+                { layer: 2, q: '¿Qué células inmunes patrullan la cavidad uterina y fagocitan esperma?', a: ['Leucocitos (neutrófilos y macrófagos)', 'Eritrocitos', 'Plaquetas'] },
+                { layer: 2, q: '¿Qué proceso sufren los espermatozoides en útero y trompa para poder fecundar?', a: ['Capacitación', 'Espermiogénesis', 'Meiosis I'] },
+                // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
+                { layer: 3, q: '¿En qué porción de la trompa de Falopio ocurre normalmente la fecundación?', a: ['Ampolla tubárica', 'Istmo uterino', 'Cérvix'] },
+                { layer: 3, q: '¿Qué enzima del acrosoma dispersa las células de la corona radiata?', a: ['Hialuronidasa', 'Amilasa', 'Pepsina'] },
+                { layer: 3, q: '¿A qué glicoproteína de la zona pelúcida se une el espermatozoide?', a: ['ZP3', 'Albúmina', 'Fibrina'] }
             ],
             qte: [
-                { q: 'Recorrido del espermatozoide al salir:', steps: ['Testículo', 'Epidídimo', 'Conducto deferente', 'Uretra'] },
-                { q: 'Orden de formación del espermatozoide:', steps: ['Espermatogonia', 'Espermatocito', 'Espermátide', 'Espermatozoide'] },
-                { q: 'Fases del ciclo uterino desde el sangrado:', steps: ['Menstrual', 'Proliferativa', 'Secretora'] },
-                { q: 'Orden de maduración del folículo ovárico:', steps: ['Primordial', 'Primario', 'Secundario', 'De Graaf'] },
-                { q: 'Pasos de la fecundación en orden:', steps: ['Capacitación', 'Reacción acrosómica', 'Fusión'] }
+                // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
+                { layer: 0, q: 'Recorrido del espermatozoide por los conductos masculinos:', steps: ['Testículo', 'Epidídimo', 'Conducto deferente', 'Uretra'] },
+                { layer: 0, q: 'Orden de formación celular en el túbulo seminífero:', steps: ['Espermatogonia', 'Espermatocito', 'Espermátide', 'Espermatozoide'] },
+                // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
+                { layer: 1, q: 'Paso del espermatozoide del canal vaginal al cérvix:', steps: ['Vagina ácida', 'Orificio cervical externo', 'Canal endocervical', 'Orificio cervical interno'] },
+                { layer: 1, q: 'Superación de la barrera ácida y mucosa cervical:', steps: ['Inseminación vaginal', 'Tampón alcalino seminal', 'Filtrado en moco cervical', 'Reserva en criptas'] },
+                // CAPA III · CAVIDAD UTERINA (layer: 2)
+                { layer: 2, q: 'Fases del ciclo endometrial uterino desde el sangrado:', steps: ['Fase menstrual', 'Fase proliferativa', 'Fase secretora'] },
+                { layer: 2, q: 'Capas de la pared uterina desde la luz hacia el exterior:', steps: ['Endometrio funcional', 'Endometrio basal', 'Miometrio', 'Perimetrio'] },
+                // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
+                { layer: 3, q: 'Segmentos de la trompa desde el útero hacia el ovario:', steps: ['Porción intramural', 'Istmo tubárico', 'Ampolla tubárica', 'Infundíbulo y fimbrias'] },
+                { layer: 3, q: 'Pasos finales de la fecundación del Ovocito II:', steps: ['Corona radiata', 'Zona pelúcida (ZP3)', 'Fusión de membranas', 'Singamia pronuclear'] }
             ]
         };
 
@@ -193,13 +238,25 @@
         }
 
         const decks = {};
-        function drawQuestion(type) {
-            if (!decks[type] || decks[type].length === 0) decks[type] = shuffle(BANK[type].map((_, i) => i));
-            const item = BANK[type][decks[type].pop()];
+        function drawQuestion(type, layerIdx) {
+            const hasLayer = layerIdx !== undefined && layerIdx !== null;
+            const key = hasLayer ? (type + '_' + layerIdx) : type;
+            if (!decks[key] || decks[key].length === 0) {
+                let indices = [];
+                if (hasLayer) {
+                    BANK[type].forEach((item, i) => {
+                        if (item.layer === layerIdx) indices.push(i);
+                    });
+                }
+                if (indices.length === 0) indices = BANK[type].map((_, i) => i);
+                decks[key] = shuffle(indices);
+            }
+            const item = BANK[type][decks[key].pop()];
             if (type === 'qte') {
                 const steps = item.steps || item.a[0].split(/\s*→\s*/);
                 return {
                     type,
+                    layer: item.layer,
                     q: item.q,
                     steps,
                     words: shuffleOrder(steps)
@@ -208,6 +265,7 @@
             const opts = shuffle(item.a.map((t, i) => ({ t, ok: i === 0 })));
             return {
                 type,
+                layer: item.layer,
                 q: item.q,
                 options: opts.map((o, i) => (i + 1) + '. ' + o.t),
                 correct: opts.findIndex(o => o.ok) + 1
@@ -220,19 +278,23 @@
         // ==========================================
         // 1. CONSTANTES DE JUEGO
         // ==========================================
-        const RUN_LEN = 8;
+        const RUN_LEN = 16;
         const CHECKPOINT_EVERY = 4;
         const FIRST_Z = -40;
         const SPACING = 40;
         const RUN_SPEED = 14;
         const TRIGGER_DIST = 18;
         const STOP_DIST = 7;
-        const QTE_STEP_TIME = 3.5;
+        const BOSS_TRIGGER_DIST = 20;
+        const BOSS_STOP_DIST = 9;
+        const QUESTION_TIME = 5.0;
+        const COOLDOWN_TIME = 5.0;
+        const PUSHBACK_DIST = 12;
         const BASE_FOV = 75;
         const TRIVIA_FOV = 64;
         const RANKS = ['D', 'C', 'B', 'A', 'S'];
-        const TIME_THRESH = [90, 120, 150, 190];
-        const STYLE_THRESH = [1250, 1000, 750, 450];
+        const TIME_THRESH = [200, 260, 320, 400];
+        const STYLE_THRESH = [3200, 2500, 1800, 1100];
         const ACC_THRESH = [95, 85, 70, 50];
 
         // ==========================================
@@ -274,9 +336,9 @@
         ];
 
         function layerIndexAtZ(z) {
-            if (z > -100) return 0;
-            if (z > -180) return 1;
-            if (z > -260) return 2;
+            if (z > -180) return 0;
+            if (z > -340) return 1;
+            if (z > -500) return 2;
             return 3;
         }
 
@@ -769,9 +831,28 @@
                 emit('banner', { text: '¡GOLPE!', color: MECH.golpe.css });
                 const fist = glowSphere(MECH.golpe.color, 0.45);
                 const from = new THREE.Vector3(0.7, 1.6, GameState.player.z - 1.5);
-                const to = new THREE.Vector3(0, 3, o.z + 0.9);
+                const to = new THREE.Vector3(0, 3.2, o.z + 0.9);
                 anim(0.28, k => fist.position.lerpVectors(from, to, k * k), () => {
                     dropMesh(fist);
+                    if (o.isBoss) {
+                        const u = finishMarker && finishMarker.userData;
+                        burst(new THREE.Vector3(0, 3.2, o.z), MECH.golpe.color, 70, 13);
+                        flashRing(new THREE.Vector3(0, 3.2, o.z + 2), MECH.golpe.color);
+                        shake(0.8);
+                        if (u && u.zona) {
+                            const mat = u.zona.material;
+                            anim(0.45, k => {
+                                u.zona.scale.setScalar(1 + k * 0.9);
+                                mat.opacity = 0.55 * (1 - k);
+                            }, () => {
+                                u.zona.visible = false;
+                                finishClear(o);
+                            });
+                        } else {
+                            finishClear(o);
+                        }
+                        return;
+                    }
                     for (let i = 0; i < 70; i++) {
                         const pos = new THREE.Vector3((Math.random() - 0.5) * 11, 0.3 + Math.random() * 6, o.z + (Math.random() - 0.5) * 0.8);
                         const vel = new THREE.Vector3((Math.random() - 0.5) * 8, 2 + Math.random() * 8, (Math.random() - 0.3) * 12);
@@ -801,6 +882,15 @@
                         dropMesh(bolt);
                         burst(turret, MECH.parry.color, 60, 12);
                         shake(0.5);
+                        if (o.isBoss) {
+                            const u = finishMarker && finishMarker.userData;
+                            if (u && u.core) {
+                                u.core.material.color.setHex(0xff88ff);
+                                u.core.material.emissive.setHex(0xaa22ff);
+                            }
+                            finishClear(o);
+                            return;
+                        }
                         removeObstacle(o);
                         finishClear(o);
                     });
@@ -809,6 +899,34 @@
 
             disparo(o) {
                 emit('banner', { text: '¡DISPARO!', color: MECH.disparo.css });
+                if (o.isBoss) {
+                    const targetPos = new THREE.Vector3(0, 3.2, o.z);
+                    const from = new THREE.Vector3(0.4, 1.6, GameState.player.z - 1);
+                    const bolt = glowSphere(0xffffaa, 0.35);
+                    anim(0.35, k => bolt.position.lerpVectors(from, targetPos, k), () => {
+                        dropMesh(bolt);
+                        burst(targetPos, MECH.disparo.color, 65, 13);
+                        flashRing(targetPos, MECH.disparo.color);
+                        shake(0.6);
+                        const u = finishMarker && finishMarker.userData;
+                        if (u) {
+                            anim(0.55, k => {
+                                if (u.coronaCells) u.coronaCells.scale.setScalar(1 + k * 1.4);
+                                if (u.coronaRing) {
+                                    u.coronaRing.scale.setScalar(1 + k * 0.9);
+                                    u.coronaRing.material.opacity = 0.85 * (1 - k);
+                                }
+                            }, () => {
+                                if (u.coronaCells) u.coronaCells.visible = false;
+                                if (u.coronaRing) u.coronaRing.visible = false;
+                                finishClear(o);
+                            });
+                        } else {
+                            finishClear(o);
+                        }
+                    });
+                    return;
+                }
                 const targetPos = new THREE.Vector3().copy(o.group.position).add(o.parts.target.position);
                 const from = new THREE.Vector3(0.4, 1.6, GameState.player.z - 1);
                 const bolt = glowSphere(0xffffaa, 0.25);
@@ -832,18 +950,21 @@
             },
 
             qte(o) {
-                const qData = drawQuestion('qte');
+                const layer = o.isBoss ? 3 : Math.min(3, Math.floor((o.index || 0) / 4));
+                GameState.layerIdx = layer;
+                const qData = drawQuestion('qte', layer);
                 const words = qData.words.map(w => ({ t: w.t, order: w.order, picked: false }));
-                const totalTime = words.length * QTE_STEP_TIME;
+                const totalTime = QUESTION_TIME;
+                const bossPhase = o.isBoss ? BOSS_PHASES[o.phaseIdx] : null;
                 GameState.qte = { o, q: qData.q, steps: qData.steps, words, i: 0, time: totalTime, maxTime: totalTime, locked: false };
                 GameState.phase = 'qte';
                 emit('showQTE', {
                     q: qData.q,
                     words: words.map(w => w.t),
                     total: words.length,
-                    name: MECH.qte.name,
-                    tema: MECH.qte.tema,
-                    color: MECH.qte.css
+                    name: bossPhase ? bossPhase.title : MECH.qte.name,
+                    tema: bossPhase ? bossPhase.tema : MECH.qte.tema,
+                    color: bossPhase ? bossPhase.color : MECH.qte.css
                 });
             }
         };
@@ -880,8 +1001,10 @@
             player: { z: 0 },
             current: null,
             question: null,
+            questionTime: 0,
             answerLock: false,
             qte: null,
+            boss: null,
             token: 0,
 
             later(ms, fn) {
@@ -908,10 +1031,13 @@
                 this.targetFov = BASE_FOV;
                 this.current = null;
                 this.question = null;
+                this.questionTime = 0;
                 this.answerLock = false;
                 this.qte = null;
+                this.boss = null;
                 emit('hideTrivia');
                 emit('hideQTE');
+                emit('hideBossHud');
                 emit('hideDeath');
                 emit('hideResults');
                 emit('updateHealth', this.health);
@@ -940,15 +1066,19 @@
 
             makePlan() {
                 const types = Object.keys(MECH);
-                let best = null;
-                for (let tries = 0; tries < 50; tries++) {
-                    const p = shuffle(types.concat(types));
-                    let ok = true;
-                    for (let i = 1; i < p.length; i++) if (p[i] === p[i - 1]) ok = false;
-                    if (ok) return p;
-                    best = p;
+                const plan = [];
+                for (let layer = 0; layer < 4; layer++) {
+                    let seg = shuffle(types);
+                    for (let tries = 0; tries < 25; tries++) {
+                        if (plan.length === 0 || seg[0] !== plan[plan.length - 1]) break;
+                        seg = shuffle(types);
+                    }
+                    if (plan.length > 0 && seg[0] === plan[plan.length - 1]) {
+                        [seg[0], seg[1]] = [seg[1], seg[0]];
+                    }
+                    plan.push(...seg);
                 }
-                return best;
+                return plan;
             },
 
             zFor(i) { return FIRST_Z - i * SPACING; },
@@ -969,6 +1099,7 @@
             triggerTrivia(o) {
                 if (this.phase !== 'running') return;
                 this.current = o;
+                this.layerIdx = o.isBoss ? 3 : Math.min(3, Math.floor((o.index || 0) / 4));
                 this.targetScale = this.bulletScale;
                 this.targetFov = TRIVIA_FOV;
                 if (o.type === 'qte') {
@@ -979,20 +1110,99 @@
                 this.showQuestion();
             },
 
+            startBossFight() {
+                if (this.phase !== 'running') return;
+                this.layerIdx = 3;
+                this.boss = {
+                    isBoss: true,
+                    z: this.finishZ,
+                    phaseIdx: 0,
+                    type: BOSS_PHASES[0].type,
+                    hp: BOSS_PHASES.length,
+                    maxHp: BOSS_PHASES.length,
+                    group: finishMarker,
+                    parts: {},
+                    cleared: false
+                };
+                emit('banner', { text: '¡JEFE FINAL: OVOCITO II!\nSupera sus 4 barreras celulares para fecundarlo', color: '#ffdd66' });
+                emit('showBossHud', { hp: this.boss.hp, maxHp: this.boss.maxHp, phaseTitle: BOSS_PHASES[0].title, color: BOSS_PHASES[0].color });
+                this.triggerBossPhase();
+            },
+
+            triggerBossPhase() {
+                if (!this.boss) return;
+                this.layerIdx = 3;
+                const bp = BOSS_PHASES[this.boss.phaseIdx];
+                this.boss.type = bp.type;
+                this.current = this.boss;
+                this.targetScale = this.bulletScale;
+                this.targetFov = TRIVIA_FOV;
+                emit('updateBossHud', { hp: this.boss.hp, maxHp: this.boss.maxHp, phaseTitle: bp.title, color: bp.color });
+                if (bp.type === 'qte') {
+                    EXEC.qte(this.boss);
+                    return;
+                }
+                this.phase = 'trivia';
+                this.showQuestion();
+            },
+
             showQuestion() {
-                this.question = drawQuestion(this.current.type);
+                const layer = this.current && this.current.isBoss
+                    ? 3
+                    : Math.min(3, Math.floor(((this.current && this.current.index) || 0) / 4));
+                this.layerIdx = layer;
+                this.question = drawQuestion(this.current.type, layer);
+                this.questionTime = QUESTION_TIME;
                 this.answerLock = false;
                 this.emitQuestion();
             },
 
             emitQuestion() {
                 const m = MECH[this.current.type];
+                const bp = this.current.isBoss ? BOSS_PHASES[this.current.phaseIdx] : null;
                 emit('showTrivia', {
                     q: this.question.q,
                     options: this.question.options,
-                    name: m.name,
-                    tema: m.tema,
-                    color: m.css
+                    name: bp ? bp.title : m.name,
+                    tema: bp ? bp.tema : m.tema,
+                    color: bp ? bp.color : m.css
+                });
+            },
+
+            pushBackAndCooldown(o, msg) {
+                const targetObj = o || this.current;
+                const stopDist = (targetObj && targetObj.isBoss) ? BOSS_STOP_DIST : STOP_DIST;
+                const baseZ = Math.max(this.player.z, (targetObj ? targetObj.z : this.player.z) + stopDist);
+                const fromZ = this.player.z;
+                const toZ = Math.min(0, baseZ + PUSHBACK_DIST);
+                this.phase = 'exec';
+                this.targetScale = 1;
+                this.targetFov = BASE_FOV;
+                emit('banner', { text: msg, color: '#ff3344' });
+                flashRing(new THREE.Vector3(0, 2.5, fromZ - 2), 0xff3344);
+                burst(new THREE.Vector3(0, 2.5, fromZ - 2.5), 0xff3344, 28, 9);
+                shake(0.65);
+
+                anim(0.35, k => {
+                    const ease = 1 - Math.pow(1 - k, 3);
+                    this.player.z = fromZ + (toZ - fromZ) * ease;
+                }, () => {
+                    if (this.phase === 'dead') return;
+                    if (targetObj && targetObj.isBoss) {
+                        this.triggerBossPhase();
+                    } else if (targetObj) {
+                        this.current = targetObj;
+                        this.targetScale = this.bulletScale;
+                        this.targetFov = TRIVIA_FOV;
+                        if (targetObj.type === 'qte') {
+                            EXEC.qte(targetObj);
+                        } else {
+                            this.phase = 'trivia';
+                            this.showQuestion();
+                        }
+                    } else {
+                        this.phase = 'running';
+                    }
                 });
             },
 
@@ -1016,12 +1226,31 @@
                         EXEC[type](this.current);
                     });
                 } else {
+                    const o = this.current;
                     this.stats.wrong++;
                     this.addStyle(-150);
                     this.damage(this.damagePct);
                     if (this.phase === 'dead') return;
-                    this.later(1500, () => this.showQuestion());
+                    this.later(550, () => {
+                        emit('hideTrivia');
+                        this.pushBackAndCooldown(o, '¡RESPUESTA INCORRECTA! RETROCESO · +5s');
+                    });
                 }
+            },
+
+            triviaTimeout() {
+                if (this.phase !== 'trivia' || this.answerLock) return;
+                this.answerLock = true;
+                const o = this.current;
+                emit('triviaFeedback', { picked: 0, correct: this.question.correct });
+                this.stats.wrong++;
+                this.addStyle(-150);
+                this.damage(this.damagePct);
+                if (this.phase === 'dead') return;
+                this.later(550, () => {
+                    emit('hideTrivia');
+                    this.pushBackAndCooldown(o, '¡TIEMPO AGOTADO! RETROCESO · +5s');
+                });
             },
 
             addStyle(n) {
@@ -1043,6 +1272,7 @@
                 this.answerLock = false;
                 emit('hideTrivia');
                 emit('hideQTE');
+                emit('hideBossHud');
                 emit('showDeath');
                 this.later(1500, () => this.respawn());
             },
@@ -1051,10 +1281,13 @@
                 this.health = this.maxHealth;
                 emit('updateHealth', this.health);
                 emit('hideDeath');
+                emit('hideBossHud');
                 this.timeScale = this.targetScale = 1;
                 this.targetFov = BASE_FOV;
                 this.current = null;
                 this.question = null;
+                this.questionTime = 0;
+                this.boss = null;
                 clearObstacles();
                 this.player.z = this.cpZ;
                 this.layerIdx = layerIndexAtZ(this.player.z);
@@ -1067,6 +1300,38 @@
             },
 
             onCleared(o) {
+                if (o && o.isBoss) {
+                    o.cleared = false;
+                    this.boss.hp = Math.max(0, this.boss.hp - 1);
+                    this.boss.phaseIdx++;
+                    if (this.boss.phaseIdx < BOSS_PHASES.length) {
+                        const nextBp = BOSS_PHASES[this.boss.phaseIdx];
+                        emit('updateBossHud', { hp: this.boss.hp, maxHp: this.boss.maxHp, phaseTitle: nextBp.title, color: nextBp.color });
+                        emit('banner', { text: '¡BARRERA ROTA! → ' + nextBp.title, color: nextBp.color });
+                        this.later(350, () => this.triggerBossPhase());
+                    } else {
+                        this.boss.cleared = true;
+                        emit('hideBossHud');
+                        this.addStyle(400);
+                        emit('banner', { text: '¡OVOCITO II DERROTADO · FECUNDACIÓN COMPLETADA!', color: '#ffdd66' });
+                        const u = finishMarker && finishMarker.userData;
+                        burst(new THREE.Vector3(0, 3.2, this.finishZ), 0xffdd66, 95, 16);
+                        flashRing(new THREE.Vector3(0, 3.2, this.finishZ + 2), 0xffffff);
+                        shake(0.95);
+                        if (u && u.core) {
+                            anim(0.65, k => {
+                                u.core.scale.setScalar(1 + k * 1.8);
+                                u.core.material.emissiveIntensity = 0.65 + k * 1.5;
+                            }, () => {
+                                if (finishMarker) finishMarker.visible = false;
+                                this.finishRun();
+                            });
+                        } else {
+                            this.finishRun();
+                        }
+                    }
+                    return;
+                }
                 this.current = null;
                 this.question = null;
                 this.targetScale = 1;
@@ -1077,7 +1342,13 @@
                     this.cpIdx = done;
                     this.cpZ = this.player.z;
                     this.styleAtCp = this.style;
-                    emit('banner', { text: 'CHECKPOINT · CÉRVIX SUPERADO', color: '#ffffff' });
+                    const clearedLayer = LAYERS[Math.floor((done - 1) / CHECKPOINT_EVERY)];
+                    emit('banner', { text: 'CHECKPOINT · ' + clearedLayer.title + ' SUPERADA', color: '#ffffff' });
+                } else if (done === RUN_LEN) {
+                    this.cpIdx = RUN_LEN;
+                    this.cpZ = this.player.z;
+                    this.styleAtCp = this.style;
+                    emit('banner', { text: 'CHECKPOINT · ANTESALA DEL OVOCITO II', color: '#ffdd66' });
                 }
             },
 
@@ -1094,16 +1365,20 @@
                     q.locked = true;
                     const correctIdx = q.words.findIndex(item => item.order === q.i);
                     emit('qteWrong', { btnIdx, correctIdx });
-                    return this.qteFail();
+                    return this.qteFail('¡ORDEN INCORRECTO! RETROCESO · +5s');
                 }
 
                 w.picked = true;
                 q.i++;
-                this.player.z = Math.max(q.o.z + STOP_DIST, this.player.z - 1.2);
+                q.time = QUESTION_TIME;
+                q.maxTime = QUESTION_TIME;
+                emit('qteTime', { frac: 1, sec: QUESTION_TIME });
+                const stopDist = q.o.isBoss ? BOSS_STOP_DIST : STOP_DIST;
+                this.player.z = Math.max(q.o.z + stopDist, this.player.z - 1.2);
                 flashRing(new THREE.Vector3(0, 2.5, this.player.z - 3), MECH.qte.color);
 
                 // Retraer valvas del esfínter progresivamente a medida que acierta cada palabra
-                if (q.o.parts.valves) {
+                if (q.o.parts && q.o.parts.valves) {
                     const frac = q.i / q.words.length;
                     q.o.parts.valves.forEach((v, idx) => {
                         const r = v.baseR + frac * 1.1;
@@ -1137,8 +1412,12 @@
                 this.addStyle((this.lastMech && this.lastMech !== 'qte' ? 150 : 100) + 100);
                 this.lastMech = 'qte';
                 emit('hideQTE');
-                emit('banner', { text: '¡QTE PERFECTO!', color: MECH.qte.css });
+                emit('banner', { text: o.isBoss ? '¡SINGAMIA PERFECTA!' : '¡QTE PERFECTO!', color: MECH.qte.css });
                 shake(0.5);
+                if (o.isBoss) {
+                    finishClear(o);
+                    return;
+                }
                 o.opening = true;
                 anim(0.5, k => {
                     o.parts.iris.scale.setScalar(1 + k * 1.6);
@@ -1150,23 +1429,24 @@
                 });
             },
 
-            qteFail() {
+            qteFail(reason) {
                 if (!this.qte) return;
                 const o = this.qte.o;
                 this.qte = null;
-                this.phase = 'exec';
-                this.targetScale = 1;
-                this.targetFov = BASE_FOV;
                 this.stats.wrong++;
                 this.addStyle(-100);
                 this.damage(this.damagePct);
                 if (this.phase === 'dead') return;
-                this.later(450, () => {
+                this.later(550, () => {
                     emit('hideQTE');
-                    emit('banner', { text: 'QTE FALLIDO', color: '#ff4444' });
-                    burst(new THREE.Vector3(0, 3.2, o.z), 0x888888, 30, 8);
-                    removeObstacle(o);
-                    finishClear(o);
+                    if (o.parts && o.parts.valves) {
+                        o.parts.valves.forEach(v => {
+                            v.mesh.position.set(Math.cos(v.ang) * v.baseR, Math.sin(v.ang) * v.baseR, 0.25);
+                            v.mesh.material.color.setHex(0xc877ff);
+                            v.mesh.material.emissive.setHex(0x4a0e88);
+                        });
+                    }
+                    this.pushBackAndCooldown(o, reason || '¡QTE FALLIDO! RETROCESO · +5s');
                 });
             },
 
@@ -1215,19 +1495,28 @@
                     }
                     const next = this.nextObstacle();
                     if (next && this.player.z - next.z <= TRIGGER_DIST) this.triggerTrivia(next);
-                    else if (!next && this.player.z <= this.finishZ) this.finishRun();
-                } else if (this.phase === 'trivia' || this.phase === 'qte') {
-                    this.player.z = Math.max(this.current.z + STOP_DIST, this.player.z - RUN_SPEED * sdt);
+                    else if (!next && !this.boss && this.player.z - this.finishZ <= BOSS_TRIGGER_DIST) this.startBossFight();
+                } else if ((this.phase === 'trivia' || this.phase === 'qte') && this.current) {
+                    const stopDist = this.current.isBoss ? BOSS_STOP_DIST : STOP_DIST;
+                    this.player.z = Math.max(this.current.z + stopDist, this.player.z - RUN_SPEED * sdt);
+                }
+
+                if (this.phase === 'trivia' && !this.answerLock) {
+                    this.questionTime -= dt;
+                    emit('triviaTime', { frac: Math.max(0, this.questionTime / QUESTION_TIME), sec: Math.max(0, this.questionTime) });
+                    if (this.questionTime <= 0) {
+                        this.triviaTimeout();
+                    }
                 }
 
                 if (this.phase === 'qte' && this.qte && !this.qte.locked) {
                     this.qte.time -= dt;
-                    emit('qteTime', { frac: Math.max(0, this.qte.time / this.qte.maxTime) });
+                    emit('qteTime', { frac: Math.max(0, this.qte.time / this.qte.maxTime), sec: Math.max(0, this.qte.time) });
                     if (this.qte.time <= 0) {
                         this.qte.locked = true;
                         const correctIdx = this.qte.words.findIndex(item => item.order === this.qte.i);
                         emit('qteWrong', { btnIdx: -1, correctIdx });
-                        this.qteFail();
+                        this.qteFail('¡TIEMPO AGOTADO! RETROCESO · +5s');
                     }
                 }
                 return sdt;
@@ -1235,10 +1524,13 @@
 
             hud() {
                 const L = LAYERS[this.layerIdx] || LAYERS[0];
+                const prog = this.boss && !this.boss.cleared
+                    ? 'JEFE ' + (this.boss.phaseIdx + 1) + '/' + BOSS_PHASES.length
+                    : (RUN_LEN - obstacles.filter(o => !o.cleared).length) + '/' + RUN_LEN;
                 return {
                     time: this.runTime,
                     style: this.style,
-                    progress: (RUN_LEN - obstacles.filter(o => !o.cleared).length) + '/' + RUN_LEN,
+                    progress: prog,
                     layer: L.title,
                     layerColor: L.css
                 };
@@ -1394,22 +1686,34 @@
 
                 this.styleText = this.add.text(0, 16, 'ESTILO: 0', F(22, { color: '#ffd700' })).setOrigin(1, 0);
                 this.timeText = this.add.text(0, 44, '00:00.0', F(18)).setOrigin(1, 0);
-                this.progText = this.add.text(0, 68, 'OBSTÁCULOS 0/8', F(15, { color: '#aaaaaa' })).setOrigin(1, 0);
+                this.progText = this.add.text(0, 68, 'OBSTÁCULOS 0/16', F(15, { color: '#aaaaaa' })).setOrigin(1, 0);
                 this.layerText = this.add.text(0, 90, LAYERS[0].title, F(13, { color: LAYERS[0].css })).setOrigin(1, 0);
                 this.bannerText = this.add.text(0, 0, '', F(26, { align: 'center', lineSpacing: 6 })).setOrigin(0.5).setAlpha(0);
 
+                // --- HUD DEL JEFE (OVOCITO II) ---
+                this.bossHud = this.add.container(0, 0);
+                this.bossHudBg = this.add.rectangle(0, 0, 380, 44, 0x1a0b00, 0.90).setStrokeStyle(2, 0xffdd66);
+                this.bossTitleTxt = this.add.text(0, -10, 'JEFE FINAL · OVOCITO II', F(13, { color: '#ffdd66' })).setOrigin(0.5);
+                this.bossBarBg = this.add.rectangle(-174, 8, 348, 12, 0x331a00).setOrigin(0, 0.5);
+                this.bossBar = this.add.rectangle(-174, 8, 348, 12, 0xffdd66).setOrigin(0, 0.5);
+                this.bossHud.add([this.bossHudBg, this.bossTitleTxt, this.bossBarBg, this.bossBar]);
+                this.bossHud.setVisible(false);
+
                 // --- PANEL DE TRIVIA CON SOPORTE TÁCTIL Y RATÓN ---
                 this.tri = this.add.container(0, 0);
-                this.triBg = this.add.rectangle(0, 0, 560, 430, 0x000000, 0.90).setStrokeStyle(4, 0xffffff);
-                this.triHead = this.add.text(0, -182, '', F(19)).setOrigin(0.5);
-                this.qText = this.add.text(0, -148, '', F(22, { align: 'center', wordWrap: { width: 510 } })).setOrigin(0.5, 0);
+                this.triBg = this.add.rectangle(0, 0, 560, 440, 0x000000, 0.90).setStrokeStyle(4, 0xffffff);
+                this.triHead = this.add.text(0, -190, '', F(18)).setOrigin(0.5);
+                this.qText = this.add.text(0, -162, '', F(21, { align: 'center', wordWrap: { width: 510 } })).setOrigin(0.5, 0);
+                this.triBarBg = this.add.rectangle(-250, -90, 500, 10, 0x333333).setOrigin(0, 0.5);
+                this.triBar = this.add.rectangle(-250, -90, 500, 10, 0xffd400).setOrigin(0, 0.5);
+                this.triTimeTxt = this.add.text(250, -104, '5.0s', F(13, { color: '#ffd400' })).setOrigin(1, 0.5);
 
                 this.optionBgs = [];
                 this.optionTexts = [];
 
                 for (let i = 0; i < 3; i++) {
-                    const oy = -38 + i * 76;
-                    const bg = this.add.rectangle(0, oy, 510, 64, 0x161616, 0.95)
+                    const oy = -34 + i * 74;
+                    const bg = this.add.rectangle(0, oy, 510, 62, 0x161616, 0.95)
                         .setStrokeStyle(2, 0x444444)
                         .setInteractive({ useHandCursor: true });
 
@@ -1434,8 +1738,8 @@
                     this.optionTexts.push(txt);
                 }
 
-                this.triHint = this.add.text(0, 182, 'Toca una opción o pulsa [1-3]', F(14, { fontStyle: 'normal', color: '#999999' })).setOrigin(0.5);
-                this.tri.add([this.triBg, this.triHead, this.qText, ...this.optionBgs, ...this.optionTexts, this.triHint]);
+                this.triHint = this.add.text(0, 186, 'Toca una opción o pulsa [1-3] · 5s por pregunta', F(14, { fontStyle: 'normal', color: '#999999' })).setOrigin(0.5);
+                this.tri.add([this.triBg, this.triHead, this.qText, this.triBarBg, this.triBar, this.triTimeTxt, ...this.optionBgs, ...this.optionTexts, this.triHint]);
                 this.tri.setVisible(false);
 
                 // --- PANEL QTE: ORDENAR PALABRAS ---
@@ -1446,6 +1750,7 @@
 
                 this.qteBarBg = this.add.rectangle(-250, -94, 500, 12, 0x333333).setOrigin(0, 0.5);
                 this.qteBar = this.add.rectangle(-250, -94, 500, 12, MECH.qte.color).setOrigin(0, 0.5);
+                this.qteTimeTxt = this.add.text(250, -110, '5.0s', F(13, { color: MECH.qte.css })).setOrigin(1, 0.5);
 
                 this.qteChainBg = this.add.rectangle(0, -50, 500, 46, 0x12081c, 0.95).setStrokeStyle(1.5, 0x5a2588);
                 this.qteChainTxt = this.add.text(0, -50, '', F(16, { color: '#d8b4ff', align: 'center', wordWrap: { width: 480 } })).setOrigin(0.5);
@@ -1487,7 +1792,7 @@
 
                 this.qteBox.add([
                     this.qteBg, this.qteHead, this.qtePrompt,
-                    this.qteBarBg, this.qteBar, this.qteChainBg, this.qteChainTxt,
+                    this.qteBarBg, this.qteBar, this.qteTimeTxt, this.qteChainBg, this.qteChainTxt,
                     ...this.qteBtnBgs, ...this.qteBtnTxts, this.qteHint
                 ]);
                 this.qteBox.setVisible(false);
@@ -1530,17 +1835,36 @@
 
                 // --- LISTENERS EXTERNOS ---
                 window.addEventListener('showTrivia', (e) => this.displayTrivia(e.detail));
+                window.addEventListener('triviaTime', (e) => {
+                    this.triBar.width = Math.max(0.01, 500 * e.detail.frac);
+                    if (e.detail.sec !== undefined) this.triTimeTxt.setText(e.detail.sec.toFixed(1) + 's');
+                });
                 window.addEventListener('triviaFeedback', (e) => {
                     const { picked, correct } = e.detail;
                     const ok = picked === correct;
-                    this.optionTexts[picked - 1].setColor(ok ? '#00ff00' : '#ff3333');
-                    this.optionBgs[picked - 1].setFillStyle(ok ? 0x0d3b14 : 0x3b0d0d, 1).setStrokeStyle(2, ok ? 0x00ff00 : 0xff3333);
-                    if (!ok) {
+                    if (picked >= 1 && picked <= 3) {
+                        this.optionTexts[picked - 1].setColor(ok ? '#00ff00' : '#ff3333');
+                        this.optionBgs[picked - 1].setFillStyle(ok ? 0x0d3b14 : 0x3b0d0d, 1).setStrokeStyle(2, ok ? 0x00ff00 : 0xff3333);
+                    }
+                    if (!ok && correct >= 1 && correct <= 3) {
                         this.optionTexts[correct - 1].setColor('#00ff00');
                         this.optionBgs[correct - 1].setFillStyle(0x0d3b14, 1).setStrokeStyle(2, 0x00ff00);
                     }
                 });
                 window.addEventListener('hideTrivia', () => this.tri.setVisible(false));
+                window.addEventListener('showBossHud', (e) => {
+                    const d = e.detail;
+                    this.bossTitleTxt.setText('JEFE FINAL: OVOCITO II · ' + d.phaseTitle).setColor(d.color || '#ffdd66');
+                    this.bossBar.width = Math.max(0.01, 348 * (d.hp / d.maxHp));
+                    this.bossHud.setVisible(true);
+                });
+                window.addEventListener('updateBossHud', (e) => {
+                    const d = e.detail;
+                    this.bossTitleTxt.setText('JEFE FINAL: OVOCITO II · ' + d.phaseTitle).setColor(d.color || '#ffdd66');
+                    this.bossBar.width = Math.max(0.01, 348 * (d.hp / d.maxHp));
+                    this.bossHud.setVisible(true);
+                });
+                window.addEventListener('hideBossHud', () => this.bossHud.setVisible(false));
                 window.addEventListener('updateHealth', (e) => {
                     const frac = Math.max(0, e.detail / 100);
                     this.tweens.add({
@@ -1554,7 +1878,7 @@
                     const h = e.detail;
                     this.styleText.setText('ESTILO: ' + h.style);
                     this.timeText.setText(fmtTime(h.time));
-                    this.progText.setText('OBSTÁCULOS ' + h.progress);
+                    this.progText.setText(String(h.progress).startsWith('JEFE') ? h.progress : 'OBSTÁCULOS ' + h.progress);
                     if (h.layer) this.layerText.setText(h.layer).setColor(h.layerColor || '#ffffff');
                 });
                 window.addEventListener('banner', (e) => {
@@ -1569,6 +1893,7 @@
                     this.qteChainTxt.setText('Selecciona el paso 1 de ' + d.total + '...');
                     this.qteChainTxt.setColor('#b899d6');
                     this.qteBar.width = 500;
+                    this.qteTimeTxt.setText(QUESTION_TIME.toFixed(1) + 's');
                     const count = d.words.length;
                     for (let i = 0; i < 4; i++) {
                         const bg = this.qteBtnBgs[i];
@@ -1585,7 +1910,7 @@
                             txt.setVisible(false);
                         }
                     }
-                    this.qteHint.setText('Toca en el orden correcto o pulsa [1-' + count + ']');
+                    this.qteHint.setText('Toca en el orden correcto o pulsa [1-' + count + '] · 5s por paso');
                     this.qteBox.setVisible(true);
                 });
                 window.addEventListener('qteStep', (e) => {
@@ -1610,7 +1935,10 @@
                         this.qteBtnTxts[correctIdx].setColor('#00ff00');
                     }
                 });
-                window.addEventListener('qteTime', (e) => { this.qteBar.width = Math.max(0.01, 500 * e.detail.frac); });
+                window.addEventListener('qteTime', (e) => {
+                    this.qteBar.width = Math.max(0.01, 500 * e.detail.frac);
+                    if (e.detail.sec !== undefined) this.qteTimeTxt.setText(e.detail.sec.toFixed(1) + 's');
+                });
                 window.addEventListener('hideQTE', () => this.qteBox.setVisible(false));
                 window.addEventListener('showDeath', () => { this.deathBg.setVisible(true); this.deathText.setVisible(true); });
                 window.addEventListener('hideDeath', () => { this.deathBg.setVisible(false); this.deathText.setVisible(false); });
@@ -1632,8 +1960,9 @@
                 this.progText.setPosition(w - 14, 14 + 52 * hudScale).setScale(hudScale);
                 this.layerText.setPosition(w - 14, 14 + 72 * hudScale).setScale(hudScale);
 
+                this.bossHud.setPosition(w / 2, 34).setScale(Math.min(1, (w - 280) / 400 > 0.55 ? (w - 280) / 400 : w / 460));
                 this.bannerText.setPosition(w / 2, h * 0.20).setScale(Math.min(1, w / 520));
-                this.tri.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 560, (h - 24) / 430));
+                this.tri.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 560, (h - 24) / 440));
                 this.qteBox.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 560, (h - 24) / 430));
                 this.deathBg.setSize(w, h);
                 this.deathText.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 24) / 520));
@@ -1641,8 +1970,12 @@
             }
 
             displayTrivia(d) {
+                const colNum = Phaser.Display.Color.HexStringToColor(d.color).color;
                 this.triHead.setText(d.name + '  ·  ' + d.tema).setColor(d.color);
-                this.triBg.setStrokeStyle(4, Phaser.Display.Color.HexStringToColor(d.color).color);
+                this.triBg.setStrokeStyle(4, colNum);
+                this.triBar.setFillStyle(colNum, 1);
+                this.triBar.width = 500;
+                this.triTimeTxt.setText(QUESTION_TIME.toFixed(1) + 's').setColor(d.color);
                 this.qText.setText(d.q);
                 for (let i = 0; i < 3; i++) {
                     this.optionTexts[i].setText(d.options[i]);

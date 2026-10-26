@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ULTRANATOMIA - Modo Libre</title>
+    <title>ULTRANATOMIA - Modo FPS</title>
     <!-- Cargar Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -32,6 +32,10 @@
         #rank-name { font-size: 20px; letter-spacing: 2px; white-space: nowrap; }
         #rank-meter { height: 6px; background: #222; margin-top: 5px; }
         #rank-fill { height: 100%; width: 0; background: currentColor; }
+        #boss-hud { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 3; pointer-events: none; width: min(420px, 52vw); background: rgba(20, 8, 0, .88); border: 2px solid #ffdd66; padding: 6px 10px; text-align: center; display: none; box-shadow: 0 0 18px rgba(255, 221, 102, .35); }
+        #boss-title { font-size: 13px; font-weight: bold; letter-spacing: 2px; color: #ffdd66; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #boss-bar-bg { position: relative; width: 100%; height: 12px; background: #331600; }
+        #boss-bar { position: absolute; top: 0; left: 0; height: 100%; width: 100%; background: linear-gradient(90deg, #ff3344, #ffdd66); transition: width .15s; }
         #banner { position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%); z-index: 3; pointer-events: none; font-size: 26px; font-weight: bold; text-align: center; white-space: pre-line; line-height: 1.3; opacity: 0; transition: opacity .55s; width: 92vw; text-shadow: 2px 2px 3px black; }
         #banner.show { opacity: 1; transition: none; }
 
@@ -79,6 +83,9 @@
             #hud-kills, #hud-layer { font-size: 11px; }
             #rank { width: 150px; padding: 4px 6px; margin-top: 6px; }
             #rank-name { font-size: 13px; letter-spacing: 1px; }
+            #boss-hud { top: 8px; padding: 4px 8px; width: min(320px, 46vw); }
+            #boss-title { font-size: 11px; margin-bottom: 3px; }
+            #boss-bar-bg { height: 9px; }
             #banner { font-size: 18px; }
             #btnPause { top: 42px; }
             .overlay { padding: 8px 16px; }
@@ -154,6 +161,10 @@
         <div id="hud-layer"></div>
         <div id="rank"><div id="rank-name"></div><div id="rank-meter"><div id="rank-fill"></div></div></div>
     </div>
+    <div id="boss-hud">
+        <div id="boss-title">JEFE FINAL · OVOCITO II</div>
+        <div id="boss-bar-bg"><div id="boss-bar"></div></div>
+    </div>
     <div id="banner"></div>
     <div id="instructions">WASD mover &middot; Rat&oacute;n apuntar &middot; Clic DISPARO &middot; F / Clic der. GOLPE &middot; Espacio salto &middot; Shift dash &middot; Esc pausa</div>
 
@@ -170,16 +181,17 @@
     </div>
 
     <div id="menu" class="overlay">
-        <div class="badge">MODO LIBRE</div>
+        <div class="badge">MODO FPS</div>
         <h1>ULTRANATOMIA</h1>
-        <p>Recorre a tu ritmo las 4 capas del sistema reproductor en primera persona. Abate las barreras celulares, devuelve las hormonas enemigas y alcanza el Ovocito II.</p>
+        <p>Recorre en primera persona las 4 capas del sistema reproductor. Abate las barreras celulares, devuelve las hormonas enemigas y derrota al Jefe Final: el Ovocito II.</p>
         <div class="mech-legend">
             <span class="mech-pill" style="color:#ffd400;border-color:#ffd400">DISPARO &middot; Clic (punto d&eacute;bil: gl&aacute;ndula)</span>
             <span class="mech-pill" style="color:#ff3344;border-color:#ff3344">GOLPE &middot; F (rompe el epitelio)</span>
             <span class="mech-pill" style="color:#2a9dff;border-color:#2a9dff">PARRY &middot; Golpea o dispara una hormona (+Vida)</span>
+            <span class="mech-pill" style="color:#ffdd66;border-color:#ffdd66">JEFE &middot; Ovocito II (Corona, Zona Pel&uacute;cida y N&uacute;cleo)</span>
         </div>
         <div>
-            <button id="startFree">ENTRAR AL MODO LIBRE</button>
+            <button id="startFps">ENTRAR AL MODO FPS</button>
         </div>
         <a class="menu-link secondary" href="../">&larr; VOLVER AL MEN&Uacute; PRINCIPAL</a>
         <small>Controles PC: WASD mover, rat&oacute;n apuntar, clic disparar, F o clic derecho golpe, Espacio saltar, Shift dash, Esc pausa.<br>Controles M&oacute;vil: joystick a la izquierda, arrastra a la derecha para apuntar y usa los botones en pantalla.</small>
@@ -193,7 +205,7 @@
             <button id="btnRestart" class="secondary">REINICIAR</button>
         </div>
         <div>
-            <button id="btnToMenu" class="secondary">MEN&Uacute; MODO LIBRE</button>
+            <button id="btnToMenu" class="secondary">MEN&Uacute; MODO FPS</button>
             <a class="menu-link secondary" href="../">INICIO</a>
         </div>
     </div>
@@ -272,6 +284,9 @@ Reiniciando al inicio de la capa...</div>
         const RESPAWN_TIME = 8;
         const METER_STEP = 150;
         const OOCYTE_Z = -336;
+        const BOSS_MAX_HP = 45;
+        const BOSS_ENGAGE_Z = -265;
+        const BOSS_FIRE_RANGE = 42;
         const LAYER_START_Z = [4, -100, -180, -260];
 
         // ==========================================
@@ -451,6 +466,7 @@ Reiniciando al inicio de la capa...</div>
 
             g.add(core, zona, coronaRing, coronaCells);
             g.userData = { core, zona, coronaRing, coronaCells, t: 0 };
+            g.traverse(m => { m.userData.boss = true; });
             scene.add(g);
             return g;
         }
@@ -711,14 +727,22 @@ Reiniciando al inicio de la capa...</div>
                 }
             });
 
-            const u = finishMarker.userData;
-            u.t += dt;
-            u.core.scale.setScalar(1 + 0.06 * Math.sin(u.t * 3));
-            u.zona.rotation.y += dt * 0.5;
-            u.zona.rotation.x += dt * 0.3;
-            u.coronaRing.rotation.z -= dt * 0.8;
-            u.coronaCells.rotation.y -= dt * 0.7;
-            u.coronaCells.rotation.z += dt * 0.4;
+            if (finishMarker && finishMarker.visible) {
+                const u = finishMarker.userData;
+                u.t += dt;
+                if (G.bossHitT > 0) {
+                    G.bossHitT = Math.max(0, G.bossHitT - dt);
+                    finishMarker.scale.setScalar(1 + G.bossHitT * 0.45);
+                } else {
+                    finishMarker.scale.setScalar(1);
+                }
+                u.core.scale.setScalar(1 + 0.06 * Math.sin(u.t * 3));
+                u.zona.rotation.y += dt * 0.5;
+                u.zona.rotation.x += dt * 0.3;
+                u.coronaRing.rotation.z -= dt * 0.8;
+                u.coronaCells.rotation.y -= dt * 0.7;
+                u.coronaCells.rotation.z += dt * 0.4;
+            }
         }
 
         // --- Efectos ---
@@ -821,7 +845,7 @@ Reiniciando al inicio de la capa...</div>
         }
 
         // ==========================================
-        // 3. ESTADO DEL MODO LIBRE
+        // 3. ESTADO DEL MODO FPS
         // ==========================================
         const G = {
             phase: 'menu',               // 'menu' | 'play' | 'paused' | 'dead'
@@ -835,6 +859,12 @@ Reiniciando al inicio de la capa...</div>
             lastSrc: null,
             layerIdx: 0,
             fert: false,
+            bossAlive: true,
+            bossHp: BOSS_MAX_HP,
+            bossMaxHp: BOSS_MAX_HP,
+            bossFireCd: 2.0,
+            bossHitT: 0,
+            bossEngaged: false,
             pos: new THREE.Vector3(0, 0, LAYER_START_Z[0]),
             vel: new THREE.Vector3(),
             yaw: 0,
@@ -864,6 +894,7 @@ Reiniciando al inicio de la capa...</div>
         const ui = {
             hpBar: $('hp-bar'), style: $('hud-style'), time: $('hud-time'), kills: $('hud-kills'),
             layer: $('hud-layer'), rank: $('rank'), rankName: $('rank-name'), rankFill: $('rank-fill'),
+            bossHud: $('boss-hud'), bossTitle: $('boss-title'), bossBar: $('boss-bar'),
             banner: $('banner'), hurt: $('hurt'), menu: $('menu'), pause: $('pause'),
             pauseNote: $('pause-note'), death: $('death')
         };
@@ -879,6 +910,48 @@ Reiniciando al inicio de la capa...</div>
 
         function updateHp() {
             ui.hpBar.style.width = Math.max(0, G.hp / G.maxHp * 100) + '%';
+        }
+
+        function updateBossHud() {
+            if (!G.bossAlive || G.pos.z > BOSS_ENGAGE_Z) {
+                ui.bossHud.style.display = 'none';
+                return;
+            }
+            ui.bossHud.style.display = 'block';
+            const frac = Math.max(0, G.bossHp / G.bossMaxHp);
+            ui.bossBar.style.width = (frac * 100) + '%';
+            const phaseLabel = G.bossHp > 30
+                ? 'CORONA RADIATA · DISPARA'
+                : (G.bossHp > 15 ? 'ZONA PELÚCIDA · GOLPE (F) / PARRY' : 'REACCIÓN CORTICAL · PARRY / DISPARO');
+            ui.bossTitle.textContent = 'JEFE: OVOCITO II · ' + phaseLabel;
+        }
+
+        function resetBossVisuals() {
+            G.bossAlive = true;
+            G.bossHp = BOSS_MAX_HP;
+            G.bossMaxHp = BOSS_MAX_HP;
+            G.bossFireCd = 1.8;
+            G.bossHitT = 0;
+            G.bossEngaged = false;
+            if (finishMarker && finishMarker.userData) {
+                finishMarker.visible = true;
+                finishMarker.scale.setScalar(1);
+                const u = finishMarker.userData;
+                u.core.visible = true;
+                u.core.scale.setScalar(1);
+                u.core.material.color.setHex(0xffdd66);
+                u.core.material.emissive.setHex(0xffaa22);
+                u.core.material.emissiveIntensity = 0.65;
+                u.zona.visible = true;
+                u.zona.scale.setScalar(1);
+                u.zona.material.opacity = 0.55;
+                u.coronaRing.visible = true;
+                u.coronaRing.scale.setScalar(1);
+                u.coronaRing.material.opacity = 0.85;
+                u.coronaCells.visible = true;
+                u.coronaCells.scale.setScalar(1);
+            }
+            updateBossHud();
         }
 
         function addStyle(n) {
@@ -914,6 +987,7 @@ Reiniciando al inicio de la capa...</div>
             G.lastSrc = null;
             G.layerIdx = 0;
             G.fert = false;
+            resetBossVisuals();
             G.pos.set(0, 0, LAYER_START_Z[0]);
             G.vel.set(0, 0, 0);
             G.yaw = 0;
@@ -923,6 +997,7 @@ Reiniciando al inicio de la capa...</div>
             shakeAmt = 0;
             ui.death.classList.add('hidden');
             updateHp();
+            updateBossHud();
         }
 
         // ==========================================
@@ -990,6 +1065,7 @@ Reiniciando al inicio de la capa...</div>
             const ray = raycaster.ray;
             const targets = [tube];
             obstacles.forEach(o => { if (o.alive) targets.push(o.group); });
+            if (G.bossAlive && finishMarker && finishMarker.visible) targets.push(finishMarker);
             bolts.forEach(b => { if (!b.reflected) targets.push(b.mesh); });
             const hit = raycaster.intersectObjects(targets, true)[0];
             const floorT = ray.direction.y < -1e-4 ? -ray.origin.y / ray.direction.y : Infinity;
@@ -1000,6 +1076,10 @@ Reiniciando al inicio de la capa...</div>
                 const obj = hit.object;
                 if (obj.userData.bolt) {
                     parryBolt(obj.userData.bolt);
+                } else if (obj.userData.boss) {
+                    const u = finishMarker.userData;
+                    const hitCorona = u && ((u.coronaCells && isDescendant(obj, u.coronaCells)) || obj === u.coronaRing);
+                    hitBoss(hitCorona ? 2.5 : 1, hitCorona ? 'disparo' : 'shot', hit.point);
                 } else if (obj.userData.obs) {
                     const o = obj.userData.obs;
                     const weak = o.type === 'disparo' && o.parts.target && isDescendant(obj, o.parts.target);
@@ -1041,12 +1121,75 @@ Reiniciando al inicio de la capa...</div>
                 hitEnemy(o, o.type === 'golpe' ? o.hp : GOLPE_DMG, 'golpe', point);
                 hitAny = true;
             });
+            if (G.bossAlive && Math.hypot(px, pz - OOCYTE_Z) < 5.8) {
+                const point = new THREE.Vector3(px * 0.5, 3.2, OOCYTE_Z + 3.2);
+                const zonaBonus = G.bossHp <= 30 && G.bossHp > 15;
+                hitBoss(zonaBonus ? 8 : 5, 'golpe', point);
+                hitAny = true;
+            }
             if (hitAny) {
                 shake(0.45);
                 G.vel.x -= fwd.x * 6;
                 G.vel.z -= fwd.z * 6;
             } else if (!parried) {
                 shake(0.1);
+            }
+        }
+
+        function hitBoss(dmg, src, point) {
+            if (!G.bossAlive) return;
+            const prevHp = G.bossHp;
+            G.bossHp = Math.max(0, G.bossHp - dmg);
+            G.bossHitT = 0.18;
+            const col = src === 'golpe' ? MECH.golpe.color : (src === 'parry' ? MECH.parry.color : 0xffdd66);
+            burst(point, col, src === 'golpe' || src === 'parry' ? 18 : 9, 8);
+            addStyle(src === 'parry' ? 60 : (src === 'golpe' ? 35 : 15));
+
+            const u = finishMarker && finishMarker.userData;
+            if (prevHp > 30 && G.bossHp <= 30 && u) {
+                burst(new THREE.Vector3(0, 3.2, OOCYTE_Z), MECH.disparo.color, 55, 13);
+                flashRing(new THREE.Vector3(0, 3.2, OOCYTE_Z + 3), MECH.disparo.color);
+                shake(0.6);
+                if (u.coronaCells) u.coronaCells.visible = false;
+                if (u.coronaRing) u.coronaRing.visible = false;
+                banner('¡CORONA RADIATA DISPERSADA!\nRompe la Zona Pelúcida con GOLPE (F) o PARRY', '#ffd400');
+            }
+            if (prevHp > 15 && G.bossHp <= 15 && u) {
+                burst(new THREE.Vector3(0, 3.2, OOCYTE_Z), MECH.golpe.color, 60, 14);
+                flashRing(new THREE.Vector3(0, 3.2, OOCYTE_Z + 3), MECH.golpe.color);
+                shake(0.7);
+                if (u.zona) u.zona.visible = false;
+                if (u.core) {
+                    u.core.material.color.setHex(0xff77cc);
+                    u.core.material.emissive.setHex(0xcc1166);
+                }
+                banner('¡ZONA PELÚCIDA PERFORADA!\nDevuelve sus ondas con PARRY o dispara al Ovocito II', '#ff3344');
+            }
+            updateBossHud();
+            if (G.bossHp <= 0) killBoss(src);
+        }
+
+        function killBoss(src) {
+            G.bossAlive = false;
+            G.fert = true;
+            G.kills++;
+            clearBolts();
+            updateBossHud();
+            addStyle(600);
+            shake(0.95);
+            const center = new THREE.Vector3(0, 3.2, OOCYTE_Z);
+            burst(center, 0xffdd66, 95, 16);
+            burst(center, MECH.parry.color, 45, 14);
+            flashRing(new THREE.Vector3(0, 3.2, OOCYTE_Z + 3), 0xffffff);
+            banner('¡JEFE DERROTADO · FECUNDACIÓN COMPLETADA!\nOvocito II conquistado en ' + fmtTime(G.time) + ' · ' + G.kills + ' bajas', '#ffdd66');
+            const u = finishMarker && finishMarker.userData;
+            if (u && u.core) {
+                anim(0.75, k => {
+                    u.core.scale.setScalar(1 + k * 2.0);
+                    u.core.material.emissiveIntensity = 0.65 + k * 1.5;
+                }, () => {
+                    if (finishMarker) finishMarker.visible = false;
+                });
             }
         }
 
@@ -1182,6 +1325,20 @@ Reiniciando al inicio de la capa...</div>
                     const from = new THREE.Vector3(o.x, o.parts.core.position.y, o.z);
                     if (from.distanceTo(eye) < FIRE_RANGE) fireBolt(o, from);
                 });
+                if (G.bossAlive) {
+                    const bossPos = new THREE.Vector3(0, 3.2, OOCYTE_Z);
+                    if (bossPos.distanceTo(eye) < BOSS_FIRE_RANGE) {
+                        G.bossFireCd -= dt;
+                        if (G.bossFireCd <= 0) {
+                            const rate = G.bossHp <= 15 ? 1.1 : (G.bossHp <= 30 ? 1.45 : 1.85);
+                            G.bossFireCd = rate + Math.random() * 0.5;
+                            const ang = Math.random() * Math.PI * 2;
+                            const r = G.bossHp > 30 ? 3.2 : 1.8;
+                            const from = new THREE.Vector3(Math.cos(ang) * r, 3.2 + Math.sin(ang) * r * 0.6, OOCYTE_Z + 2.8);
+                            fireBolt('boss', from);
+                        }
+                    }
+                }
             }
 
             const eye = eyePos(tmpA);
@@ -1203,6 +1360,11 @@ Reiniciando al inicio de la capa...</div>
                         continue;
                     }
                 } else {
+                    if (G.bossAlive && Math.hypot(p.x, p.z - OOCYTE_Z) < 4.2 && p.y < 8) {
+                        hitBoss(10, 'parry', p.clone());
+                        killBolt(i, MECH.parry.color);
+                        continue;
+                    }
                     const o = enemyAt(p, 0.6, null);
                     if (o) {
                         hitEnemy(o, o.hp, 'parry', p.clone());
@@ -1241,6 +1403,9 @@ Reiniciando al inicio de la capa...</div>
             G.hp = G.maxHp;
             G.meter = 0;
             G.lastSrc = null;
+            if (G.bossAlive && G.layerIdx === 3) {
+                resetBossVisuals();
+            }
             G.pos.set(0, 0, LAYER_START_Z[G.layerIdx]);
             G.vel.set(0, 0, 0);
             G.yaw = 0;
@@ -1248,6 +1413,7 @@ Reiniciando al inicio de la capa...</div>
             G.dashT = 0;
             G.hurtCd = 0;
             updateHp();
+            updateBossHud();
             ui.death.classList.add('hidden');
             banner('REAPARICIÓN · ' + LAYERS[G.layerIdx].title, '#ffffff');
             if (!TOUCH && document.pointerLockElement !== canvas) pause();
@@ -1310,13 +1476,17 @@ Reiniciando al inicio de la capa...</div>
                 }
             });
 
-            // Ovocito II: no se puede atravesar
-            const dx = P.x, dz = P.z - OOCYTE_Z;
-            const d = Math.hypot(dx, dz);
-            const minD = 3.4 + PLAYER_R;
-            if (d < minD) {
-                if (d < 1e-4) P.z = OOCYTE_Z + minD;
-                else { P.x = dx / d * minD; P.z = OOCYTE_Z + dz / d * minD; }
+            // Ovocito II: colisión y daño de contacto mientras el jefe esté vivo
+            if (G.bossAlive) {
+                const dx = P.x, dz = P.z - OOCYTE_Z;
+                const d = Math.hypot(dx, dz);
+                const minD = 3.6 + PLAYER_R;
+                if (d < minD) {
+                    if (d < 1e-4) P.z = OOCYTE_Z + minD;
+                    else { P.x = dx / d * minD; P.z = OOCYTE_Z + dz / d * minD; }
+                    G.vel.z = Math.max(G.vel.z, 10);
+                    hurt(15);
+                }
             }
 
             P.x = THREE.MathUtils.clamp(P.x, -HALF_W, HALF_W);
@@ -1368,17 +1538,11 @@ Reiniciando al inicio de la capa...</div>
                 banner(L.title + '\n' + L.sub, L.css);
             }
 
-            // Encuentro con el Ovocito II
-            const dOocyte = Math.hypot(G.pos.x, G.pos.z - OOCYTE_Z);
-            if (!G.fert && dOocyte < 5.5) {
-                G.fert = true;
-                addStyle(500);
-                burst(new THREE.Vector3(0, 3.2, OOCYTE_Z + 4), 0xffdd66, 60, 10);
-                shake(0.4);
-                banner('¡FECUNDACIÓN!\nOvocito II alcanzado en ' + fmtTime(G.time) + ' · ' + G.kills + ' bajas', '#ffdd66');
-            } else if (G.fert && dOocyte > 14) {
-                G.fert = false;
+            if (G.bossAlive && G.pos.z <= BOSS_ENGAGE_Z && !G.bossEngaged) {
+                G.bossEngaged = true;
+                banner('¡JEFE FINAL: OVOCITO II!\nDispara a la Corona, usa GOLPE (F) y devuelve sus ondas con PARRY', '#ffdd66');
             }
+            updateBossHud();
         }
 
         function updateSpawns() {
@@ -1564,7 +1728,7 @@ Reiniciando al inicio de la capa...</div>
             }
         }
 
-        $('startFree').onclick = (e) => {
+        $('startFps').onclick = (e) => {
             e.target.blur();
             resetRun();
             ui.menu.classList.add('hidden');
