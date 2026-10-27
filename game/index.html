@@ -1896,71 +1896,14 @@
         document.getElementById('btnRestart').onclick = (e) => { GameState.restart(); e.target.blur(); };
         document.getElementById('btnMenu').onclick = (e) => { GameState.toMenu(); e.target.blur(); };
 
-        // Iniciar música en bucle y efecto subacuático (filtro paso bajo en cámara lenta)
+        // Iniciar música en bucle
         const bgmEl = document.getElementById('bgm');
-        let bgmCtx = null;
-        let bgmFilter = null;
-        let bgmGain = null;
-        let bgmSubmerged = null;
-
-        function initBgmAudioGraph() {
-            if (!bgmEl || bgmCtx) return;
-            const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            if (!AudioCtx) return;
-            try {
-                bgmCtx = new AudioCtx();
-                const source = bgmCtx.createMediaElementSource(bgmEl);
-                bgmFilter = bgmCtx.createBiquadFilter();
-                bgmFilter.type = 'lowpass';
-                bgmFilter.frequency.value = 20000;
-                bgmFilter.Q.value = 1.0;
-
-                bgmGain = bgmCtx.createGain();
-                bgmGain.gain.value = 1.0;
-
-                source.connect(bgmFilter);
-                bgmFilter.connect(bgmGain);
-                bgmGain.connect(bgmCtx.destination);
-            } catch (e) {}
-        }
 
         function ensureBgmPlaying() {
             if (!bgmEl) return;
-            initBgmAudioGraph();
-            if (bgmCtx && bgmCtx.state === 'suspended') {
-                bgmCtx.resume().catch(() => {});
-            }
             if (bgmEl.paused) {
                 bgmEl.volume = 0.5;
                 bgmEl.play().catch(() => {});
-            }
-        }
-
-        function updateBgmUnderwater(submerged) {
-            if (bgmSubmerged === submerged) return;
-            bgmSubmerged = submerged;
-            if (bgmCtx && bgmFilter && bgmGain) {
-                if (bgmCtx.state === 'suspended') bgmCtx.resume().catch(() => {});
-                const now = bgmCtx.currentTime;
-                bgmFilter.frequency.cancelScheduledValues(now);
-                bgmFilter.Q.cancelScheduledValues(now);
-                bgmGain.gain.cancelScheduledValues(now);
-
-                bgmFilter.frequency.setValueAtTime(Math.max(40, bgmFilter.frequency.value), now);
-                bgmFilter.Q.setValueAtTime(bgmFilter.Q.value, now);
-                bgmGain.gain.setValueAtTime(bgmGain.gain.value, now);
-
-                if (submerged) {
-                    bgmFilter.frequency.exponentialRampToValueAtTime(380, now + 0.25);
-                    bgmFilter.Q.linearRampToValueAtTime(3.2, now + 0.25);
-                    bgmGain.gain.linearRampToValueAtTime(0.68, now + 0.25);
-                } else {
-                    bgmFilter.frequency.exponentialRampToValueAtTime(20000, now + 0.25);
-                    bgmFilter.Q.linearRampToValueAtTime(0.7, now + 0.25);
-                    bgmGain.gain.linearRampToValueAtTime(1.0, now + 0.25);
-                }
-            } else if (bgmEl) {
-                bgmEl.volume = submerged ? 0.22 : 0.5;
             }
         }
 
@@ -1985,7 +1928,6 @@
             const isPortraitMobile = window.innerHeight > window.innerWidth && window.innerWidth <= 900;
             const dt = isPortraitMobile ? 0 : rawDt;
             const sdt = GameState.update(dt);
-            updateBgmUnderwater(GameState.phase === 'trivia' || GameState.phase === 'qte');
             swimTime += sdt;
             updateAnims(dt);
             animateObstacles(sdt);
