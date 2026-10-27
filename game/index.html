@@ -93,6 +93,38 @@
             #top-actions { top: 44px; left: 10px; }
             #instructions { font-size: 10px; bottom: 4px; }
         }
+
+        .diff-section { width: 100%; max-width: 580px; margin: 4px 0 10px; }
+        .diff-title { font-size: 11px; letter-spacing: 2px; color: #888; margin-bottom: 6px; text-transform: uppercase; }
+        .diff-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        #menu .diff-btn {
+            display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important;
+            margin: 0 !important; padding: 8px 6px !important; background: #111 !important; border: 2px solid #555 !important;
+            cursor: pointer !important; transition: all 0.15s ease !important; width: 100% !important;
+        }
+        #menu .diff-btn:hover { border-color: #aaa !important; background: #222 !important; }
+        .diff-btn .diff-name { font-size: clamp(14px, 2.5vw, 17px); font-weight: bold; letter-spacing: 2px; }
+        .diff-btn .diff-sub { font-size: clamp(9px, 1.4vw, 11px); color: #888; margin-top: 3px; font-weight: normal; }
+        #menu .diff-btn[data-diff="noob"].active {
+            border-color: #00ff88 !important; background: rgba(0, 255, 136, 0.14) !important; color: #00ff88 !important; box-shadow: 0 0 14px rgba(0, 255, 136, 0.35);
+        }
+        #menu .diff-btn[data-diff="noob"].active .diff-sub { color: #a3ffcc; }
+        #menu .diff-btn[data-diff="pro"].active {
+            border-color: #2a9dff !important; background: rgba(42, 157, 255, 0.14) !important; color: #2a9dff !important; box-shadow: 0 0 14px rgba(42, 157, 255, 0.35);
+        }
+        #menu .diff-btn[data-diff="pro"].active .diff-sub { color: #b0d8ff; }
+        #menu .diff-btn[data-diff="ultra"].active {
+            border-color: #ff3344 !important; background: rgba(255, 51, 68, 0.14) !important; color: #ff3344 !important; box-shadow: 0 0 14px rgba(255, 51, 68, 0.35);
+        }
+        #menu .diff-btn[data-diff="ultra"].active .diff-sub { color: #ff99aa; }
+        .diff-info { font-size: 11px; color: #ccc; margin-top: 6px; line-height: 1.4; min-height: 28px; }
+        @media (max-height: 500px) and (orientation: landscape) {
+            .diff-section { margin: 2px 0 4px; }
+            #menu .diff-btn { padding: 4px 4px !important; }
+            .diff-btn .diff-name { font-size: 12px; }
+            .diff-btn .diff-sub { font-size: 8px; }
+            .diff-info { font-size: 10px; min-height: 18px; margin-top: 2px; }
+        }
     </style>
 </head>
 <body>
@@ -113,13 +145,35 @@
     <div id="menu">
         <div class="badge">DEMO PRINCIPAL</div>
         <h1>ULTRANATOMIA</h1>
-        <p>Supera los 16 obst&aacute;culos anat&oacute;micos a trav&eacute;s de las 4 capas y derrota al Jefe Final: el Ovocito II. Entra en bullet time, responde en menos de 5 segundos y encadena mec&aacute;nicas para alcanzar el Rango P.</p>
+        <p>Supera los obst&aacute;culos anat&oacute;micos a trav&eacute;s de las 4 capas y derrota al Jefe Final: el Ovocito II. Entra en bullet time, responde antes del l&iacute;mite de tiempo y encadena mec&aacute;nicas para alcanzar el Rango P.</p>
         <div class="mech-legend">
             <span class="mech-pill" style="color:#ff3344;border-color:#ff3344">GOLPE &middot; Histolog&iacute;a</span>
             <span class="mech-pill" style="color:#2a9dff;border-color:#2a9dff">PARRY &middot; Hormonas (+Vida)</span>
             <span class="mech-pill" style="color:#ffd400;border-color:#ffd400">DISPARO &middot; Bioqu&iacute;mica</span>
             <span class="mech-pill" style="color:#a23bff;border-color:#a23bff">QTE &middot; Secuencias</span>
         </div>
+
+        <div class="diff-section">
+            <div class="diff-title">Dificultad de la partida</div>
+            <div class="diff-grid">
+                <button type="button" class="diff-btn" data-diff="noob" id="diffNoob">
+                    <span class="diff-name">NOOB</span>
+                    <span class="diff-sub">8 Obst&aacute;culos &middot; 10s &middot; -15% HP</span>
+                </button>
+                <button type="button" class="diff-btn active" data-diff="pro" id="diffPro">
+                    <span class="diff-name">PRO</span>
+                    <span class="diff-sub">12 Obst&aacute;culos &middot; 8s &middot; -25% HP</span>
+                </button>
+                <button type="button" class="diff-btn" data-diff="ultra" id="diffUltra">
+                    <span class="diff-name">ULTRA</span>
+                    <span class="diff-sub">16 Obst&aacute;culos &middot; 5s &middot; -40% HP</span>
+                </button>
+            </div>
+            <div class="diff-info" id="diffInfo">
+                PRO &middot; 12 obst&aacute;culos (3 por capa) &middot; 8s por pregunta &middot; Da&ntilde;o normal (-25% vida) &middot; Variedad de preguntas x3
+            </div>
+        </div>
+
         <div>
             <button id="startRun">INICIAR DEMO</button>
         </div>
@@ -145,78 +199,155 @@
             { type: 'qte',     title: 'FASE 4/4 · SINGAMIA Y FECUNDACIÓN', tema: 'Secuencia final de fusión pronuclear', color: '#a23bff', hex: 0xa23bff }
         ];
 
-        // La primera opción de cada pregunta es la correcta; se barajan al mostrarlas.
-        // Cada pregunta pertenece obligatoriamente a una capa anatómica (layer: 0..3).
-        const BANK = {
-            golpe: [
-                // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
-                { layer: 0, q: '¿Qué célula forma la barrera hematotesticular?', a: ['Célula de Sertoli', 'Célula de Leydig', 'Espermatogonia'] },
-                { layer: 0, q: '¿Qué capa fibrosa densa envuelve al testículo?', a: ['Túnica albugínea', 'Túnica vaginal', 'Túnica dartos'] },
-                { layer: 0, q: '¿Qué epitelio con estereocilios tapiza el epidídimo?', a: ['Pseudoestratificado cilíndrico', 'Plano simple', 'Transicional'] },
-                // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
-                { layer: 1, q: '¿Qué epitelio protege la mucosa del canal vaginal?', a: ['Plano estratificado no queratinizado', 'Cilíndrico ciliado', 'Cúbico simple'] },
-                { layer: 1, q: '¿Qué estructuras del endocérvix almacenan y filtran espermatozoides?', a: ['Criptas cervicales', 'Glándulas de Tyson', 'Folículos de Graaf'] },
-                { layer: 1, q: '¿Cómo se llama la zona de transición epitelial del cérvix?', a: ['Unión escamocolumnar', 'Lámina basal', 'Túnica albugínea'] },
-                // CAPA III · CAVIDAD UTERINA (layer: 2)
-                { layer: 2, q: '¿Qué capa del útero se desprende en la menstruación?', a: ['Endometrio', 'Miometrio', 'Perimetrio'] },
-                { layer: 2, q: '¿Qué capa muscular gruesa del útero se contrae en el parto?', a: ['Miometrio', 'Endometrio', 'Perimetrio'] },
-                { layer: 2, q: '¿Cuál es la cubierta serosa más externa del útero?', a: ['Perimetrio', 'Miometrio', 'Endometrio'] },
-                // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
-                { layer: 3, q: '¿Qué matriz glicoproteica rodea directamente al Ovocito II?', a: ['Zona pelúcida', 'Teca interna', 'Túnica albugínea'] },
-                { layer: 3, q: '¿Qué capa de células foliculares envuelve por fuera a la zona pelúcida?', a: ['Corona radiata', 'Cuerpo albicans', 'Miometrio'] },
-                { layer: 3, q: '¿Qué células del epitelio tubárico impulsan al ovocito hacia el útero?', a: ['Células ciliadas', 'Células de Sertoli', 'Células de Leydig'] }
-            ],
-            parry: [
-                // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
-                { layer: 0, q: '¿Qué célula intersticial del testículo produce testosterona?', a: ['Célula de Leydig', 'Célula de Sertoli', 'Espermatocito'] },
-                { layer: 0, q: '¿A qué hormona hipofisaria frena la inhibina B de Sertoli?', a: ['FSH', 'Oxitocina', 'Prolactina'] },
-                { layer: 0, q: '¿Dónde ejerce retroalimentación negativa la testosterona?', a: ['Hipotálamo e hipófisis', 'Epidídimo y uretra', 'Próstata y cérvix'] },
-                // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
-                { layer: 1, q: '¿Qué hormona vuelve el moco cervical fluido y filante al ovular?', a: ['Estradiol', 'Progesterona', 'Testosterona'] },
-                { layer: 1, q: '¿Qué hormona espesa el moco cervical formando un tapón denso?', a: ['Progesterona', 'FSH', 'LH'] },
-                { layer: 1, q: '¿Qué hormona estimula el glucógeno vaginal para mantener el pH ácido?', a: ['Estrógenos', 'Andrógenos', 'Oxitocina'] },
-                // CAPA III · CAVIDAD UTERINA (layer: 2)
-                { layer: 2, q: '¿Qué hormona del cuerpo lúteo prepara el endometrio secretor?', a: ['Progesterona', 'FSH', 'Prolactina'] },
-                { layer: 2, q: '¿Qué hormona regenera la capa funcional del endometrio tras menstruar?', a: ['Estradiol', 'Oxitocina', 'Inhibina'] },
-                { layer: 2, q: '¿Qué hormona embrionaria rescata al cuerpo lúteo tras la implantación?', a: ['hCG', 'FSH', 'LH'] },
-                // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
-                { layer: 3, q: '¿Qué pico hormonal desencadena directamente la ovulación hacia la trompa?', a: ['Pico de LH', 'Pico de progesterona', 'Pico de prolactina'] },
-                { layer: 3, q: 'Antes de ovular, el estradiol alto ejerce sobre la LH un control:', a: ['Positivo', 'Negativo', 'Nulo'] },
-                { layer: 3, q: '¿Qué ión se libera en onda en el ovocito para bloquear la polispermia?', a: ['Calcio (Ca²⁺)', 'Sodio (Na⁺)', 'Hierro (Fe²⁺)'] }
-            ],
-            disparo: [
-                // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
-                { layer: 0, q: '¿Dónde maduran y adquieren movilidad los espermatozoides?', a: ['Epidídimo', 'Próstata', 'Uretra esponjosa'] },
-                { layer: 0, q: '¿Qué azúcar de las vesículas seminales da energía al espermatozoide?', a: ['Fructosa', 'Lactosa', 'Galactosa'] },
-                { layer: 0, q: '¿Qué glándula secreta el antígeno prostático (PSA) que licúa el semen?', a: ['Próstata', 'Epidídimo', 'Glándula de Bartholin'] },
-                // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
-                { layer: 1, q: '¿Qué bacterias producen ácido láctico manteniendo el pH vaginal (~4)?', a: ['Lactobacilos (Döderlein)', 'Escherichia coli', 'Estreptococos'] },
-                { layer: 1, q: '¿Qué característica del semen neutraliza la acidez de la vagina?', a: ['Su pH alcalino seminal', 'Su acidez láctica', 'Las enzimas lisosomales'] },
-                { layer: 1, q: '¿Qué glicoproteína forma la red fibrilar del moco cervical?', a: ['Mucina cervical', 'Hemoglobina', 'Queratina'] },
-                // CAPA III · CAVIDAD UTERINA (layer: 2)
-                { layer: 2, q: '¿Qué arterias del endometrio nutren la mucosa y sangran al menstruar?', a: ['Arterias espirales', 'Arterias arqueadas', 'Arterias ilíacas'] },
-                { layer: 2, q: '¿Qué células inmunes patrullan la cavidad uterina y fagocitan esperma?', a: ['Leucocitos (neutrófilos y macrófagos)', 'Eritrocitos', 'Plaquetas'] },
-                { layer: 2, q: '¿Qué proceso sufren los espermatozoides en útero y trompa para poder fecundar?', a: ['Capacitación', 'Espermiogénesis', 'Meiosis I'] },
-                // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
-                { layer: 3, q: '¿En qué porción de la trompa de Falopio ocurre normalmente la fecundación?', a: ['Ampolla tubárica', 'Istmo uterino', 'Cérvix'] },
-                { layer: 3, q: '¿Qué enzima del acrosoma dispersa las células de la corona radiata?', a: ['Hialuronidasa', 'Amilasa', 'Pepsina'] },
-                { layer: 3, q: '¿A qué glicoproteína de la zona pelúcida se une el espermatozoide?', a: ['ZP3', 'Albúmina', 'Fibrina'] }
-            ],
-            qte: [
-                // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
-                { layer: 0, q: 'Recorrido del espermatozoide por los conductos masculinos:', steps: ['Testículo', 'Epidídimo', 'Conducto deferente', 'Uretra'] },
-                { layer: 0, q: 'Orden de formación celular en el túbulo seminífero:', steps: ['Espermatogonia', 'Espermatocito', 'Espermátide', 'Espermatozoide'] },
-                // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
-                { layer: 1, q: 'Paso del espermatozoide del canal vaginal al cérvix:', steps: ['Vagina ácida', 'Orificio cervical externo', 'Canal endocervical', 'Orificio cervical interno'] },
-                { layer: 1, q: 'Superación de la barrera ácida y mucosa cervical:', steps: ['Inseminación vaginal', 'Tampón alcalino seminal', 'Filtrado en moco cervical', 'Reserva en criptas'] },
-                // CAPA III · CAVIDAD UTERINA (layer: 2)
-                { layer: 2, q: 'Fases del ciclo endometrial uterino desde el sangrado:', steps: ['Fase menstrual', 'Fase proliferativa', 'Fase secretora'] },
-                { layer: 2, q: 'Capas de la pared uterina desde la luz hacia el exterior:', steps: ['Endometrio funcional', 'Endometrio basal', 'Miometrio', 'Perimetrio'] },
-                // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
-                { layer: 3, q: 'Segmentos de la trompa desde el útero hacia el ovario:', steps: ['Porción intramural', 'Istmo tubárico', 'Ampolla tubárica', 'Infundíbulo y fimbrias'] },
-                { layer: 3, q: 'Pasos finales de la fecundación del Ovocito II:', steps: ['Corona radiata', 'Zona pelúcida (ZP3)', 'Fusión de membranas', 'Singamia pronuclear'] }
-            ]
+        
+        const DIFFICULTIES = {
+            noob: {
+                id: 'noob',
+                name: 'NOOB',
+                badge: 'PRINCIPIANTE',
+                color: '#00ff88',
+                hex: 0x00ff88,
+                questionTime: 10.0,
+                damagePct: 15,
+                variety: 2,
+                runLen: 8,
+                enemiesPerLayer: 2,
+                desc: 'NOOB · 8 obstáculos (2 por capa) · 10s por pregunta · Daño leve (-15% vida) · Variedad de preguntas x2'
+            },
+            pro: {
+                id: 'pro',
+                name: 'PRO',
+                badge: 'ESTÁNDAR',
+                color: '#2a9dff',
+                hex: 0x2a9dff,
+                questionTime: 8.0,
+                damagePct: 25,
+                variety: 3,
+                runLen: 12,
+                enemiesPerLayer: 3,
+                desc: 'PRO · 12 obstáculos (3 por capa) · 8s por pregunta · Daño normal (-25% vida) · Variedad de preguntas x3'
+            },
+            ultra: {
+                id: 'ultra',
+                name: 'ULTRA',
+                badge: 'EXTREMO',
+                color: '#ff3344',
+                hex: 0xff3344,
+                questionTime: 5.0,
+                damagePct: 40,
+                variety: 4,
+                runLen: 16,
+                enemiesPerLayer: 4,
+                desc: 'ULTRA · 16 obstáculos (4 por capa) · 5s por pregunta · Daño severo (-40% vida) · Variedad de preguntas x4'
+            }
         };
+
+        // La primera opción de cada pregunta es la correcta; se barajan al mostrarlas.
+        const BANK = {
+    golpe: [
+        // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
+        { layer: 0, q: '¿Qué célula forma la barrera hematotesticular?', a: ['Célula de Sertoli', 'Célula de Leydig', 'Espermatogonia'] },
+        { layer: 0, q: 'Epitelio del epidídimo:', a: ['Pseudoestratificado cilíndrico', 'Plano simple', 'Cúbico simple'] },
+        { layer: 0, q: 'Capa fibrosa externa del testículo:', a: ['Túnica albugínea', 'Túnica vaginal', 'Túnica dartos'] },
+        { layer: 0, q: 'Lugar de formación del esperma:', a: ['Túbulos seminíferos', 'Conducto eyaculador', 'Red testicular'] },
+
+        // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
+        { layer: 1, q: 'Epitelio de la mucosa vaginal:', a: ['Plano estratificado', 'Cilíndrico simple', 'Transicional'] },
+        { layer: 1, q: 'Epitelio del endocérvix:', a: ['Cilíndrico simple', 'Plano estratificado', 'Cúbico simple'] },
+        { layer: 1, q: 'Zona de transición del cérvix:', a: ['Unión escamocolumnar', 'Fondo de saco', 'Cripta cervical'] },
+        { layer: 1, q: 'Estructuras de reserva espermática cervical:', a: ['Criptas cervicales', 'Glándulas de Bartholin', 'Folículos'] },
+
+        // CAPA III · CAVIDAD UTERINA (layer: 2)
+        { layer: 2, q: 'Capa uterina que se desprende:', a: ['Endometrio funcional', 'Endometrio basal', 'Miometrio'] },
+        { layer: 2, q: 'Capa muscular del útero:', a: ['Miometrio', 'Perimetrio', 'Endometrio'] },
+        { layer: 2, q: 'Capa serosa externa del útero:', a: ['Perimetrio', 'Miometrio', 'Endometrio'] },
+        { layer: 2, q: 'Capa endometrial permanente que regenera:', a: ['Endometrio basal', 'Endometrio funcional', 'Miometrio'] },
+
+        // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
+        { layer: 3, q: 'Matriz glucoproteica del ovocito:', a: ['Zona pelúcida', 'Corona radiata', 'Teca interna'] },
+        { layer: 3, q: 'Células foliculares externas al ovocito:', a: ['Corona radiata', 'Células tecales', 'Células cumulares'] },
+        { layer: 3, q: 'Células tubáricas que mueven el óvulo:', a: ['Células ciliadas', 'Células de Sertoli', 'Células intercalares'] },
+        { layer: 3, q: 'Segmento tubárico de la fecundación:', a: ['Ampolla', 'Istmo', 'Infundíbulo'] }
+    ],
+
+    parry: [
+        // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
+        { layer: 0, q: '¿Qué célula produce testosterona?', a: ['Célula de Leydig', 'Célula de Sertoli', 'Espermatogonia'] },
+        { layer: 0, q: 'Hormona que estimula la espermatogénesis:', a: ['FSH', 'LH', 'Prolactina'] },
+        { layer: 0, q: 'Hormona que estimula células de Leydig:', a: ['LH', 'FSH', 'Oxitocina'] },
+        { layer: 0, q: 'Hormona testicular que inhibe la FSH:', a: ['Inhibina B', 'Testosterona', 'Estradiol'] },
+
+        // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
+        { layer: 1, q: 'Hormona que fluidifica el moco cervical:', a: ['Estradiol', 'Progesterona', 'Testosterona'] },
+        { layer: 1, q: 'Hormona que espesa el moco cervical:', a: ['Progesterona', 'Estradiol', 'FSH'] },
+        { layer: 1, q: 'Hormona que induce acumulación de glucógeno:', a: ['Estrógenos', 'Progesterona', 'LH'] },
+        { layer: 1, q: 'Hormona que incrementa secreción cervical:', a: ['Estradiol', 'Progesterona', 'Prolactina'] },
+
+        // CAPA III · CAVIDAD UTERINA (layer: 2)
+        { layer: 2, q: 'Hormona dominante en la fase secretora:', a: ['Progesterona', 'Estradiol', 'FSH'] },
+        { layer: 2, q: 'Hormona que estimula la fase proliferativa:', a: ['Estradiol', 'Progesterona', 'Oxitocina'] },
+        { layer: 2, q: 'Hormona embrionaria que rescata el cuerpo lúteo:', a: ['hCG', 'LH', 'FSH'] },
+        { layer: 2, q: 'Caída hormonal que desencadena la menstruación:', a: ['Estrógenos y progesterona', 'FSH y LH', 'hCG y prolactina'] },
+
+        // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
+        { layer: 3, q: 'Pico hormonal que desencadena la ovulación:', a: ['Pico de LH', 'Pico de FSH', 'Pico de progesterona'] },
+        { layer: 3, q: 'Catión liberado en la reacción cortical:', a: ['Calcio (Ca²⁺)', 'Sodio (Na⁺)', 'Potasio (K⁺)'] },
+        { layer: 3, q: 'Efecto del estradiol alto preovulatorio sobre LH:', a: ['Retroalimentación positiva', 'Retroalimentación negativa', 'Sin efecto'] },
+        { layer: 3, q: 'Hormona producida por el cuerpo lúteo:', a: ['Progesterona', 'FSH', 'Prolactina'] }
+    ],
+
+    disparo: [
+        // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
+        { layer: 0, q: 'Fuente de energía principal del esperma:', a: ['Fructosa', 'Glucosa', 'Sacarosa'] },
+        { layer: 0, q: 'Enzima prostática que licúa el semen:', a: ['PSA', 'Hialuronidasa', 'Amilasa'] },
+        { layer: 0, q: 'Sitio de maduración motora espermática:', a: ['Epidídimo', 'Túbulo seminífero', 'Vesícula seminal'] },
+        { layer: 0, q: 'Aporte volumétrico de las vesículas seminales:', a: ['60% del semen', '20% del semen', '5% del semen'] },
+
+        // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
+        { layer: 1, q: 'Bacterias que acidifican la vagina:', a: ['Lactobacilos', 'E. coli', 'Estreptococos'] },
+        { layer: 1, q: 'Ácido vaginal producido por lactobacilos:', a: ['Ácido láctico', 'Ácido cítrico', 'Ácido úrico'] },
+        { layer: 1, q: 'Proteína estructural del moco cervical:', a: ['Mucina', 'Queratina', 'Colágeno'] },
+        { layer: 1, q: 'Mecanismo que neutraliza la acidez vaginal:', a: ['pH alcalino seminal', 'Flujo glucídico', 'Secreción ácida'] },
+
+        // CAPA III · CAVIDAD UTERINA (layer: 2)
+        { layer: 2, q: 'Arterias que se constriñen en la menstruación:', a: ['Arterias espirales', 'Arterias arqueadas', 'Arterias rectas'] },
+        { layer: 2, q: 'La capacitación espermática ocurre en:', a: ['Tracto femenino', 'Epidídimo', 'Túbulos seminíferos'] },
+        { layer: 2, q: 'Células inmunes defensivas del endometrio:', a: ['Leucocitos', 'Eritrocitos', 'Trombocitos'] },
+        { layer: 2, q: 'Cambio bioquímico durante la capacitación:', a: ['Remoción de colesterol', 'Entrada de fructosa', 'Pérdida de ADN'] },
+
+        // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
+        { layer: 3, q: 'Enzima acrosómica que dispersa la corona radiata:', a: ['Hialuronidasa', 'PSA', 'Lactasa'] },
+        { layer: 3, q: 'Receptor de la zona pelúcida para esperma:', a: ['ZP3', 'hCG', 'CD4'] },
+        { layer: 3, q: 'Reacción de membrana que bloquea polispermia:', a: ['Reacción cortical', 'Capacitación', 'Reacción acrosómica'] },
+        { layer: 3, q: 'Sitio anatómico preciso de la fecundación:', a: ['Ampolla tubárica', 'Istmo tubárico', 'Cérvix'] }
+    ],
+
+    qte: [
+        // CAPA I · CONDUCTOS MASCULINOS (layer: 0)
+        { layer: 0, q: 'Recorrido espermático en conductos masculinos:', steps: ['Testículo', 'Epidídimo', 'Conducto deferente', 'Uretra'] },
+        { layer: 0, q: 'Secuencia celular de la espermatogénesis:', steps: ['Espermatogonia', 'Espermatocito', 'Espermátida', 'Espermatozoide'] },
+        { layer: 0, q: 'Vía de transporte intratesticular:', steps: ['Túbulo seminífero', 'Red testicular', 'Conductillos eferentes', 'Epidídimo'] },
+        { layer: 0, q: 'Etapas de diferenciación meiótica masculina:', steps: ['Espermatogonia', 'Espermatocito I', 'Espermatocito II', 'Espermátida'] },
+
+        // CAPA II · CANAL VAGINAL Y CÉRVIX (layer: 1)
+        { layer: 1, q: 'Paso del esperma a través del cérvix:', steps: ['Vagina', 'Orificio externo', 'Canal endocervical', 'Orificio interno'] },
+        { layer: 1, q: 'Selección espermática en vagina y cérvix:', steps: ['Vagina ácida', 'Neutralización seminal', 'Filtrado en moco', 'Criptas cervicales'] },
+        { layer: 1, q: 'Evolución del moco cervical en el ciclo:', steps: ['Moco denso', 'Moco filante', 'Moco espeso'] },
+        { layer: 1, q: 'Capas del canal vaginal (luz a exterior):', steps: ['Epitelio', 'Lámina propia', 'Capa muscular', 'Adventicia'] },
+
+        // CAPA III · CAVIDAD UTERINA (layer: 2)
+        { layer: 2, q: 'Fases del ciclo uterino endometrial:', steps: ['Fase menstrual', 'Fase proliferativa', 'Fase secretora'] },
+        { layer: 2, q: 'Pared uterina (de luz a exterior):', steps: ['Endometrio funcional', 'Endometrio basal', 'Miometrio', 'Perimetrio'] },
+        { layer: 2, q: 'Desarrollo embrionario antes de implantación:', steps: ['Cigoto', 'Mórula', 'Blastocisto'] },
+        { layer: 2, q: 'Fases de la implantación en el endometrio:', steps: ['Aposición', 'Adhesión', 'Invasión'] },
+
+        // CAPA IV · TROMPA DE FALOPIO Y OVOCITO II (layer: 3)
+        { layer: 3, q: 'Segmentos tubáricos (del útero al ovario):', steps: ['Porción intramural', 'Istmo', 'Ampolla', 'Infundíbulo'] },
+        { layer: 3, q: 'Pasos de interacción esperma con el ovocito:', steps: ['Corona radiata', 'Zona pelúcida ZP3', 'Fusión de membranas', 'Reacción cortical'] },
+        { layer: 3, q: 'Fases finales del proceso de fecundación:', steps: ['Entrada espermática', 'Activación ovocitaria', 'Pronúcleos', 'Singamia'] },
+        { layer: 3, q: 'Capas a penetrar para alcanzar el citoplasma:', steps: ['Corona radiata', 'Zona pelúcida', 'Membrana plasmática'] }
+    ]
+};
 
         function shuffle(arr) {
             const a = arr.slice();
@@ -237,19 +368,43 @@
             return s;
         }
 
+        const activePools = {};
         const decks = {};
+
+        function initDecksForRun(variety) {
+            for (const k in activePools) delete activePools[k];
+            for (const k in decks) delete decks[k];
+            const types = ['golpe', 'parry', 'disparo', 'qte'];
+            types.forEach(type => {
+                for (let layer = 0; layer < 4; layer++) {
+                    const layerIndices = [];
+                    BANK[type].forEach((item, i) => {
+                        if (item.layer === layer) layerIndices.push(i);
+                    });
+                    const v = Math.min(layerIndices.length, variety || 4);
+                    const selected = shuffle(layerIndices).slice(0, v);
+                    const key = type + '_' + layer;
+                    activePools[key] = selected;
+                    decks[key] = shuffle(selected.slice());
+                }
+            });
+        }
+
         function drawQuestion(type, layerIdx) {
             const hasLayer = layerIdx !== undefined && layerIdx !== null;
             const key = hasLayer ? (type + '_' + layerIdx) : type;
             if (!decks[key] || decks[key].length === 0) {
-                let indices = [];
-                if (hasLayer) {
+                if (hasLayer && activePools[key] && activePools[key].length > 0) {
+                    decks[key] = shuffle(activePools[key].slice());
+                } else if (hasLayer) {
+                    let indices = [];
                     BANK[type].forEach((item, i) => {
                         if (item.layer === layerIdx) indices.push(i);
                     });
+                    decks[key] = shuffle(indices);
+                } else {
+                    decks[key] = shuffle(BANK[type].map((_, i) => i));
                 }
-                if (indices.length === 0) indices = BANK[type].map((_, i) => i);
-                decks[key] = shuffle(indices);
             }
             const item = BANK[type][decks[key].pop()];
             if (type === 'qte') {
@@ -278,8 +433,6 @@
         // ==========================================
         // 1. CONSTANTES DE JUEGO
         // ==========================================
-        const RUN_LEN = 16;
-        const CHECKPOINT_EVERY = 4;
         const FIRST_Z = -40;
         const SPACING = 40;
         const RUN_SPEED = 14;
@@ -287,15 +440,14 @@
         const STOP_DIST = 7;
         const BOSS_TRIGGER_DIST = 20;
         const BOSS_STOP_DIST = 9;
-        const QUESTION_TIME = 5.0;
         const COOLDOWN_TIME = 5.0;
         const PUSHBACK_DIST = 12;
         const BASE_FOV = 75;
         const TRIVIA_FOV = 64;
         const RANKS = ['D', 'C', 'B', 'A', 'S'];
-        const TIME_THRESH = [200, 260, 320, 400];
-        const STYLE_THRESH = [3200, 2500, 1800, 1100];
         const ACC_THRESH = [95, 85, 70, 50];
+
+        function zFor(i) { return FIRST_Z - i * SPACING; }
 
         // ==========================================
         // 2. ENTORNO 3D (THREE.JS): CAPAS ANATÓMICAS Y MODELOS
@@ -336,9 +488,13 @@
         ];
 
         function layerIndexAtZ(z) {
-            if (z > -180) return 0;
-            if (z > -340) return 1;
-            if (z > -500) return 2;
+            const epl = (GameState && GameState.diff) ? GameState.diff.enemiesPerLayer : 4;
+            const b0 = zFor(epl) + SPACING / 2;
+            const b1 = zFor(epl * 2) + SPACING / 2;
+            const b2 = zFor(epl * 3) + SPACING / 2;
+            if (z > b0) return 0;
+            if (z > b1) return 1;
+            if (z > b2) return 2;
             return 3;
         }
 
@@ -950,11 +1106,12 @@
             },
 
             qte(o) {
-                const layer = o.isBoss ? 3 : Math.min(3, Math.floor((o.index || 0) / 4));
+                const epl = GameState.diff.enemiesPerLayer;
+                const layer = o.isBoss ? 3 : Math.min(3, Math.floor((o.index || 0) / epl));
                 GameState.layerIdx = layer;
                 const qData = drawQuestion('qte', layer);
                 const words = qData.words.map(w => ({ t: w.t, order: w.order, picked: false }));
-                const totalTime = QUESTION_TIME;
+                const totalTime = GameState.diff.questionTime;
                 const bossPhase = o.isBoss ? BOSS_PHASES[o.phaseIdx] : null;
                 GameState.qte = { o, q: qData.q, steps: qData.steps, words, i: 0, time: totalTime, maxTime: totalTime, locked: false };
                 GameState.phase = 'qte';
@@ -964,7 +1121,8 @@
                     total: words.length,
                     name: bossPhase ? bossPhase.title : MECH.qte.name,
                     tema: bossPhase ? bossPhase.tema : MECH.qte.tema,
-                    color: bossPhase ? bossPhase.color : MECH.qte.css
+                    color: bossPhase ? bossPhase.color : MECH.qte.css,
+                    maxTime: totalTime
                 });
             }
         };
@@ -978,6 +1136,8 @@
         // 4. GESTOR DE ESTADO GLOBAL
         // ==========================================
         const GameState = {
+            selectedDiffKey: 'pro',
+            diff: DIFFICULTIES.pro,
             mode: 'run',
             phase: 'menu',
             health: 100,
@@ -1044,9 +1204,12 @@
             },
 
             start() {
+                this.diff = DIFFICULTIES[this.selectedDiffKey] || DIFFICULTIES.pro;
+                this.damagePct = this.diff.damagePct;
                 this.resetAll();
                 this.mode = 'run';
                 document.getElementById('menu').classList.add('hidden');
+                initDecksForRun(this.diff.variety);
                 this.buildRun();
                 this.phase = 'running';
                 const l0 = LAYERS[0];
@@ -1067,13 +1230,14 @@
             makePlan() {
                 const types = Object.keys(MECH);
                 const plan = [];
+                const epl = this.diff.enemiesPerLayer;
                 for (let layer = 0; layer < 4; layer++) {
-                    let seg = shuffle(types);
+                    let seg = shuffle(types).slice(0, epl);
                     for (let tries = 0; tries < 25; tries++) {
                         if (plan.length === 0 || seg[0] !== plan[plan.length - 1]) break;
-                        seg = shuffle(types);
+                        seg = shuffle(types).slice(0, epl);
                     }
-                    if (plan.length > 0 && seg[0] === plan[plan.length - 1]) {
+                    if (plan.length > 0 && seg[0] === plan[plan.length - 1] && epl > 1) {
                         [seg[0], seg[1]] = [seg[1], seg[0]];
                     }
                     plan.push(...seg);
@@ -1081,12 +1245,12 @@
                 return plan;
             },
 
-            zFor(i) { return FIRST_Z - i * SPACING; },
+            zFor(i) { return zFor(i); },
 
             buildRun() {
                 this.plan = this.makePlan();
-                this.plan.slice(0, RUN_LEN).forEach((type, i) => createObstacle(type, this.zFor(i), i));
-                this.finishZ = this.zFor(RUN_LEN - 1) - 35;
+                this.plan.slice(0, this.diff.runLen).forEach((type, i) => createObstacle(type, this.zFor(i), i));
+                this.finishZ = this.zFor(this.diff.runLen - 1) - 35;
                 finishMarker = buildFinishOocyte(this.finishZ);
             },
 
@@ -1099,7 +1263,8 @@
             triggerTrivia(o) {
                 if (this.phase !== 'running') return;
                 this.current = o;
-                this.layerIdx = o.isBoss ? 3 : Math.min(3, Math.floor((o.index || 0) / 4));
+                const epl = this.diff.enemiesPerLayer;
+                this.layerIdx = o.isBoss ? 3 : Math.min(3, Math.floor((o.index || 0) / epl));
                 this.targetScale = this.bulletScale;
                 this.targetFov = TRIVIA_FOV;
                 if (o.type === 'qte') {
@@ -1147,12 +1312,13 @@
             },
 
             showQuestion() {
+                const epl = this.diff.enemiesPerLayer;
                 const layer = this.current && this.current.isBoss
                     ? 3
-                    : Math.min(3, Math.floor(((this.current && this.current.index) || 0) / 4));
+                    : Math.min(3, Math.floor(((this.current && this.current.index) || 0) / epl));
                 this.layerIdx = layer;
                 this.question = drawQuestion(this.current.type, layer);
-                this.questionTime = QUESTION_TIME;
+                this.questionTime = this.diff.questionTime;
                 this.answerLock = false;
                 this.emitQuestion();
             },
@@ -1165,7 +1331,8 @@
                     options: this.question.options,
                     name: bp ? bp.title : m.name,
                     tema: bp ? bp.tema : m.tema,
-                    color: bp ? bp.color : m.css
+                    color: bp ? bp.color : m.css,
+                    maxTime: this.diff.questionTime
                 });
             },
 
@@ -1293,7 +1460,7 @@
                 this.layerIdx = layerIndexAtZ(this.player.z);
                 this.style = this.styleAtCp;
                 this.lastMech = null;
-                for (let i = this.cpIdx; i < RUN_LEN; i++) createObstacle(this.plan[i], this.zFor(i), i);
+                for (let i = this.cpIdx; i < this.diff.runLen; i++) createObstacle(this.plan[i], this.zFor(i), i);
                 finishMarker = buildFinishOocyte(this.finishZ);
                 this.phase = 'running';
                 emit('banner', { text: 'CHECKPOINT · ' + LAYERS[this.layerIdx].title, color: '#ffffff' });
@@ -1338,14 +1505,16 @@
                 this.targetFov = BASE_FOV;
                 this.phase = 'running';
                 const done = o.index + 1;
-                if (done % CHECKPOINT_EVERY === 0 && done < RUN_LEN) {
+                const epl = this.diff.enemiesPerLayer;
+                const runLen = this.diff.runLen;
+                if (done % epl === 0 && done < runLen) {
                     this.cpIdx = done;
                     this.cpZ = this.player.z;
                     this.styleAtCp = this.style;
-                    const clearedLayer = LAYERS[Math.floor((done - 1) / CHECKPOINT_EVERY)];
+                    const clearedLayer = LAYERS[Math.floor((done - 1) / epl)];
                     emit('banner', { text: 'CHECKPOINT · ' + clearedLayer.title + ' SUPERADA', color: '#ffffff' });
-                } else if (done === RUN_LEN) {
-                    this.cpIdx = RUN_LEN;
+                } else if (done === runLen) {
+                    this.cpIdx = runLen;
                     this.cpZ = this.player.z;
                     this.styleAtCp = this.style;
                     emit('banner', { text: 'CHECKPOINT · ANTESALA DEL OVOCITO II', color: '#ffdd66' });
@@ -1370,9 +1539,9 @@
 
                 w.picked = true;
                 q.i++;
-                q.time = QUESTION_TIME;
-                q.maxTime = QUESTION_TIME;
-                emit('qteTime', { frac: 1, sec: QUESTION_TIME });
+                q.time = GameState.diff.questionTime;
+                q.maxTime = GameState.diff.questionTime;
+                emit('qteTime', { frac: 1, sec: GameState.diff.questionTime });
                 const stopDist = q.o.isBoss ? BOSS_STOP_DIST : STOP_DIST;
                 this.player.z = Math.max(q.o.z + stopDist, this.player.z - 1.2);
                 flashRing(new THREE.Vector3(0, 2.5, this.player.z - 3), MECH.qte.color);
@@ -1458,16 +1627,21 @@
             finishRun() {
                 this.phase = 'finished';
                 this.targetScale = 1;
+                const runLen = this.diff.runLen;
+                const timeThresh = [runLen * 12.5, runLen * 16.25, runLen * 20, runLen * 25];
+                const styleThresh = [runLen * 200, runLen * 156.25, runLen * 112.5, runLen * 68.75];
+                const accThresh = [95, 85, 70, 50];
                 const rankLow = (v, th) => v <= th[0] ? 4 : v <= th[1] ? 3 : v <= th[2] ? 2 : v <= th[3] ? 1 : 0;
                 const rankHigh = (v, th) => v >= th[0] ? 4 : v >= th[1] ? 3 : v >= th[2] ? 2 : v >= th[3] ? 1 : 0;
                 const acc = this.accuracy();
-                const tR = rankLow(this.runTime, TIME_THRESH);
-                const sR = rankHigh(this.style, STYLE_THRESH);
-                const aR = rankHigh(acc, ACC_THRESH);
+                const tR = rankLow(this.runTime, timeThresh);
+                const sR = rankHigh(this.style, styleThresh);
+                const aR = rankHigh(acc, accThresh);
                 const perfect = tR === 4 && sR === 4 && acc === 100 && this.stats.deaths === 0;
                 const overall = perfect ? 'P' : RANKS[Math.floor((tR + sR + aR) / 3)];
                 emit('showResults', {
                     rows: [
+                        ['DIFICULTAD', this.diff.name, this.diff.badge],
                         ['TIEMPO', fmtTime(this.runTime), RANKS[tR]],
                         ['ESTILO', this.style + ' pts', RANKS[sR]],
                         ['PRECISIÓN', acc.toFixed(1) + '%  (' + this.stats.correct + '/' + (this.stats.correct + this.stats.wrong) + ')', RANKS[aR]],
@@ -1503,7 +1677,8 @@
 
                 if (this.phase === 'trivia' && !this.answerLock) {
                     this.questionTime -= dt;
-                    emit('triviaTime', { frac: Math.max(0, this.questionTime / QUESTION_TIME), sec: Math.max(0, this.questionTime) });
+                    const maxT = this.diff.questionTime;
+                    emit('triviaTime', { frac: Math.max(0, this.questionTime / maxT), sec: Math.max(0, this.questionTime) });
                     if (this.questionTime <= 0) {
                         this.triviaTimeout();
                     }
@@ -1526,13 +1701,15 @@
                 const L = LAYERS[this.layerIdx] || LAYERS[0];
                 const prog = this.boss && !this.boss.cleared
                     ? 'JEFE ' + (this.boss.phaseIdx + 1) + '/' + BOSS_PHASES.length
-                    : (RUN_LEN - obstacles.filter(o => !o.cleared).length) + '/' + RUN_LEN;
+                    : (this.diff.runLen - obstacles.filter(o => !o.cleared).length) + '/' + this.diff.runLen;
                 return {
                     time: this.runTime,
                     style: this.style,
                     progress: prog,
                     layer: L.title,
-                    layerColor: L.css
+                    layerColor: L.css,
+                    diffName: this.diff.name,
+                    diffColor: this.diff.color
                 };
             }
         };
@@ -1557,10 +1734,34 @@
                     e.preventDefault();
                     gs.qteInput(Number(m[1]) - 1);
                 }
+            } else if (gs.phase === 'menu') {
+                if (e.code === 'Digit1' || e.code === 'Numpad1') setDifficulty('noob');
+                else if (e.code === 'Digit2' || e.code === 'Numpad2') setDifficulty('pro');
+                else if (e.code === 'Digit3' || e.code === 'Numpad3') setDifficulty('ultra');
+                else if (e.code === 'Enter') { tryLockLandscape(); gs.start(); }
             } else if (gs.phase === 'finished') {
                 if (e.code === 'KeyR' || e.code === 'Enter') gs.start();
                 else if (e.code === 'KeyM') gs.toMenu();
             }
+        });
+
+        const diffButtons = document.querySelectorAll('.diff-btn');
+        const diffInfoEl = document.getElementById('diffInfo');
+
+        function setDifficulty(key) {
+            if (!DIFFICULTIES[key]) return;
+            GameState.selectedDiffKey = key;
+            GameState.diff = DIFFICULTIES[key];
+            diffButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.diff === key);
+            });
+            if (diffInfoEl) {
+                diffInfoEl.textContent = DIFFICULTIES[key].desc;
+            }
+        }
+
+        diffButtons.forEach(btn => {
+            btn.onclick = () => setDifficulty(btn.dataset.diff);
         });
 
         function tryLockLandscape() {
@@ -1686,8 +1887,9 @@
 
                 this.styleText = this.add.text(0, 16, 'ESTILO: 0', F(22, { color: '#ffd700' })).setOrigin(1, 0);
                 this.timeText = this.add.text(0, 44, '00:00.0', F(18)).setOrigin(1, 0);
-                this.progText = this.add.text(0, 68, 'OBSTÁCULOS 0/16', F(15, { color: '#aaaaaa' })).setOrigin(1, 0);
+                this.progText = this.add.text(0, 68, 'OBSTÁCULOS 0/12', F(15, { color: '#aaaaaa' })).setOrigin(1, 0);
                 this.layerText = this.add.text(0, 90, LAYERS[0].title, F(13, { color: LAYERS[0].css })).setOrigin(1, 0);
+                this.diffText = this.add.text(0, 110, 'DIFICULTAD: PRO', F(12, { color: '#2a9dff' })).setOrigin(1, 0);
                 this.bannerText = this.add.text(0, 0, '', F(26, { align: 'center', lineSpacing: 6 })).setOrigin(0.5).setAlpha(0);
 
                 // --- HUD DEL JEFE (OVOCITO II) ---
@@ -1805,7 +2007,7 @@
                 this.res = this.add.container(0, 0);
                 this.resBg = this.add.rectangle(0, 0, 540, 440, 0x000000, 0.92).setStrokeStyle(4, 0xffffff);
                 this.resTitle = this.add.text(0, -180, 'DEMO COMPLETADA', F(26)).setOrigin(0.5);
-                this.resRows = this.add.text(-240, -125, '', F(20, { lineSpacing: 16 }));
+                this.resRows = this.add.text(-240, -135, '', F(18, { lineSpacing: 12 }));
                 this.resRank = this.add.text(0, 85, '', F(84, { color: '#ffd700' })).setOrigin(0.5);
 
                 this.resRetryBtn = this.add.rectangle(-120, 175, 210, 48, 0x161616, 0.95)
@@ -1880,6 +2082,7 @@
                     this.timeText.setText(fmtTime(h.time));
                     this.progText.setText(String(h.progress).startsWith('JEFE') ? h.progress : 'OBSTÁCULOS ' + h.progress);
                     if (h.layer) this.layerText.setText(h.layer).setColor(h.layerColor || '#ffffff');
+                    if (h.diffName) this.diffText.setText('DIFICULTAD: ' + h.diffName).setColor(h.diffColor || '#ffffff');
                 });
                 window.addEventListener('banner', (e) => {
                     this.bannerText.setText(e.detail.text).setColor(e.detail.color).setAlpha(1);
@@ -1892,8 +2095,9 @@
                     this.qtePrompt.setText(d.q);
                     this.qteChainTxt.setText('Selecciona el paso 1 de ' + d.total + '...');
                     this.qteChainTxt.setColor('#b899d6');
+                    const maxTime = d.maxTime || 5.0;
                     this.qteBar.width = 500;
-                    this.qteTimeTxt.setText(QUESTION_TIME.toFixed(1) + 's');
+                    this.qteTimeTxt.setText(maxTime.toFixed(1) + 's');
                     const count = d.words.length;
                     for (let i = 0; i < 4; i++) {
                         const bg = this.qteBtnBgs[i];
@@ -1910,7 +2114,7 @@
                             txt.setVisible(false);
                         }
                     }
-                    this.qteHint.setText('Toca en el orden correcto o pulsa [1-' + count + '] · 5s por paso');
+                    this.qteHint.setText('Toca en el orden correcto o pulsa [1-' + count + '] · ' + maxTime.toFixed(0) + 's por paso');
                     this.qteBox.setVisible(true);
                 });
                 window.addEventListener('qteStep', (e) => {
@@ -1943,7 +2147,7 @@
                 window.addEventListener('showDeath', () => { this.deathBg.setVisible(true); this.deathText.setVisible(true); });
                 window.addEventListener('hideDeath', () => { this.deathBg.setVisible(false); this.deathText.setVisible(false); });
                 window.addEventListener('showResults', (e) => {
-                    const lines = e.detail.rows.map(r => r[0].padEnd(11) + r[1].padEnd(18) + r[2]);
+                    const lines = e.detail.rows.map(r => r[0].padEnd(12) + r[1].padEnd(17) + r[2]);
                     this.resRows.setText(lines.join('\n'));
                     this.resRank.setText('RANGO ' + e.detail.rank);
                     this.res.setVisible(true);
@@ -1956,9 +2160,10 @@
                 const hudScale = Math.min(1, w / 460);
                 this.hudLeft.setPosition(14, 14).setScale(hudScale);
                 this.styleText.setPosition(w - 14, 14).setScale(hudScale);
-                this.timeText.setPosition(w - 14, 14 + 28 * hudScale).setScale(hudScale);
-                this.progText.setPosition(w - 14, 14 + 52 * hudScale).setScale(hudScale);
-                this.layerText.setPosition(w - 14, 14 + 72 * hudScale).setScale(hudScale);
+                this.timeText.setPosition(w - 14, 14 + 26 * hudScale).setScale(hudScale);
+                this.progText.setPosition(w - 14, 14 + 48 * hudScale).setScale(hudScale);
+                this.layerText.setPosition(w - 14, 14 + 68 * hudScale).setScale(hudScale);
+                this.diffText.setPosition(w - 14, 14 + 86 * hudScale).setScale(hudScale);
 
                 this.bossHud.setPosition(w / 2, 34).setScale(Math.min(1, (w - 280) / 400 > 0.55 ? (w - 280) / 400 : w / 460));
                 this.bannerText.setPosition(w / 2, h * 0.20).setScale(Math.min(1, w / 520));
@@ -1971,11 +2176,13 @@
 
             displayTrivia(d) {
                 const colNum = Phaser.Display.Color.HexStringToColor(d.color).color;
+                const maxTime = d.maxTime || 5.0;
                 this.triHead.setText(d.name + '  ·  ' + d.tema).setColor(d.color);
                 this.triBg.setStrokeStyle(4, colNum);
                 this.triBar.setFillStyle(colNum, 1);
                 this.triBar.width = 500;
-                this.triTimeTxt.setText(QUESTION_TIME.toFixed(1) + 's').setColor(d.color);
+                this.triTimeTxt.setText(maxTime.toFixed(1) + 's').setColor(d.color);
+                this.triHint.setText('Toca una opción o pulsa [1-3] · ' + maxTime.toFixed(0) + 's por pregunta');
                 this.qText.setText(d.q);
                 for (let i = 0; i < 3; i++) {
                     this.optionTexts[i].setText(d.options[i]);
