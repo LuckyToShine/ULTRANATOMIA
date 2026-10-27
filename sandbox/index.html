@@ -114,7 +114,7 @@
     </div>
     <canvas id="three-canvas"></canvas>
     <div id="phaser-canvas"></div>
-    <div id="instructions">Toca o pulsa 1-3: responder trivia &middot; QTE: toca o pulsa 1-4 para ordenar los pasos &middot; Esc o bot&oacute;n: cancelar (libre)</div>
+    <div id="instructions">Toca o pulsa 1-3: responder trivia &middot; QTE: toca o pulsa 1-4 para ordenar los pasos &middot; U (o toca barra): usar ULTI &middot; Esc o bot&oacute;n: cancelar (libre)</div>
 
     <div id="panel">
         <h3 id="panelToggle"><span>SANDBOX</span><span id="panelArrow">&#9662;</span></h3>
@@ -992,6 +992,9 @@
             question: null,
             answerLock: false,
             qte: null,
+            ultiCharge: 0,
+            ultiReady: false,
+            ultiUsed: false,
             token: 0,
             lastSpawn: null,
 
@@ -1021,12 +1024,113 @@
                 this.question = null;
                 this.answerLock = false;
                 this.qte = null;
+                this.ultiCharge = 0;
+                this.ultiReady = false;
+                this.ultiUsed = false;
                 this.lastSpawn = null;
                 emit('hideTrivia');
                 emit('hideQTE');
                 emit('hideDeath');
                 emit('hideResults');
                 emit('updateHealth', this.health);
+                emit('updateUlti', { charge: 0, ready: false, used: false });
+            },
+
+            addUltiStreak() {
+                if (this.ultiUsed || this.ultiReady) return;
+                this.ultiCharge = Math.min(4, this.ultiCharge + 1);
+                if (this.ultiCharge >= 4) {
+                    this.ultiReady = true;
+                    emit('banner', { text: '¡ULTI LISTA! [U] SALTAR SECCIÓN (1 USO)', color: '#00ffcc' });
+                }
+                emit('updateUlti', { charge: this.ultiCharge, ready: this.ultiReady, used: this.ultiUsed });
+            },
+
+            resetUltiStreak() {
+                if (this.ultiUsed || this.ultiReady) return;
+                if (this.ultiCharge > 0) {
+                    this.ultiCharge = 0;
+                    emit('updateUlti', { charge: 0, ready: false, used: this.ultiUsed });
+                }
+            },
+
+            useUlti() {
+                if (!this.ultiReady || this.ultiUsed) return;
+                if (!['idle', 'running', 'trivia', 'qte'].includes(this.phase)) return;
+                lastUiAction = performance.now();
+
+                this.token++;
+                this.ultiReady = false;
+                this.ultiUsed = true;
+                this.ultiCharge = 0;
+                emit('updateUlti', { charge: 0, ready: false, used: true });
+                emit('hideTrivia');
+                emit('hideQTE');
+                this.answerLock = false;
+                this.qte = null;
+                this.current = null;
+                this.question = null;
+                this.targetScale = 1;
+                this.targetFov = BASE_FOV;
+
+                if (this.mode !== 'run') {
+                    obstacles.slice().forEach(o => {
+                        o.cleared = true;
+                        burst(new THREE.Vector3(0, 3.2, o.z), 0x00ffcc, 35, 11);
+                        removeObstacle(o);
+                    });
+                    this.addStyle(250);
+                    this.phase = 'idle';
+                    emit('banner', { text: '¡ULTI ACTIVADA! OBSTÁCULO DESTRUIDO', color: '#00ffcc' });
+                    return;
+                }
+
+                const next = this.nextObstacle();
+                if (!next) return;
+
+                const curLayer = Math.min(3, Math.floor(next.index / CHECKPOINT_EVERY));
+                const nextLayerStartIdx = Math.min(RUN_LEN, (curLayer + 1) * CHECKPOINT_EVERY);
+
+                obstacles.slice().forEach(o => {
+                    if (!o.cleared && o.index < nextLayerStartIdx) {
+                        o.cleared = true;
+                        burst(new THREE.Vector3(0, 3.2, o.z), 0x00ffcc, 35, 11);
+                        removeObstacle(o);
+                    }
+                });
+
+                const targetZ = nextLayerStartIdx < RUN_LEN
+                    ? this.zFor(nextLayerStartIdx) + TRIGGER_DIST + 6
+                    : this.finishZ + 6;
+
+                const fromZ = this.player.z;
+                const toZ = Math.min(fromZ, targetZ);
+
+                this.cpIdx = nextLayerStartIdx;
+                this.cpZ = toZ;
+                this.styleAtCp = this.style + 250;
+                this.addStyle(250);
+
+                this.phase = 'exec';
+                flashRing(new THREE.Vector3(0, 2.5, fromZ - 2), 0x00ffcc);
+                burst(new THREE.Vector3(0, 2.5, fromZ - 3), 0x00ffcc, 50, 14);
+                shake(0.8);
+                emit('banner', { text: '¡ULTI ACTIVADA! SALTANDO SECCIÓN...', color: '#00ffcc' });
+
+                anim(0.55, k => {
+                    const ease = 1 - Math.pow(1 - k, 3);
+                    this.player.z = fromZ + (toZ - fromZ) * ease;
+                }, () => {
+                    if (this.phase === 'dead') return;
+                    this.layerIdx = layerIndexAtZ(this.player.z);
+                    this.phase = 'running';
+                    if (nextLayerStartIdx < RUN_LEN) {
+                        const L = LAYERS[this.layerIdx];
+                        emit('banner', { text: 'SECCIÓN SALTADA · ' + L.title, color: L.css });
+                    } else {
+                        emit('banner', { text: '¡TRAMO FINAL ALCANZADO!', color: '#ffdd66' });
+                    }
+                });
             },
 
             start(mode) {
@@ -1187,6 +1291,7 @@
 
                 if (ok) {
                     this.stats.correct++;
+                    this.addUltiStreak();
                     this.addStyle(this.lastMech && this.lastMech !== type ? 150 : 100);
                     this.lastMech = type;
                     this.later(450, () => {
@@ -1198,6 +1303,7 @@
                     });
                 } else {
                     this.stats.wrong++;
+                    this.resetUltiStreak();
                     this.addStyle(-150);
                     this.damage(this.damagePct);
                     if (this.phase === 'dead') return;
@@ -1333,6 +1439,7 @@
                 this.targetScale = 1;
                 this.targetFov = BASE_FOV;
                 this.stats.correct++;
+                this.addUltiStreak();
                 this.addStyle((this.lastMech && this.lastMech !== 'qte' ? 150 : 100) + 100);
                 this.lastMech = 'qte';
                 emit('hideQTE');
@@ -1357,6 +1464,7 @@
                 this.targetScale = 1;
                 this.targetFov = BASE_FOV;
                 this.stats.wrong++;
+                this.resetUltiStreak();
                 this.addStyle(-100);
                 this.damage(this.damagePct);
                 if (this.phase === 'dead') return;
@@ -1475,6 +1583,11 @@
         window.addEventListener('keydown', (e) => {
             if (e.repeat) return;
             const gs = GameState;
+            if (e.code === 'KeyU' && ['idle', 'running', 'trivia', 'qte'].includes(gs.phase)) {
+                e.preventDefault();
+                gs.useUlti();
+                return;
+            }
             if (gs.phase === 'trivia') {
                 if (e.code === 'Escape' && gs.mode === 'free') return gs.cancelTrivia();
                 const m = /^(?:Digit|Numpad)([1-3])$/.exec(e.code);
@@ -1654,7 +1767,24 @@
                 this.hpBg = this.add.rectangle(0, 0, 260, 28, 0x440000).setOrigin(0, 0);
                 this.hpBar = this.add.rectangle(0, 0, 260, 28, 0xff0000).setOrigin(0, 0);
                 this.hpLabel = this.add.text(8, 5, 'VITALIDAD', F(17));
-                this.hudLeft.add([this.hpBg, this.hpBar, this.hpLabel]);
+
+                // Barra de ULTI con 4 barritas
+                this.ultiBg = this.add.rectangle(0, 32, 260, 28, 0x0a1414, 0.92).setOrigin(0, 0).setStrokeStyle(1.5, 0x224444);
+                this.ultiLabel = this.add.text(6, 39, 'ULTI 0/4', F(11, { color: '#669999' }));
+                this.ultiBars = [];
+                for (let i = 0; i < 4; i++) {
+                    const bx = 76 + i * 44;
+                    const seg = this.add.rectangle(bx, 37, 40, 18, 0x162626).setOrigin(0, 0).setStrokeStyle(1.5, 0x335555);
+                    this.ultiBars.push(seg);
+                }
+                this.ultiBg.setInteractive({ useHandCursor: true });
+                this.ultiBg.on('pointerdown', () => {
+                    if (GameState.ultiReady && !GameState.ultiUsed) {
+                        GameState.useUlti();
+                    }
+                });
+
+                this.hudLeft.add([this.hpBg, this.hpBar, this.hpLabel, this.ultiBg, this.ultiLabel, ...this.ultiBars]);
                 this.hpProxy = { v: 1 };
 
                 this.styleText = this.add.text(0, 18, 'ESTILO: 0', F(22, { color: '#ffd700' })).setOrigin(1, 0);
@@ -1838,6 +1968,28 @@
                         duration: 200,
                         onUpdate: () => { this.hpBar.width = Math.max(0.01, 260 * this.hpProxy.v); }
                     });
+                });
+                window.addEventListener('updateUlti', (e) => {
+                    const { charge, ready, used } = e.detail;
+                    if (used) {
+                        this.ultiLabel.setText('AGOTADA').setColor('#555555');
+                        this.ultiBg.setFillStyle(0x111111, 0.85).setStrokeStyle(1.5, 0x333333);
+                        this.ultiBars.forEach(b => b.setFillStyle(0x1a1a1a).setStrokeStyle(1.5, 0x333333));
+                    } else if (ready) {
+                        this.ultiLabel.setText('¡LISTA! [U]').setColor('#00ffcc');
+                        this.ultiBg.setFillStyle(0x062e26, 0.96).setStrokeStyle(2, 0x00ffcc);
+                        this.ultiBars.forEach(b => b.setFillStyle(0x00ffcc).setStrokeStyle(1.5, 0xffffff));
+                    } else {
+                        this.ultiLabel.setText('ULTI ' + charge + '/4').setColor(charge > 0 ? '#66ffee' : '#669999');
+                        this.ultiBg.setFillStyle(0x0a1414, 0.92).setStrokeStyle(1.5, 0x224444);
+                        this.ultiBars.forEach((b, idx) => {
+                            if (idx < charge) {
+                                b.setFillStyle(0x00d4aa).setStrokeStyle(1.5, 0x88ffee);
+                            } else {
+                                b.setFillStyle(0x162626).setStrokeStyle(1.5, 0x335555);
+                            }
+                        });
+                    }
                 });
                 window.addEventListener('updateHud', (e) => {
                     const h = e.detail;

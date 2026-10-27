@@ -18,7 +18,7 @@
         #instructions { position: absolute; bottom: 12px; left: 16px; right: 16px; z-index: 3; pointer-events: none; text-shadow: 1px 1px 2px black; font-size: 12px; line-height: 1.4; opacity: .85; }
 
         /* Barra rápida de acciones en partida (Reiniciar / Menú) */
-        #top-actions { position: absolute; top: 54px; left: 14px; z-index: 4; display: flex; gap: 6px; }
+        #top-actions { position: absolute; top: 82px; left: 14px; z-index: 4; display: flex; gap: 6px; }
         #top-actions button, #top-actions a { font: inherit; font-size: 12px; background: rgba(17,17,17,.85); color: #ddd; border: 1px solid #666; padding: 5px 10px; cursor: pointer; text-decoration: none; }
         #top-actions button:hover, #top-actions button:active, #top-actions a:hover, #top-actions a:active { background: #fff; color: #000; border-color: #fff; }
 
@@ -37,7 +37,7 @@
         #menu small { color: #888; margin-top: 16px; max-width: 560px; line-height: 1.5; font-size: clamp(11px, 2vw, 13px); }
 
         @media (max-width: 640px) {
-            #top-actions { top: 46px; left: 10px; }
+            #top-actions { top: 70px; left: 10px; }
             #instructions { font-size: 11px; bottom: 8px; left: 10px; right: 10px; }
         }
         #rotate-overlay {
@@ -90,7 +90,7 @@
             #menu button, #menu a.menu-link { padding: 8px 18px; margin: 3px; font-size: 15px; }
             #menu a.menu-link.secondary { padding: 6px 14px; margin-top: 4px; font-size: 12px; }
             #menu small { margin-top: 6px; font-size: 10px; }
-            #top-actions { top: 44px; left: 10px; }
+            #top-actions { top: 68px; left: 10px; }
             #instructions { font-size: 10px; bottom: 4px; }
         }
 
@@ -140,7 +140,7 @@
         <button id="btnMenu">Men&uacute; Demo</button>
         <a href="../">Inicio</a>
     </div>
-    <div id="instructions">Toca o pulsa 1-3: responder trivia &middot; QTE: toca o pulsa 1-4 para ordenar los pasos</div>
+    <div id="instructions">Toca o pulsa 1-3: responder trivia &middot; QTE: toca o pulsa 1-4 para ordenar los pasos &middot; U (o toca barra): usar ULTI</div>
 
     <div id="menu">
         <div class="badge">DEMO PRINCIPAL</div>
@@ -1165,6 +1165,9 @@
             answerLock: false,
             qte: null,
             boss: null,
+            ultiCharge: 0,
+            ultiReady: false,
+            ultiUsed: false,
             token: 0,
 
             later(ms, fn) {
@@ -1195,12 +1198,113 @@
                 this.answerLock = false;
                 this.qte = null;
                 this.boss = null;
+                this.ultiCharge = 0;
+                this.ultiReady = false;
+                this.ultiUsed = false;
                 emit('hideTrivia');
                 emit('hideQTE');
                 emit('hideBossHud');
                 emit('hideDeath');
                 emit('hideResults');
                 emit('updateHealth', this.health);
+                emit('updateUlti', { charge: 0, ready: false, used: false });
+            },
+
+            addUltiStreak() {
+                if (this.ultiUsed || this.ultiReady) return;
+                this.ultiCharge = Math.min(4, this.ultiCharge + 1);
+                if (this.ultiCharge >= 4) {
+                    this.ultiReady = true;
+                    emit('banner', { text: '¡ULTI LISTA! [U] SALTAR SECCIÓN (1 USO)', color: '#00ffcc' });
+                }
+                emit('updateUlti', { charge: this.ultiCharge, ready: this.ultiReady, used: this.ultiUsed });
+            },
+
+            resetUltiStreak() {
+                if (this.ultiUsed || this.ultiReady) return;
+                if (this.ultiCharge > 0) {
+                    this.ultiCharge = 0;
+                    emit('updateUlti', { charge: 0, ready: false, used: this.ultiUsed });
+                }
+            },
+
+            useUlti() {
+                if (!this.ultiReady || this.ultiUsed) return;
+                if (!['running', 'trivia', 'qte'].includes(this.phase)) return;
+                lastUiAction = performance.now();
+
+                this.token++;
+                this.ultiReady = false;
+                this.ultiUsed = true;
+                this.ultiCharge = 0;
+                emit('updateUlti', { charge: 0, ready: false, used: true });
+                emit('hideTrivia');
+                emit('hideQTE');
+                this.answerLock = false;
+                this.qte = null;
+                this.current = null;
+                this.question = null;
+                this.targetScale = 1;
+                this.targetFov = BASE_FOV;
+
+                if (this.boss && !this.boss.cleared) {
+                    const o = this.boss;
+                    this.phase = 'exec';
+                    this.addStyle(200);
+                    const bp = BOSS_PHASES[o.phaseIdx];
+                    emit('banner', { text: '¡ULTI ACTIVADA! FASE SALTADA', color: '#00ffcc' });
+                    EXEC[bp.type](o);
+                    return;
+                }
+
+                const epl = this.diff.enemiesPerLayer;
+                const runLen = this.diff.runLen;
+                const next = this.nextObstacle();
+                if (!next) return;
+
+                const curLayer = Math.min(3, Math.floor(next.index / epl));
+                const nextLayerStartIdx = Math.min(runLen, (curLayer + 1) * epl);
+
+                obstacles.slice().forEach(o => {
+                    if (!o.cleared && o.index < nextLayerStartIdx) {
+                        o.cleared = true;
+                        burst(new THREE.Vector3(0, 3.2, o.z), 0x00ffcc, 35, 11);
+                        removeObstacle(o);
+                    }
+                });
+
+                const targetZ = nextLayerStartIdx < runLen
+                    ? this.zFor(nextLayerStartIdx) + TRIGGER_DIST + 6
+                    : this.finishZ + BOSS_TRIGGER_DIST + 6;
+
+                const fromZ = this.player.z;
+                const toZ = Math.min(fromZ, targetZ);
+
+                this.cpIdx = nextLayerStartIdx;
+                this.cpZ = toZ;
+                this.styleAtCp = this.style + 250;
+                this.addStyle(250);
+
+                this.phase = 'exec';
+                flashRing(new THREE.Vector3(0, 2.5, fromZ - 2), 0x00ffcc);
+                burst(new THREE.Vector3(0, 2.5, fromZ - 3), 0x00ffcc, 50, 14);
+                shake(0.8);
+                emit('banner', { text: '¡ULTI ACTIVADA! SALTANDO SECCIÓN...', color: '#00ffcc' });
+
+                anim(0.55, k => {
+                    const ease = 1 - Math.pow(1 - k, 3);
+                    this.player.z = fromZ + (toZ - fromZ) * ease;
+                }, () => {
+                    if (this.phase === 'dead') return;
+                    this.layerIdx = layerIndexAtZ(this.player.z);
+                    this.phase = 'running';
+                    if (nextLayerStartIdx < runLen) {
+                        const L = LAYERS[this.layerIdx];
+                        emit('banner', { text: 'SECCIÓN SALTADA · ' + L.title, color: L.css });
+                    } else {
+                        emit('banner', { text: 'SECCIÓN SALTADA · ANTESALA DEL OVOCITO II', color: '#ffdd66' });
+                    }
+                });
             },
 
             start() {
@@ -1383,6 +1487,7 @@
 
                 if (ok) {
                     this.stats.correct++;
+                    this.addUltiStreak();
                     this.addStyle(this.lastMech && this.lastMech !== type ? 150 : 100);
                     this.lastMech = type;
                     this.later(450, () => {
@@ -1395,6 +1500,7 @@
                 } else {
                     const o = this.current;
                     this.stats.wrong++;
+                    this.resetUltiStreak();
                     this.addStyle(-150);
                     this.damage(this.damagePct);
                     if (this.phase === 'dead') return;
@@ -1411,6 +1517,7 @@
                 const o = this.current;
                 emit('triviaFeedback', { picked: 0, correct: this.question.correct });
                 this.stats.wrong++;
+                this.resetUltiStreak();
                 this.addStyle(-150);
                 this.damage(this.damagePct);
                 if (this.phase === 'dead') return;
@@ -1578,6 +1685,7 @@
                 this.targetScale = 1;
                 this.targetFov = BASE_FOV;
                 this.stats.correct++;
+                this.addUltiStreak();
                 this.addStyle((this.lastMech && this.lastMech !== 'qte' ? 150 : 100) + 100);
                 this.lastMech = 'qte';
                 emit('hideQTE');
@@ -1603,6 +1711,7 @@
                 const o = this.qte.o;
                 this.qte = null;
                 this.stats.wrong++;
+                this.resetUltiStreak();
                 this.addStyle(-100);
                 this.damage(this.damagePct);
                 if (this.phase === 'dead') return;
@@ -1725,6 +1834,11 @@
         window.addEventListener('keydown', (e) => {
             if (e.repeat) return;
             const gs = GameState;
+            if (e.code === 'KeyU' && ['running', 'trivia', 'qte'].includes(gs.phase)) {
+                e.preventDefault();
+                gs.useUlti();
+                return;
+            }
             if (gs.phase === 'trivia') {
                 const m = /^(?:Digit|Numpad)([1-3])$/.exec(e.code);
                 if (m) gs.answer(Number(m[1]));
@@ -1882,7 +1996,24 @@
                 this.hpBg = this.add.rectangle(0, 0, 260, 28, 0x440000).setOrigin(0, 0);
                 this.hpBar = this.add.rectangle(0, 0, 260, 28, 0xff0000).setOrigin(0, 0);
                 this.hpLabel = this.add.text(8, 5, 'VITALIDAD', F(17));
-                this.hudLeft.add([this.hpBg, this.hpBar, this.hpLabel]);
+
+                // Barra de ULTI con 4 barritas
+                this.ultiBg = this.add.rectangle(0, 32, 260, 28, 0x0a1414, 0.92).setOrigin(0, 0).setStrokeStyle(1.5, 0x224444);
+                this.ultiLabel = this.add.text(6, 39, 'ULTI 0/4', F(11, { color: '#669999' }));
+                this.ultiBars = [];
+                for (let i = 0; i < 4; i++) {
+                    const bx = 76 + i * 44;
+                    const seg = this.add.rectangle(bx, 37, 40, 18, 0x162626).setOrigin(0, 0).setStrokeStyle(1.5, 0x335555);
+                    this.ultiBars.push(seg);
+                }
+                this.ultiBg.setInteractive({ useHandCursor: true });
+                this.ultiBg.on('pointerdown', () => {
+                    if (GameState.ultiReady && !GameState.ultiUsed) {
+                        GameState.useUlti();
+                    }
+                });
+
+                this.hudLeft.add([this.hpBg, this.hpBar, this.hpLabel, this.ultiBg, this.ultiLabel, ...this.ultiBars]);
                 this.hpProxy = { v: 1 };
 
                 this.styleText = this.add.text(0, 16, 'ESTILO: 0', F(22, { color: '#ffd700' })).setOrigin(1, 0);
@@ -2075,6 +2206,28 @@
                         duration: 200,
                         onUpdate: () => { this.hpBar.width = Math.max(0.01, 260 * this.hpProxy.v); }
                     });
+                });
+                window.addEventListener('updateUlti', (e) => {
+                    const { charge, ready, used } = e.detail;
+                    if (used) {
+                        this.ultiLabel.setText('AGOTADA').setColor('#555555');
+                        this.ultiBg.setFillStyle(0x111111, 0.85).setStrokeStyle(1.5, 0x333333);
+                        this.ultiBars.forEach(b => b.setFillStyle(0x1a1a1a).setStrokeStyle(1.5, 0x333333));
+                    } else if (ready) {
+                        this.ultiLabel.setText('¡LISTA! [U]').setColor('#00ffcc');
+                        this.ultiBg.setFillStyle(0x062e26, 0.96).setStrokeStyle(2, 0x00ffcc);
+                        this.ultiBars.forEach(b => b.setFillStyle(0x00ffcc).setStrokeStyle(1.5, 0xffffff));
+                    } else {
+                        this.ultiLabel.setText('ULTI ' + charge + '/4').setColor(charge > 0 ? '#66ffee' : '#669999');
+                        this.ultiBg.setFillStyle(0x0a1414, 0.92).setStrokeStyle(1.5, 0x224444);
+                        this.ultiBars.forEach((b, idx) => {
+                            if (idx < charge) {
+                                b.setFillStyle(0x00d4aa).setStrokeStyle(1.5, 0x88ffee);
+                            } else {
+                                b.setFillStyle(0x162626).setStrokeStyle(1.5, 0x335555);
+                            }
+                        });
+                    }
                 });
                 window.addEventListener('updateHud', (e) => {
                     const h = e.detail;
