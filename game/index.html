@@ -135,6 +135,7 @@
     </div>
     <canvas id="three-canvas"></canvas>
     <div id="phaser-canvas"></div>
+    <audio id="bgm" src="bgm.mp3" loop preload="auto"></audio>
     <div id="top-actions">
         <button id="btnRestart">Reiniciar</button>
         <button id="btnMenu">Men&uacute; Demo</button>
@@ -1313,6 +1314,11 @@
                 this.resetAll();
                 this.mode = 'run';
                 document.getElementById('menu').classList.add('hidden');
+                const bgm = document.getElementById('bgm');
+                if (bgm && bgm.paused) {
+                    bgm.volume = 0.5;
+                    bgm.play().catch(() => {});
+                }
                 initDecksForRun(this.diff.variety);
                 this.buildRun();
                 this.phase = 'running';
@@ -1893,6 +1899,18 @@
         document.getElementById('startRun').onclick = () => { tryLockLandscape(); GameState.start(); };
         document.getElementById('btnRestart').onclick = (e) => { GameState.restart(); e.target.blur(); };
         document.getElementById('btnMenu').onclick = (e) => { GameState.toMenu(); e.target.blur(); };
+
+        // Iniciar música en bucle al interactuar en game/
+        const bgmEl = document.getElementById('bgm');
+        if (bgmEl) {
+            bgmEl.volume = 0.5;
+            bgmEl.play().catch(() => {});
+            const unlockBgm = () => {
+                if (bgmEl.paused) bgmEl.play().catch(() => {});
+            };
+            window.addEventListener('pointerdown', unlockBgm, { once: true });
+            window.addEventListener('keydown', unlockBgm, { once: true });
+        }
 
         // ==========================================
         // 6. BUCLE DE RENDER
