@@ -154,6 +154,7 @@
         <p>Gira tu dispositivo en posici&oacute;n horizontal para jugar ULTRANATOMIA.</p>
     </div>
     <canvas id="three-canvas"></canvas>
+    <audio id="sfxParry" src="../game/parry.mp3" preload="auto"></audio>
     <div id="hurt"></div>
     <div id="crosshair"></div>
 
@@ -1030,7 +1031,19 @@ Reiniciando al inicio de la capa...</div>
             return acroTip.getWorldPosition(v);
         }
 
+        const sfxParryEl = document.getElementById('sfxParry');
+
+        function playParrySfx() {
+            if (!sfxParryEl) return;
+            try {
+                sfxParryEl.currentTime = 0;
+                sfxParryEl.volume = 0.85;
+                sfxParryEl.play().catch(() => {});
+            } catch (_) {}
+        }
+
         function parryBolt(b) {
+            if (typeof playParrySfx === 'function') playParrySfx();
             const fwd = camera.getWorldDirection(tmpC);
             b.reflected = true;
             b.vel.copy(fwd).multiplyScalar(BOLT_SPEED * 2.6);

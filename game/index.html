@@ -143,6 +143,7 @@
     <canvas id="three-canvas"></canvas>
     <div id="phaser-canvas"></div>
     <audio id="bgm" src="bgm.mp3" loop preload="auto"></audio>
+    <audio id="sfxParry" src="parry.mp3" preload="auto"></audio>
     <div id="top-actions">
         <button id="btnRestart">Reiniciar</button>
         <button id="btnMenu">Men&uacute; Demo</button>
@@ -1498,6 +1499,7 @@
                 emit('triviaFeedback', { picked: n, correct: this.question.correct });
 
                 if (ok) {
+                    if (type === 'parry' && typeof playParrySfx === 'function') playParrySfx();
                     this.stats.correct++;
                     this.addUltiStreak();
                     this.addStyle(this.lastMech && this.lastMech !== type ? 150 : 100);
@@ -2024,6 +2026,16 @@
 
         // Iniciar música en bucle únicamente al iniciar la demo
         const bgmEl = document.getElementById('bgm');
+        const sfxParryEl = document.getElementById('sfxParry');
+
+        function playParrySfx() {
+            if (!sfxParryEl) return;
+            try {
+                sfxParryEl.currentTime = 0;
+                sfxParryEl.volume = 0.85;
+                sfxParryEl.play().catch(() => {});
+            } catch (_) {}
+        }
 
         function ensureBgmPlaying() {
             if (!bgmEl) return;

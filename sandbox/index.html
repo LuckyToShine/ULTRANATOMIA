@@ -119,6 +119,7 @@
     </div>
     <canvas id="three-canvas"></canvas>
     <div id="phaser-canvas"></div>
+    <audio id="sfxParry" src="../game/parry.mp3" preload="auto"></audio>
     <div id="instructions">Toca o pulsa 1-3: responder trivia &middot; QTE: toca o pulsa 1-4 para ordenar los pasos &middot; U (o toca barra): usar ULTI &middot; Esc o bot&oacute;n: cancelar (libre)</div>
 
     <div id="panel">
@@ -1297,6 +1298,7 @@
                 emit('triviaFeedback', { picked: n, correct: this.question.correct });
 
                 if (ok) {
+                    if (type === 'parry' && typeof playParrySfx === 'function') playParrySfx();
                     this.stats.correct++;
                     this.addUltiStreak();
                     this.addStyle(this.lastMech && this.lastMech !== type ? 150 : 100);
@@ -1616,6 +1618,16 @@
         // 6. PANEL DE SANDBOX (DOM)
         // ==========================================
         const $ = (id) => document.getElementById(id);
+        const sfxParryEl = document.getElementById('sfxParry');
+
+        function playParrySfx() {
+            if (!sfxParryEl) return;
+            try {
+                sfxParryEl.currentTime = 0;
+                sfxParryEl.volume = 0.85;
+                sfxParryEl.play().catch(() => {});
+            } catch (_) {}
+        }
 
         // Colapsar el panel por defecto en pantallas pequeñas para no tapar la UI móvil
         if (window.innerWidth <= 900 || window.innerHeight <= 500) {
