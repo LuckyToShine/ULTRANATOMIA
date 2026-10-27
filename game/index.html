@@ -1334,6 +1334,7 @@
             toMenu() {
                 this.resetAll();
                 this.phase = 'menu';
+                if (typeof stopBgm === 'function') stopBgm();
                 document.getElementById('menu').classList.remove('hidden');
             },
 
@@ -2021,22 +2022,21 @@
         window.addEventListener('globalfullscreenchange', updateFullscreenButtons);
         updateFullscreenButtons();
 
-        // Iniciar música en bucle
+        // Iniciar música en bucle únicamente al iniciar la demo
         const bgmEl = document.getElementById('bgm');
 
         function ensureBgmPlaying() {
             if (!bgmEl) return;
+            bgmEl.volume = 0.5;
             if (bgmEl.paused) {
-                bgmEl.volume = 0.5;
                 bgmEl.play().catch(() => {});
             }
         }
 
-        if (bgmEl) {
-            bgmEl.volume = 0.5;
-            bgmEl.play().catch(() => {});
-            window.addEventListener('pointerdown', ensureBgmPlaying);
-            window.addEventListener('keydown', ensureBgmPlaying);
+        function stopBgm() {
+            if (!bgmEl) return;
+            bgmEl.pause();
+            bgmEl.currentTime = 0;
         }
 
         // ==========================================
