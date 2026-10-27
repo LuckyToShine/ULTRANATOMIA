@@ -2,14 +2,17 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>ULTRANATOMIA - Modo FPS</title>
     <!-- Cargar Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; color: #fff; user-select: none; -webkit-user-select: none; touch-action: none; }
-        #three-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; touch-action: none; }
+        #three-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 1; touch-action: none; }
         #instructions { position: absolute; bottom: 12px; left: 16px; right: 16px; z-index: 3; pointer-events: none; text-shadow: 1px 1px 2px black; font-size: 12px; line-height: 1.4; opacity: .85; }
         body.touch-mode #instructions { display: none; }
 
@@ -52,6 +55,8 @@
         .overlay button:hover, .overlay button:active, .overlay a.menu-link:hover, .overlay a.menu-link:active { background: #fff; color: #000; }
         .overlay a.menu-link.secondary, .overlay button.secondary { border-color: #888; color: #ccc; font-size: clamp(13px, 2.5vw, 15px); padding: 9px 18px; font-weight: normal; }
         .overlay a.menu-link.secondary:hover, .overlay button.secondary:hover { border-color: #fff; background: #fff; color: #000; }
+        .overlay .fs-corner-btn { position: absolute; top: 14px; right: 14px; z-index: 12; font: inherit; font-size: 12px; padding: 7px 14px; margin: 0; border: 2px solid #fff; background: #111; color: #fff; cursor: pointer; font-weight: bold; letter-spacing: 1px; touch-action: manipulation; }
+        .overlay .fs-corner-btn:hover, .overlay .fs-corner-btn:active { background: #fff; color: #000; }
         .overlay small { color: #888; margin-top: 16px; max-width: 600px; line-height: 1.5; font-size: clamp(11px, 2vw, 13px); }
         #pause-note { color: #ff8899; min-height: 1.2em; }
         #death { background: rgba(102, 0, 0, .55); pointer-events: none; font-size: 28px; font-weight: bold; white-space: pre-line; }
@@ -70,7 +75,8 @@
         #btnGolpe { width: 62px; height: 62px; right: 122px; bottom: 22px; border-color: #ff3344; color: #ff3344; }
         #btnJump { width: 62px; height: 62px; right: 34px; bottom: 126px; border-color: #ffffff; }
         #btnDash { width: 56px; height: 56px; right: 116px; bottom: 104px; border-color: #2a9dff; color: #2a9dff; }
-        #btnPause { position: absolute; top: 52px; left: 14px; font: inherit; font-size: 12px; background: rgba(17,17,17,.85); color: #ddd; border: 1px solid #666; padding: 5px 10px; }
+        #btnPause { position: absolute; top: 52px; left: 14px; font: inherit; font-size: 12px; background: rgba(17,17,17,.85); color: #ddd; border: 1px solid #666; padding: 5px 10px; touch-action: manipulation; }
+        #btnFullscreenTouch { position: absolute; top: 52px; left: 78px; font: inherit; font-size: 12px; background: rgba(17,17,17,.85); color: #ddd; border: 1px solid #666; padding: 5px 10px; touch-action: manipulation; }
 
         @media (max-width: 640px) {
             #instructions { font-size: 11px; bottom: 8px; left: 10px; right: 10px; }
@@ -87,7 +93,7 @@
             #boss-title { font-size: 11px; margin-bottom: 3px; }
             #boss-bar-bg { height: 9px; }
             #banner { font-size: 18px; }
-            #btnPause { top: 42px; }
+            #btnPause, #btnFullscreenTouch { top: 42px; }
             .overlay { padding: 8px 16px; }
             .overlay .badge { margin-bottom: 4px; font-size: 11px; }
             .overlay h1 { font-size: clamp(24px, 5vw, 38px); }
@@ -178,9 +184,11 @@
         <button class="tbtn" id="btnJump">SALTO</button>
         <button class="tbtn" id="btnDash">DASH</button>
         <button id="btnPause">Pausa</button>
+        <button id="btnFullscreenTouch" type="button">Pantalla Completa</button>
     </div>
 
     <div id="menu" class="overlay">
+        <button type="button" id="btnFullscreenMenu" class="fs-corner-btn">PANTALLA COMPLETA</button>
         <div class="badge">MODO FPS</div>
         <h1>ULTRANATOMIA</h1>
         <p>Recorre en primera persona las 4 capas del sistema reproductor. Abate las barreras celulares, devuelve las hormonas enemigas y derrota al Jefe Final: el Ovocito II.</p>
@@ -198,6 +206,7 @@
     </div>
 
     <div id="pause" class="overlay hidden">
+        <button type="button" id="btnFullscreenPause" class="fs-corner-btn">PANTALLA COMPLETA</button>
         <h2>PAUSA</h2>
         <p id="pause-note"></p>
         <div>
@@ -206,6 +215,7 @@
         </div>
         <div>
             <button id="btnToMenu" class="secondary">MEN&Uacute; MODO FPS</button>
+            <button id="btnFullscreenPauseInline" type="button" class="secondary">PANTALLA COMPLETA</button>
             <a class="menu-link secondary" href="../">INICIO</a>
         </div>
     </div>
@@ -1716,17 +1726,147 @@ Reiniciando al inicio de la capa...</div>
         touchButton('btnDash', dash);
         $('btnPause').addEventListener('click', () => { if (G.phase === 'play') pause(); });
 
-        function tryLockLandscape() {
-            if (window.innerWidth > 900 && window.innerHeight > 600) return;
+        let localPseudoFullscreen = false;
+
+        function hasParentFullscreenCtrl() {
+            try {
+                return !!(window.parent && window.parent !== window && typeof window.parent.toggleGlobalFullscreen === 'function');
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function isLocalNativeFullscreen() {
+            return !!(
+                document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                document.webkitCurrentFullScreenElement ||
+                document.mozFullScreenElement ||
+                document.msFullscreenElement ||
+                document.webkitIsFullScreen
+            );
+        }
+
+        function isFullscreenActive() {
+            if (hasParentFullscreenCtrl()) {
+                try {
+                    return !!window.parent.isGlobalFullscreenActive();
+                } catch (_) {}
+            }
+            return isLocalNativeFullscreen() || localPseudoFullscreen;
+        }
+
+        function updateFullscreenButtons() {
+            const active = isFullscreenActive();
+            document.body.classList.toggle('is-fullscreen', active);
+            const btnTouch = $('btnFullscreenTouch');
+            const btnMenu = $('btnFullscreenMenu');
+            const btnPauseCorner = $('btnFullscreenPause');
+            const btnPauseInline = $('btnFullscreenPauseInline');
+            if (btnTouch) btnTouch.textContent = active ? 'Salir Pantalla Completa' : 'Pantalla Completa';
+            if (btnMenu) btnMenu.textContent = active ? 'SALIR PANTALLA COMPLETA' : 'PANTALLA COMPLETA';
+            if (btnPauseCorner) btnPauseCorner.textContent = active ? 'SALIR PANTALLA COMPLETA' : 'PANTALLA COMPLETA';
+            if (btnPauseInline) btnPauseInline.textContent = active ? 'SALIR PANTALLA COMPLETA' : 'PANTALLA COMPLETA';
+        }
+
+        function enterFullscreen() {
+            if (hasParentFullscreenCtrl()) {
+                try {
+                    window.parent.enterGlobalFullscreen();
+                    updateFullscreenButtons();
+                    return;
+                } catch (_) {}
+            }
+            localPseudoFullscreen = true;
+            window.scrollTo(0, 1);
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+            updateFullscreenButtons();
+            if (isLocalNativeFullscreen()) return;
             const de = document.documentElement;
-            if (de.requestFullscreen && !document.fullscreenElement) {
-                de.requestFullscreen().then(() => {
-                    if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
-                }).catch(() => {});
+            const req = de.requestFullscreen || de.webkitRequestFullscreen || de.webkitRequestFullScreen || de.mozRequestFullScreen || de.msRequestFullscreen;
+            if (req) {
+                try {
+                    const p = req.call(de);
+                    if (p && typeof p.then === 'function') {
+                        p.then(() => {
+                            if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+                            updateFullscreenButtons();
+                        }).catch(() => updateFullscreenButtons());
+                    }
+                } catch (_) {}
+            }
+        }
+
+        function toggleFullscreen() {
+            if (hasParentFullscreenCtrl()) {
+                try {
+                    window.parent.toggleGlobalFullscreen();
+                    updateFullscreenButtons();
+                    return;
+                } catch (_) {}
+            }
+            if (!isFullscreenActive()) {
+                enterFullscreen();
+            } else {
+                localPseudoFullscreen = false;
+                if (isLocalNativeFullscreen()) {
+                    const exit = document.exitFullscreen || document.webkitExitFullscreen || document.webkitCancelFullScreen || document.mozCancelFullScreen || document.msExitFullscreen;
+                    if (exit) {
+                        try {
+                            const p = exit.call(document);
+                            if (p && typeof p.catch === 'function') p.catch(() => updateFullscreenButtons());
+                        } catch (_) {}
+                    }
+                }
+                updateFullscreenButtons();
+            }
+        }
+
+        function tryLockLandscape() {
+            if (window.innerWidth <= 900 || window.innerHeight <= 600) {
+                enterFullscreen();
             } else if (screen.orientation && screen.orientation.lock) {
                 screen.orientation.lock('landscape').catch(() => {});
             }
         }
+
+        ['btnFullscreenTouch', 'btnFullscreenMenu', 'btnFullscreenPause', 'btnFullscreenPauseInline'].forEach(id => {
+            const el = $(id);
+            if (el) {
+                el.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    toggleFullscreen();
+                    el.blur();
+                });
+            }
+        });
+
+        document.querySelectorAll('a[href="../"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.closeSubApp === 'function') {
+                        e.preventDefault();
+                        if (document.pointerLockElement) document.exitPointerLock();
+                        window.parent.closeSubApp();
+                    }
+                } catch (_) {}
+            });
+        });
+
+        function onLocalFullscreenChange() {
+            if (!isLocalNativeFullscreen() && !hasParentFullscreenCtrl()) {
+                localPseudoFullscreen = false;
+            }
+            updateFullscreenButtons();
+        }
+        document.addEventListener('fullscreenchange', onLocalFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', onLocalFullscreenChange);
+        document.addEventListener('mozfullscreenchange', onLocalFullscreenChange);
+        document.addEventListener('MSFullscreenChange', onLocalFullscreenChange);
+        window.addEventListener('globalfullscreenchange', updateFullscreenButtons);
+        updateFullscreenButtons();
 
         $('startFps').onclick = (e) => {
             e.target.blur();

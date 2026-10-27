@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>ULTRANATOMIA - Main Menu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -58,14 +61,54 @@
 
         /* Maximized layout when in fullscreen or mobile pseudo-fullscreen */
         body.is-fullscreen {
-            padding: 0.25rem;
+            padding: 0 !important;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
         }
 
         body.is-fullscreen .screen-frame {
-            width: min(100%, calc((100vh - 0.5rem) * 16 / 9));
-            width: min(100%, calc((100dvh - 0.5rem) * 16 / 9));
-            max-height: calc(100vh - 0.5rem);
-            max-height: calc(100dvh - 0.5rem);
+            width: 100vw !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            max-width: 100vw !important;
+            max-height: 100vh !important;
+            max-height: 100dvh !important;
+            aspect-ratio: auto !important;
+            border-width: 0 !important;
+            border-radius: 0 !important;
+        }
+
+        body.is-fullscreen .menu-left-col {
+            padding-left: max(clamp(16px, 4.5cqh, 60px), env(safe-area-inset-left, 0px));
+        }
+
+        body.is-fullscreen .retro-btn.fullscreen-corner-btn {
+            right: max(clamp(16px, 2.5cqw, 32px), env(safe-area-inset-right, 0px));
+        }
+
+        /* Seamless Sub-App Container to preserve Fullscreen across sections */
+        #appViewer {
+            display: none;
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            z-index: 500;
+            background: #000;
+        }
+
+        #appViewer.active {
+            display: block;
+        }
+
+        #appFrame {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+            background: #000;
         }
 
         /* Scanlines Effect */
@@ -335,13 +378,13 @@ struct branch {
 
             <!-- Middle: Main Menu Buttons -->
             <div class="flex flex-col menu-btn-group w-3/4 max-w-[400px]">
-                <a href="game/" class="retro-btn font-bold uppercase tracking-widest text-left">
+                <a href="game/" data-subapp="game/index.html" class="retro-btn font-bold uppercase tracking-widest text-left">
                     GAME
                 </a>
-                <a href="fps/" class="retro-btn font-bold uppercase tracking-widest text-left">
+                <a href="fps/" data-subapp="fps/index.html" class="retro-btn font-bold uppercase tracking-widest text-left">
                     FPS
                 </a>
-                <a href="sandbox/" class="retro-btn font-bold uppercase tracking-widest text-left">
+                <a href="sandbox/" data-subapp="sandbox/index.html" class="retro-btn font-bold uppercase tracking-widest text-left">
                     SANDBOX
                 </a>
                 <a href="https://github.com/LuckyToShine/ULTRANATOMIA" target="_blank" rel="noopener noreferrer" class="retro-btn font-bold uppercase tracking-widest text-left">
@@ -478,10 +521,22 @@ struct branch {
 
     </div>
 
+    <!-- Seamless Sub-App Viewer (keeps Fullscreen active across GAME, FPS, and SANDBOX) -->
+    <div id="appViewer">
+        <iframe id="appFrame" allow="fullscreen; autoplay; pointer-lock; gamepad" title="ULTRANATOMIA"></iframe>
+    </div>
+
     <script>
         const btnFullscreen = document.getElementById('btnFullscreen');
+        const appViewer = document.getElementById('appViewer');
+        const appFrame = document.getElementById('appFrame');
         let pseudoFullscreen = false;
-        let lastFullscreenTap = 0;
+
+        try {
+            if (sessionStorage.getItem('ultranatomia_fs') === '1') {
+                pseudoFullscreen = true;
+            }
+        } catch (_) {}
 
         function isNativeFullscreen() {
             return !!(
@@ -498,14 +553,29 @@ struct branch {
             return isNativeFullscreen() || pseudoFullscreen;
         }
 
+        function notifyFullscreenChange() {
+            const active = isFullscreenActive();
+            try {
+                sessionStorage.setItem('ultranatomia_fs', active ? '1' : '0');
+            } catch (_) {}
+            window.dispatchEvent(new CustomEvent('globalfullscreenchange', { detail: { active } }));
+            if (appFrame && appFrame.contentWindow) {
+                try {
+                    appFrame.contentWindow.dispatchEvent(new CustomEvent('globalfullscreenchange', { detail: { active } }));
+                } catch (_) {}
+            }
+        }
+
         function updateFullscreenLabel() {
             if (isNativeFullscreen()) {
                 pseudoFullscreen = false;
             }
             const active = isFullscreenActive();
             document.body.classList.toggle('is-fullscreen', active);
-            if (!btnFullscreen) return;
-            btnFullscreen.textContent = active ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
+            if (btnFullscreen) {
+                btnFullscreen.textContent = active ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
+            }
+            notifyFullscreenChange();
         }
 
         function lockLandscapeSafe() {
@@ -521,60 +591,92 @@ struct branch {
             updateFullscreenLabel();
         }
 
-        function requestElementFullscreen(el) {
-            if (!el) return null;
-            const req =
-                el.requestFullscreen ||
+        function requestElementFullscreen(el, onSuccess, onFail) {
+            if (!el) {
+                if (onFail) onFail();
+                return;
+            }
+            const stdReq = el.requestFullscreen;
+            const vendorReq =
                 el.webkitRequestFullscreen ||
                 el.webkitRequestFullScreen ||
                 el.mozRequestFullScreen ||
                 el.msRequestFullscreen;
-            if (!req) return null;
-            try {
-                return req.call(el, { navigationUI: 'hide' });
-            } catch (_) {
-                try {
-                    return req.call(el);
-                } catch (__) {
-                    return null;
-                }
-            }
-        }
 
-        function toggleFullscreen() {
-            if (!isFullscreenActive()) {
-                const de = document.documentElement;
-                let res = requestElementFullscreen(de);
-                if (res === null && document.body) {
-                    res = requestElementFullscreen(document.body);
-                }
-
+            const handleRes = (res) => {
                 if (res && typeof res.then === 'function') {
                     res.then(() => {
-                        lockLandscapeSafe();
-                        updateFullscreenLabel();
+                        if (onSuccess) onSuccess();
                     }).catch(() => {
-                        if (!isNativeFullscreen()) {
-                            enablePseudoFullscreen();
-                        }
+                        if (onFail) onFail();
                     });
                 } else {
                     setTimeout(() => {
                         if (isNativeFullscreen()) {
+                            if (onSuccess) onSuccess();
+                        } else if (onFail) {
+                            onFail();
+                        }
+                    }, 100);
+                }
+            };
+
+            if (stdReq) {
+                try {
+                    handleRes(stdReq.call(el));
+                    return;
+                } catch (_) {}
+            }
+            if (vendorReq) {
+                try {
+                    handleRes(vendorReq.call(el));
+                    return;
+                } catch (_) {}
+            }
+            if (onFail) onFail();
+        }
+
+        function enterFullscreen() {
+            pseudoFullscreen = true;
+            window.scrollTo(0, 1);
+            lockLandscapeSafe();
+            updateFullscreenLabel();
+
+            if (isNativeFullscreen()) {
+                return;
+            }
+            const de = document.documentElement;
+            requestElementFullscreen(
+                de,
+                () => {
+                    lockLandscapeSafe();
+                    updateFullscreenLabel();
+                },
+                () => {
+                    requestElementFullscreen(
+                        document.body,
+                        () => {
                             lockLandscapeSafe();
                             updateFullscreenLabel();
-                        } else {
+                        },
+                        () => {
                             enablePseudoFullscreen();
                         }
-                    }, 120);
+                    );
                 }
-            } else {
-                if (pseudoFullscreen && !isNativeFullscreen()) {
-                    pseudoFullscreen = false;
-                    updateFullscreenLabel();
-                    return;
-                }
+            );
+        }
+
+        function onNativeFullscreenChange() {
+            if (!isNativeFullscreen()) {
                 pseudoFullscreen = false;
+            }
+            updateFullscreenLabel();
+        }
+
+        function exitFullscreen() {
+            pseudoFullscreen = false;
+            if (isNativeFullscreen()) {
                 const exit =
                     document.exitFullscreen ||
                     document.webkitExitFullscreen ||
@@ -589,40 +691,115 @@ struct branch {
                         }
                     } catch (_) {}
                 }
-                updateFullscreenLabel();
+            }
+            updateFullscreenLabel();
+        }
+
+        function toggleFullscreen() {
+            if (!isFullscreenActive()) {
+                enterFullscreen();
+            } else {
+                exitFullscreen();
             }
         }
 
-        if (btnFullscreen) {
-            btnFullscreen.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                lastFullscreenTap = Date.now();
-                toggleFullscreen();
-                btnFullscreen.blur();
-            }, { passive: false });
+        // Expose global fullscreen & navigation controllers for sub-apps (game/, fps/, sandbox/)
+        window.isGlobalFullscreenActive = isFullscreenActive;
+        window.toggleGlobalFullscreen = toggleFullscreen;
+        window.enterGlobalFullscreen = enterFullscreen;
+        window.exitGlobalFullscreen = exitFullscreen;
 
+        function isSubAppOpen() {
+            return !!(appViewer && appViewer.classList.contains('active'));
+        }
+
+        function openSubApp(url, pushHistory = true) {
+            if (!appViewer || !appFrame) {
+                window.location.href = url;
+                return;
+            }
+            appViewer.classList.add('active');
+            appFrame.src = url;
+            if (pushHistory && window.history && window.history.pushState) {
+                try {
+                    window.history.pushState({ subApp: url }, '', window.location.href);
+                } catch (_) {}
+            }
+            updateFullscreenLabel();
+        }
+
+        function closeSubApp(fromPopState = false) {
+            if (!appViewer || !appFrame) return;
+            if (!isSubAppOpen()) return;
+            appViewer.classList.remove('active');
+            appFrame.src = 'about:blank';
+            if (!fromPopState && window.history && window.history.state && window.history.state.subApp) {
+                try {
+                    window.history.back();
+                } catch (_) {}
+            }
+            window.focus();
+            updateFullscreenLabel();
+        }
+
+        window.openSubApp = openSubApp;
+        window.closeSubApp = closeSubApp;
+
+        if (appFrame) {
+            appFrame.addEventListener('load', () => {
+                if (!isSubAppOpen()) return;
+                try {
+                    appFrame.focus();
+                    if (appFrame.contentWindow) {
+                        appFrame.contentWindow.focus();
+                    }
+                    notifyFullscreenChange();
+                } catch (_) {}
+            });
+        }
+
+        window.addEventListener('popstate', (e) => {
+            if (e.state && e.state.subApp) {
+                openSubApp(e.state.subApp, false);
+            } else if (isSubAppOpen()) {
+                closeSubApp(true);
+            }
+        });
+
+        document.querySelectorAll('a[data-subapp]').forEach((link) => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetUrl = link.getAttribute('data-subapp');
+                if (targetUrl) {
+                    openSubApp(targetUrl);
+                }
+            });
+        });
+
+        if (btnFullscreen) {
             btnFullscreen.addEventListener('click', (e) => {
-                if (Date.now() - lastFullscreenTap < 450) return;
                 e.preventDefault();
                 toggleFullscreen();
                 btnFullscreen.blur();
             });
         }
 
-        document.addEventListener('fullscreenchange', updateFullscreenLabel);
-        document.addEventListener('webkitfullscreenchange', updateFullscreenLabel);
-        document.addEventListener('mozfullscreenchange', updateFullscreenLabel);
-        document.addEventListener('MSFullscreenChange', updateFullscreenLabel);
+        document.addEventListener('fullscreenchange', onNativeFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', onNativeFullscreenChange);
+        document.addEventListener('mozfullscreenchange', onNativeFullscreenChange);
+        document.addEventListener('MSFullscreenChange', onNativeFullscreenChange);
+        updateFullscreenLabel();
 
         // Keyboard navigation shortcuts
         window.addEventListener('keydown', (e) => {
+            if (isSubAppOpen()) return;
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             if (e.key === '1') {
-                window.location.href = 'game/';
+                openSubApp('game/index.html');
             } else if (e.key === '2') {
-                window.location.href = 'fps/';
+                openSubApp('fps/index.html');
             } else if (e.key === '3') {
-                window.location.href = 'sandbox/';
+                openSubApp('sandbox/index.html');
             } else if (e.key === '4' || e.key === 'f' || e.key === 'F') {
                 toggleFullscreen();
             } else if (e.key === '5') {

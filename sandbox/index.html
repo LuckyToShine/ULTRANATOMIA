@@ -2,7 +2,10 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>ULTRANATOMIA - Sandbox</title>
     <!-- Cargar Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -11,9 +14,9 @@
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; color: #fff; user-select: none; -webkit-user-select: none; touch-action: none; }
-        #three-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; touch-action: none; }
+        #three-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 1; touch-action: none; }
         /* Phaser UI encima de Three.js con soporte táctil y de ratón */
-        #phaser-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; touch-action: none; }
+        #phaser-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 2; touch-action: none; }
         #phaser-canvas canvas { width: 100% !important; height: 100% !important; display: block; }
         #instructions { position: absolute; bottom: 12px; left: 16px; right: 16px; z-index: 3; pointer-events: none; text-shadow: 1px 1px 2px black; font-size: 12px; line-height: 1.4; opacity: .85; }
 
@@ -46,6 +49,8 @@
         #menu button:hover, #menu button:active, #menu a.menu-link:hover, #menu a.menu-link:active { background: #fff; color: #000; }
         #menu a.menu-link.secondary { border-color: #888; color: #ccc; font-size: clamp(13px, 2.5vw, 15px); padding: 9px 18px; margin-top: 10px; }
         #menu a.menu-link.secondary:hover { border-color: #fff; background: #fff; color: #000; }
+        #menu .fs-corner-btn { position: absolute; top: 14px; right: 14px; z-index: 12; font: inherit; font-size: 12px; padding: 7px 14px; margin: 0; border: 2px solid #fff; background: #111; color: #fff; cursor: pointer; font-weight: bold; letter-spacing: 1px; touch-action: manipulation; }
+        #menu .fs-corner-btn:hover, #menu .fs-corner-btn:active { background: #fff; color: #000; }
         #menu small { color: #888; margin-top: 16px; max-width: 560px; line-height: 1.5; font-size: clamp(11px, 2vw, 13px); }
 
         @media (max-width: 640px) {
@@ -145,6 +150,7 @@
             </div>
             <div class="row chk"><input type="checkbox" id="infHp"><label for="infHp" style="margin:0;color:#fff">Vida infinita</label></div>
             <div class="row chk"><input type="checkbox" id="showAns"><label for="showAns" style="margin:0;color:#fff">Mostrar respuesta correcta</label></div>
+            <div class="row"><button class="full" id="btnFullscreenPanel" type="button">Pantalla Completa</button></div>
             <div class="row"><button class="full" id="btnRestart">Reiniciar</button></div>
             <div class="row"><button class="full" id="btnMenu">Men&uacute; Sandbox</button></div>
             <div class="row"><a class="btn-link full" href="../">Men&uacute; Principal</a></div>
@@ -153,6 +159,7 @@
     </div>
 
     <div id="menu">
+        <button type="button" id="btnFullscreenMenu" class="fs-corner-btn">PANTALLA COMPLETA</button>
         <div class="badge">MODO SANDBOX</div>
         <h1>ULTRANATOMIA</h1>
         <p>Sandbox de mec&aacute;nicas. Ac&eacute;rcate a un obst&aacute;culo, entra en bullet time, responde la pregunta anat&oacute;mica y desbloquea la mec&aacute;nica para destruirlo.</p>
@@ -1616,13 +1623,103 @@
             $('panelArrow').innerHTML = '&#9656;';
         }
 
-        function tryLockLandscape() {
-            if (window.innerWidth > 900 && window.innerHeight > 600) return;
+        let localPseudoFullscreen = false;
+
+        function hasParentFullscreenCtrl() {
+            try {
+                return !!(window.parent && window.parent !== window && typeof window.parent.toggleGlobalFullscreen === 'function');
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function isLocalNativeFullscreen() {
+            return !!(
+                document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                document.webkitCurrentFullScreenElement ||
+                document.mozFullScreenElement ||
+                document.msFullscreenElement ||
+                document.webkitIsFullScreen
+            );
+        }
+
+        function isFullscreenActive() {
+            if (hasParentFullscreenCtrl()) {
+                try {
+                    return !!window.parent.isGlobalFullscreenActive();
+                } catch (_) {}
+            }
+            return isLocalNativeFullscreen() || localPseudoFullscreen;
+        }
+
+        function updateFullscreenButtons() {
+            const active = isFullscreenActive();
+            document.body.classList.toggle('is-fullscreen', active);
+            const btnPanel = $('btnFullscreenPanel');
+            const btnMenu = $('btnFullscreenMenu');
+            if (btnPanel) btnPanel.textContent = active ? 'Salir Pantalla Completa' : 'Pantalla Completa';
+            if (btnMenu) btnMenu.textContent = active ? 'SALIR PANTALLA COMPLETA' : 'PANTALLA COMPLETA';
+        }
+
+        function enterFullscreen() {
+            if (hasParentFullscreenCtrl()) {
+                try {
+                    window.parent.enterGlobalFullscreen();
+                    updateFullscreenButtons();
+                    return;
+                } catch (_) {}
+            }
+            localPseudoFullscreen = true;
+            window.scrollTo(0, 1);
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+            updateFullscreenButtons();
+            if (isLocalNativeFullscreen()) return;
             const de = document.documentElement;
-            if (de.requestFullscreen && !document.fullscreenElement) {
-                de.requestFullscreen().then(() => {
-                    if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
-                }).catch(() => {});
+            const req = de.requestFullscreen || de.webkitRequestFullscreen || de.webkitRequestFullScreen || de.mozRequestFullScreen || de.msRequestFullscreen;
+            if (req) {
+                try {
+                    const p = req.call(de);
+                    if (p && typeof p.then === 'function') {
+                        p.then(() => {
+                            if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+                            updateFullscreenButtons();
+                        }).catch(() => updateFullscreenButtons());
+                    }
+                } catch (_) {}
+            }
+        }
+
+        function toggleFullscreen() {
+            if (hasParentFullscreenCtrl()) {
+                try {
+                    window.parent.toggleGlobalFullscreen();
+                    updateFullscreenButtons();
+                    return;
+                } catch (_) {}
+            }
+            if (!isFullscreenActive()) {
+                enterFullscreen();
+            } else {
+                localPseudoFullscreen = false;
+                if (isLocalNativeFullscreen()) {
+                    const exit = document.exitFullscreen || document.webkitExitFullscreen || document.webkitCancelFullScreen || document.mozCancelFullScreen || document.msExitFullscreen;
+                    if (exit) {
+                        try {
+                            const p = exit.call(document);
+                            if (p && typeof p.catch === 'function') p.catch(() => updateFullscreenButtons());
+                        } catch (_) {}
+                    }
+                }
+                updateFullscreenButtons();
+            }
+        }
+
+        function tryLockLandscape() {
+            if (window.innerWidth <= 900 || window.innerHeight <= 600) {
+                enterFullscreen();
             } else if (screen.orientation && screen.orientation.lock) {
                 screen.orientation.lock('landscape').catch(() => {});
             }
@@ -1630,6 +1727,32 @@
 
         $('startFree').onclick = () => { tryLockLandscape(); GameState.start('free'); };
         $('startRun').onclick = () => { tryLockLandscape(); GameState.start('run'); };
+        $('btnFullscreenPanel').onclick = (e) => { e.preventDefault(); toggleFullscreen(); e.target.blur(); };
+        $('btnFullscreenMenu').onclick = (e) => { e.preventDefault(); toggleFullscreen(); e.target.blur(); };
+
+        document.querySelectorAll('a[href="../"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.closeSubApp === 'function') {
+                        e.preventDefault();
+                        window.parent.closeSubApp();
+                    }
+                } catch (_) {}
+            });
+        });
+
+        function onLocalFullscreenChange() {
+            if (!isLocalNativeFullscreen() && !hasParentFullscreenCtrl()) {
+                localPseudoFullscreen = false;
+            }
+            updateFullscreenButtons();
+        }
+        document.addEventListener('fullscreenchange', onLocalFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', onLocalFullscreenChange);
+        document.addEventListener('mozfullscreenchange', onLocalFullscreenChange);
+        document.addEventListener('MSFullscreenChange', onLocalFullscreenChange);
+        window.addEventListener('globalfullscreenchange', updateFullscreenButtons);
+        updateFullscreenButtons();
         $('modeSel').onchange = (e) => { GameState.start(e.target.value); e.target.blur(); };
         document.querySelectorAll('#panel .mech button').forEach(b => {
             b.onclick = () => { GameState.spawnMech(b.dataset.mech); b.blur(); };
