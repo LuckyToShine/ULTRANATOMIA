@@ -159,6 +159,18 @@
             transform: scale(0.98);
         }
 
+        /* Fullscreen Button in Top-Right Corner */
+        .retro-btn.fullscreen-corner-btn {
+            position: absolute;
+            top: clamp(12px, 2.5cqh, 28px);
+            right: clamp(16px, 2.5cqw, 32px);
+            z-index: 20;
+            width: auto;
+            font-size: clamp(0.95rem, 1.6vw, 1.5rem);
+            font-size: clamp(0.95rem, 2.8cqh, 1.75rem);
+            padding: clamp(2px, 0.5cqh, 6px) clamp(10px, 1.6cqw, 20px);
+        }
+
         /* C++ Background Text */
         .bg-code {
             color: rgba(255, 255, 255, 0.2);
@@ -264,6 +276,11 @@
     <!-- Screen Frame: Strictly 16:9 Aspect Ratio -->
     <div class="screen-frame relative max-w-[1920px] aspect-video border-[6px] border-white rounded-[2rem] overflow-hidden bg-black flex flex-row scanlines screen-glow">
         
+        <!-- Fullscreen Button (Top-Right Corner) -->
+        <button type="button" id="btnFullscreen" class="retro-btn fullscreen-corner-btn font-bold uppercase tracking-widest">
+            FULLSCREEN
+        </button>
+
         <!-- Background Code Text Layer -->
         <div class="absolute top-4 left-6 z-0 bg-code leading-tight tracking-wider whitespace-pre font-mono">
 #INCLUDE { above, so } FROM "dHJPc21|Z2lzDHVz";
@@ -310,9 +327,6 @@ struct branch {
                 <a href="sandbox/" class="retro-btn font-bold uppercase tracking-widest text-left">
                     SANDBOX
                 </a>
-                <button type="button" id="btnFullscreen" class="retro-btn font-bold uppercase tracking-widest text-left">
-                    FULLSCREEN
-                </button>
                 <a href="https://github.com/LuckyToShine/ULTRANATOMIA" target="_blank" rel="noopener noreferrer" class="retro-btn font-bold uppercase tracking-widest text-left">
                     GITHUB
                 </a>
