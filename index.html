@@ -31,7 +31,7 @@
             padding: 1rem;
         }
 
-        @media (min-width: 768px) {
+        @media (min-width: 768px) and (min-height: 500px) {
             body {
                 padding: 2rem;
             }
@@ -47,13 +47,25 @@
             aspect-ratio: 16 / 9;
         }
 
-        @media (min-width: 768px) {
+        @media (min-width: 768px) and (min-height: 500px) {
             .screen-frame {
                 width: min(100%, calc((100vh - 4rem) * 16 / 9));
                 width: min(100%, calc((100dvh - 4rem) * 16 / 9));
                 max-height: calc(100vh - 4rem);
                 max-height: calc(100dvh - 4rem);
             }
+        }
+
+        /* Maximized layout when in fullscreen or mobile pseudo-fullscreen */
+        body.is-fullscreen {
+            padding: 0.25rem;
+        }
+
+        body.is-fullscreen .screen-frame {
+            width: min(100%, calc((100vh - 0.5rem) * 16 / 9));
+            width: min(100%, calc((100dvh - 0.5rem) * 16 / 9));
+            max-height: calc(100vh - 0.5rem);
+            max-height: calc(100dvh - 0.5rem);
         }
 
         /* Scanlines Effect */
@@ -164,11 +176,16 @@
             position: absolute;
             top: clamp(12px, 2.5cqh, 28px);
             right: clamp(16px, 2.5cqw, 32px);
-            z-index: 20;
+            z-index: 50;
             width: auto;
-            font-size: clamp(0.95rem, 1.6vw, 1.5rem);
-            font-size: clamp(0.95rem, 2.8cqh, 1.75rem);
-            padding: clamp(2px, 0.5cqh, 6px) clamp(10px, 1.6cqw, 20px);
+            min-height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            font-size: clamp(1rem, 1.8vw, 1.5rem);
+            font-size: clamp(1rem, 3.2cqh, 1.75rem);
+            padding: clamp(4px, 0.8cqh, 8px) clamp(12px, 1.8cqw, 22px);
         }
 
         /* C++ Background Text */
@@ -463,41 +480,130 @@ struct branch {
 
     <script>
         const btnFullscreen = document.getElementById('btnFullscreen');
+        let pseudoFullscreen = false;
+        let lastFullscreenTap = 0;
+
+        function isNativeFullscreen() {
+            return !!(
+                document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                document.webkitCurrentFullScreenElement ||
+                document.mozFullScreenElement ||
+                document.msFullscreenElement ||
+                document.webkitIsFullScreen
+            );
+        }
 
         function isFullscreenActive() {
-            return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+            return isNativeFullscreen() || pseudoFullscreen;
         }
 
         function updateFullscreenLabel() {
+            if (isNativeFullscreen()) {
+                pseudoFullscreen = false;
+            }
+            const active = isFullscreenActive();
+            document.body.classList.toggle('is-fullscreen', active);
             if (!btnFullscreen) return;
-            btnFullscreen.textContent = isFullscreenActive() ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
+            btnFullscreen.textContent = active ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
         }
 
-        function toggleFullscreen() {
-            const de = document.documentElement;
-            if (!isFullscreenActive()) {
-                const req = de.requestFullscreen || de.webkitRequestFullscreen || de.msRequestFullscreen;
-                if (req) {
-                    const p = req.call(de);
-                    if (p && p.then) {
-                        p.then(() => {
-                            if (screen.orientation && screen.orientation.lock) {
-                                screen.orientation.lock('landscape').catch(() => {});
-                            }
-                        }).catch(() => {});
-                    }
-                }
-            } else {
-                const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-                if (exit) {
-                    const p = exit.call(document);
-                    if (p && p.catch) p.catch(() => {});
+        function lockLandscapeSafe() {
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+        }
+
+        function enablePseudoFullscreen() {
+            pseudoFullscreen = true;
+            window.scrollTo(0, 1);
+            lockLandscapeSafe();
+            updateFullscreenLabel();
+        }
+
+        function requestElementFullscreen(el) {
+            if (!el) return null;
+            const req =
+                el.requestFullscreen ||
+                el.webkitRequestFullscreen ||
+                el.webkitRequestFullScreen ||
+                el.mozRequestFullScreen ||
+                el.msRequestFullscreen;
+            if (!req) return null;
+            try {
+                return req.call(el, { navigationUI: 'hide' });
+            } catch (_) {
+                try {
+                    return req.call(el);
+                } catch (__) {
+                    return null;
                 }
             }
         }
 
+        function toggleFullscreen() {
+            if (!isFullscreenActive()) {
+                const de = document.documentElement;
+                let res = requestElementFullscreen(de);
+                if (res === null && document.body) {
+                    res = requestElementFullscreen(document.body);
+                }
+
+                if (res && typeof res.then === 'function') {
+                    res.then(() => {
+                        lockLandscapeSafe();
+                        updateFullscreenLabel();
+                    }).catch(() => {
+                        if (!isNativeFullscreen()) {
+                            enablePseudoFullscreen();
+                        }
+                    });
+                } else {
+                    setTimeout(() => {
+                        if (isNativeFullscreen()) {
+                            lockLandscapeSafe();
+                            updateFullscreenLabel();
+                        } else {
+                            enablePseudoFullscreen();
+                        }
+                    }, 120);
+                }
+            } else {
+                if (pseudoFullscreen && !isNativeFullscreen()) {
+                    pseudoFullscreen = false;
+                    updateFullscreenLabel();
+                    return;
+                }
+                pseudoFullscreen = false;
+                const exit =
+                    document.exitFullscreen ||
+                    document.webkitExitFullscreen ||
+                    document.webkitCancelFullScreen ||
+                    document.mozCancelFullScreen ||
+                    document.msExitFullscreen;
+                if (exit) {
+                    try {
+                        const p = exit.call(document);
+                        if (p && typeof p.catch === 'function') {
+                            p.catch(() => updateFullscreenLabel());
+                        }
+                    } catch (_) {}
+                }
+                updateFullscreenLabel();
+            }
+        }
+
         if (btnFullscreen) {
-            btnFullscreen.addEventListener('click', () => {
+            btnFullscreen.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                lastFullscreenTap = Date.now();
+                toggleFullscreen();
+                btnFullscreen.blur();
+            }, { passive: false });
+
+            btnFullscreen.addEventListener('click', (e) => {
+                if (Date.now() - lastFullscreenTap < 450) return;
+                e.preventDefault();
                 toggleFullscreen();
                 btnFullscreen.blur();
             });
@@ -505,6 +611,8 @@ struct branch {
 
         document.addEventListener('fullscreenchange', updateFullscreenLabel);
         document.addEventListener('webkitfullscreenchange', updateFullscreenLabel);
+        document.addEventListener('mozfullscreenchange', updateFullscreenLabel);
+        document.addEventListener('MSFullscreenChange', updateFullscreenLabel);
 
         // Keyboard navigation shortcuts
         window.addEventListener('keydown', (e) => {
