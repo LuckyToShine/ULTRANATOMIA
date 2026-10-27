@@ -102,10 +102,10 @@
         }
 
         .menu-btn-group {
-            gap: clamp(6px, 1vw, 14px);
-            gap: clamp(6px, 1.6cqh, 16px);
-            margin-top: clamp(10px, 1.8vw, 28px);
-            margin-top: clamp(10px, 2.5cqh, 32px);
+            gap: clamp(4px, 0.8vw, 12px);
+            gap: clamp(4px, 1.3cqh, 14px);
+            margin-top: clamp(8px, 1.4vw, 24px);
+            margin-top: clamp(8px, 2cqh, 28px);
         }
 
         .menu-socials-text {
@@ -134,13 +134,15 @@
             position: relative;
             overflow: hidden;
             display: block;
+            width: 100%;
+            font-family: inherit;
             text-decoration: none;
             cursor: pointer;
             pointer-events: auto;
-            font-size: clamp(1.25rem, 2.5vw, 2.5rem);
-            font-size: clamp(1.25rem, 4.2cqh, 3rem);
-            padding: 6px 20px;
-            padding: clamp(4px, 1cqh, 10px) clamp(14px, 2.8cqw, 32px);
+            font-size: clamp(1.1rem, 2.2vw, 2.2rem);
+            font-size: clamp(1.1rem, 3.6cqh, 2.5rem);
+            padding: 4px 20px;
+            padding: clamp(2px, 0.7cqh, 8px) clamp(14px, 2.8cqw, 32px);
         }
 
         .retro-btn:hover, .retro-btn:focus {
@@ -308,6 +310,9 @@ struct branch {
                 <a href="sandbox/" class="retro-btn font-bold uppercase tracking-widest text-left">
                     SANDBOX
                 </a>
+                <button type="button" id="btnFullscreen" class="retro-btn font-bold uppercase tracking-widest text-left">
+                    FULLSCREEN
+                </button>
                 <a href="https://github.com/LuckyToShine/ULTRANATOMIA" target="_blank" rel="noopener noreferrer" class="retro-btn font-bold uppercase tracking-widest text-left">
                     GITHUB
                 </a>
@@ -443,6 +448,50 @@ struct branch {
     </div>
 
     <script>
+        const btnFullscreen = document.getElementById('btnFullscreen');
+
+        function isFullscreenActive() {
+            return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+        }
+
+        function updateFullscreenLabel() {
+            if (!btnFullscreen) return;
+            btnFullscreen.textContent = isFullscreenActive() ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
+        }
+
+        function toggleFullscreen() {
+            const de = document.documentElement;
+            if (!isFullscreenActive()) {
+                const req = de.requestFullscreen || de.webkitRequestFullscreen || de.msRequestFullscreen;
+                if (req) {
+                    const p = req.call(de);
+                    if (p && p.then) {
+                        p.then(() => {
+                            if (screen.orientation && screen.orientation.lock) {
+                                screen.orientation.lock('landscape').catch(() => {});
+                            }
+                        }).catch(() => {});
+                    }
+                }
+            } else {
+                const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+                if (exit) {
+                    const p = exit.call(document);
+                    if (p && p.catch) p.catch(() => {});
+                }
+            }
+        }
+
+        if (btnFullscreen) {
+            btnFullscreen.addEventListener('click', () => {
+                toggleFullscreen();
+                btnFullscreen.blur();
+            });
+        }
+
+        document.addEventListener('fullscreenchange', updateFullscreenLabel);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenLabel);
+
         // Keyboard navigation shortcuts
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -452,7 +501,9 @@ struct branch {
                 window.location.href = 'fps/';
             } else if (e.key === '3') {
                 window.location.href = 'sandbox/';
-            } else if (e.key === '4') {
+            } else if (e.key === '4' || e.key === 'f' || e.key === 'F') {
+                toggleFullscreen();
+            } else if (e.key === '5') {
                 window.open('https://github.com/LuckyToShine/ULTRANATOMIA', '_blank', 'noopener,noreferrer');
             }
         });
