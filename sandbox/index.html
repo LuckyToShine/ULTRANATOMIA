@@ -18,6 +18,7 @@
         /* Phaser UI encima de Three.js con soporte táctil y de ratón */
         #phaser-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 2; touch-action: none; }
         #phaser-canvas canvas { width: 100% !important; height: 100% !important; display: block; }
+        #parry-flash { position: fixed; inset: 0; z-index: 5; pointer-events: none; opacity: 0; background-color: #ffffff; }
         #instructions { position: absolute; bottom: 12px; left: 16px; right: 16px; z-index: 3; pointer-events: none; text-shadow: 1px 1px 2px black; font-size: 12px; line-height: 1.4; opacity: .85; }
 
         /* Panel de sandbox */
@@ -120,6 +121,7 @@
     <canvas id="three-canvas"></canvas>
     <div id="phaser-canvas"></div>
     <audio id="sfxParry" src="../game/parry.mp3" preload="auto"></audio>
+    <div id="parry-flash"></div>
     <div id="instructions">Toca o pulsa 1-3: responder trivia &middot; QTE: toca o pulsa 1-4 para ordenar los pasos &middot; U (o toca barra): usar ULTI &middot; Esc o bot&oacute;n: cancelar (libre)</div>
 
     <div id="panel">
@@ -1014,6 +1016,7 @@
             resetAll() {
                 this.token++;
                 clearObstacles();
+                if (typeof resetParryFlash === 'function') resetParryFlash();
                 clearFx();
                 anims.length = 0;
                 this.health = this.maxHealth;
@@ -1205,6 +1208,7 @@
                 this.qte = null;
                 this.timeScale = this.targetScale = 1;
                 clearObstacles();
+                if (typeof resetParryFlash === 'function') resetParryFlash();
                 this.lastSpawn = type;
                 const o = createObstacle(type, this.player.z - 14, 0);
                 this.phase = 'idle';
@@ -1302,6 +1306,7 @@
                         if (typeof unlockParrySfx === 'function') unlockParrySfx();
                         this.later(1500, () => {
                             if (typeof playParrySfx === 'function') playParrySfx();
+                            if (typeof triggerParryFlash === 'function') triggerParryFlash();
                         });
                     }
                     this.stats.correct++;
@@ -1359,6 +1364,7 @@
                 this.current = null;
                 this.question = null;
                 clearObstacles();
+                if (typeof resetParryFlash === 'function') resetParryFlash();
                 if (this.mode === 'run') {
                     this.player.z = this.cpZ;
                     this.layerIdx = layerIndexAtZ(this.player.z);
@@ -1624,6 +1630,33 @@
         // ==========================================
         const $ = (id) => document.getElementById(id);
         const sfxParryEl = document.getElementById('sfxParry');
+        const parryFlashEl = document.getElementById('parry-flash');
+        const timeController = {
+            timeScale: 1.0,
+            currentStop: 0,
+            flashTimer: 0
+        };
+
+        function trueStop(length) {
+            if (length > timeController.currentStop) {
+                timeController.currentStop = length;
+                timeController.timeScale = 0;
+            }
+        }
+
+        function triggerParryFlash() {
+            if (parryFlashEl) parryFlashEl.style.opacity = '0.8';
+            timeController.flashTimer = 0.10;
+            trueStop(0.25);
+            shake(0.5);
+        }
+
+        function resetParryFlash() {
+            timeController.currentStop = 0;
+            timeController.flashTimer = 0;
+            timeController.timeScale = 1.0;
+            if (parryFlashEl) parryFlashEl.style.opacity = '0';
+        }
         let parryUnlocked = false;
 
         function unlockParrySfx() {
@@ -1843,7 +1876,22 @@
             requestAnimationFrame(animate);
             const rawDt = Math.min(clock.getDelta(), 0.05);
             const isPortraitMobile = window.innerHeight > window.innerWidth && window.innerWidth <= 900;
-            const dt = isPortraitMobile ? 0 : rawDt;
+            const unscaledDt = isPortraitMobile ? 0 : rawDt;
+            if (timeController.currentStop > 0) {
+                timeController.currentStop -= unscaledDt;
+                if (timeController.currentStop <= 0) {
+                    timeController.currentStop = 0;
+                    timeController.timeScale = 1.0;
+                }
+            }
+            const dt = unscaledDt * timeController.timeScale;
+            if (timeController.flashTimer > 0) {
+                timeController.flashTimer -= dt;
+                if (timeController.flashTimer <= 0) {
+                    timeController.flashTimer = 0;
+                    if (parryFlashEl) parryFlashEl.style.opacity = '0';
+                }
+            }
             const sdt = GameState.update(dt);
             swimTime += sdt;
             updateAnims(dt);
@@ -1879,9 +1927,10 @@
             const running = GameState.mode === 'run' && GameState.phase === 'running';
             const bob = running ? Math.sin(performance.now() * 0.012) * 0.08 : 0;
             shakeAmt *= Math.max(0, 1 - dt * 6);
+            const curShake = timeController.currentStop > 0 ? 0 : shakeAmt;
             camera.position.set(
-                (Math.random() - 0.5) * shakeAmt,
-                2.2 + bob + (Math.random() - 0.5) * shakeAmt,
+                (Math.random() - 0.5) * curShake,
+                2.2 + bob + (Math.random() - 0.5) * curShake,
                 pz
             );
             camera.lookAt(0, 2.6, pz - 20);

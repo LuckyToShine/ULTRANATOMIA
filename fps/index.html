@@ -20,6 +20,7 @@
         #crosshair { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; transform: translate(-50%, -50%); border: 2px solid #ff3344; border-radius: 50%; pointer-events: none; z-index: 3; box-shadow: 0 0 8px rgba(255, 51, 68, .7); }
         #crosshair::after { content: ''; position: absolute; top: 50%; left: 50%; width: 2px; height: 2px; transform: translate(-50%, -50%); background: #fff; }
         #hurt { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; background: radial-gradient(circle at center, rgba(255, 0, 0, 0) 40%, rgba(200, 0, 20, .75) 100%); }
+        #parry-flash { position: fixed; inset: 0; z-index: 5; pointer-events: none; opacity: 0; background-color: #ffffff; }
 
         /* HUD */
         #hud-left { position: absolute; top: 14px; left: 14px; z-index: 3; pointer-events: none; }
@@ -156,6 +157,7 @@
     <canvas id="three-canvas"></canvas>
     <audio id="sfxParry" src="../game/parry.mp3" preload="auto"></audio>
     <div id="hurt"></div>
+    <div id="parry-flash"></div>
     <div id="crosshair"></div>
 
     <div id="hud-left">
@@ -1006,6 +1008,7 @@ Reiniciando al inicio de la capa...</div>
             G.grounded = true;
             G.dashT = G.dashCd = G.shotCd = G.golpeCd = G.hurtCd = G.hurtFlash = G.kick = 0;
             shakeAmt = 0;
+            if (typeof resetParryFlash === 'function') resetParryFlash();
             ui.death.classList.add('hidden');
             updateHp();
             updateBossHud();
@@ -1032,6 +1035,33 @@ Reiniciando al inicio de la capa...</div>
         }
 
         const sfxParryEl = document.getElementById('sfxParry');
+        const parryFlashEl = document.getElementById('parry-flash');
+        const timeController = {
+            timeScale: 1.0,
+            currentStop: 0,
+            flashTimer: 0
+        };
+
+        function trueStop(length) {
+            if (length > timeController.currentStop) {
+                timeController.currentStop = length;
+                timeController.timeScale = 0;
+            }
+        }
+
+        function triggerParryFlash() {
+            if (parryFlashEl) parryFlashEl.style.opacity = '0.8';
+            timeController.flashTimer = 0.10;
+            trueStop(0.25);
+            shake(0.5);
+        }
+
+        function resetParryFlash() {
+            timeController.currentStop = 0;
+            timeController.flashTimer = 0;
+            timeController.timeScale = 1.0;
+            if (parryFlashEl) parryFlashEl.style.opacity = '0';
+        }
 
         function playParrySfx() {
             if (!sfxParryEl) return;
@@ -1044,6 +1074,7 @@ Reiniciando al inicio de la capa...</div>
 
         function parryBolt(b) {
             if (typeof playParrySfx === 'function') playParrySfx();
+            triggerParryFlash();
             const fwd = camera.getWorldDirection(tmpC);
             b.reflected = true;
             b.vel.copy(fwd).multiplyScalar(BOLT_SPEED * 2.6);
@@ -1338,7 +1369,7 @@ Reiniciando al inicio de la capa...</div>
         }
 
         function updateBolts(dt) {
-            if (G.phase === 'play') {
+            if (G.phase === 'play' && timeController.currentStop <= 0) {
                 const eye = eyePos(tmpA);
                 obstacles.forEach(o => {
                     if (!o.alive || o.type !== 'parry') return;
@@ -1524,7 +1555,7 @@ Reiniciando al inicio de la capa...</div>
             if (G.phase !== 'play') return;
 
             G.time += dt;
-            if (firing) shoot();
+            if (firing && dt > 0) shoot();
 
             const inp = moveInput();
             const fwd = forwardFlat(tmpA);
@@ -1631,12 +1662,12 @@ Reiniciando al inicio de la capa...</div>
         });
 
         document.addEventListener('mousemove', (e) => {
-            if (G.phase !== 'play' || document.pointerLockElement !== canvas) return;
+            if (G.phase !== 'play' || document.pointerLockElement !== canvas || timeController.currentStop > 0) return;
             G.yaw -= e.movementX * MOUSE_SENS;
             G.pitch = THREE.MathUtils.clamp(G.pitch - e.movementY * MOUSE_SENS, -1.45, 1.45);
         });
         document.addEventListener('mousedown', (e) => {
-            if (G.phase !== 'play' || document.pointerLockElement !== canvas) return;
+            if (G.phase !== 'play' || document.pointerLockElement !== canvas || timeController.currentStop > 0) return;
             if (e.button === 0) { firing = true; shoot(); }
             else if (e.button === 2) golpe();
         });
@@ -1707,7 +1738,7 @@ Reiniciando al inicio de la capa...</div>
         });
         lookZone.addEventListener('pointermove', (e) => {
             if (e.pointerId !== lookId) return;
-            if (G.phase === 'play') {
+            if (G.phase === 'play' && timeController.currentStop <= 0) {
                 G.yaw -= (e.clientX - lookX) * TOUCH_SENS;
                 G.pitch = THREE.MathUtils.clamp(G.pitch - (e.clientY - lookY) * TOUCH_SENS, -1.45, 1.45);
             }
@@ -1943,7 +1974,22 @@ Reiniciando al inicio de la capa...</div>
             requestAnimationFrame(animate);
             const rawDt = Math.min(clock.getDelta(), 0.05);
             const isPortraitMobile = window.innerHeight > window.innerWidth && window.innerWidth <= 900;
-            const dt = (isPortraitMobile || G.phase === 'paused') ? 0 : rawDt;
+            const unscaledDt = (isPortraitMobile || G.phase === 'paused') ? 0 : rawDt;
+            if (timeController.currentStop > 0) {
+                timeController.currentStop -= unscaledDt;
+                if (timeController.currentStop <= 0) {
+                    timeController.currentStop = 0;
+                    timeController.timeScale = 1.0;
+                }
+            }
+            const dt = unscaledDt * timeController.timeScale;
+            if (timeController.flashTimer > 0) {
+                timeController.flashTimer -= dt;
+                if (timeController.flashTimer <= 0) {
+                    timeController.flashTimer = 0;
+                    if (parryFlashEl) parryFlashEl.style.opacity = '0';
+                }
+            }
 
             updatePlayer(dt);
             updateSpawns();
@@ -1986,10 +2032,11 @@ Reiniciando al inicio de la capa...</div>
             const speed = Math.hypot(G.vel.x, G.vel.z);
             const bob = G.grounded && G.phase === 'play' ? Math.sin(swimTime * 12) * 0.07 * Math.min(1, speed / MOVE_SPEED) : 0;
             shakeAmt *= Math.max(0, 1 - dt * 6);
+            const curShake = timeController.currentStop > 0 ? 0 : shakeAmt;
             camera.position.set(
-                G.pos.x + (Math.random() - 0.5) * shakeAmt,
-                G.pos.y + EYE + bob + (Math.random() - 0.5) * shakeAmt,
-                G.pos.z + (Math.random() - 0.5) * shakeAmt
+                G.pos.x + (Math.random() - 0.5) * curShake,
+                G.pos.y + EYE + bob + (Math.random() - 0.5) * curShake,
+                G.pos.z + (Math.random() - 0.5) * curShake
             );
             if (G.phase === 'menu') G.yaw = Math.sin(performance.now() * 0.0003) * 0.35;
             camera.rotation.set(G.pitch, G.yaw, 0);
