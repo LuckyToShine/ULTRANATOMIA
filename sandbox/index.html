@@ -1298,7 +1298,12 @@
                 emit('triviaFeedback', { picked: n, correct: this.question.correct });
 
                 if (ok) {
-                    if (type === 'parry' && typeof playParrySfx === 'function') playParrySfx();
+                    if (type === 'parry') {
+                        if (typeof unlockParrySfx === 'function') unlockParrySfx();
+                        this.later(1500, () => {
+                            if (typeof playParrySfx === 'function') playParrySfx();
+                        });
+                    }
                     this.stats.correct++;
                     this.addUltiStreak();
                     this.addStyle(this.lastMech && this.lastMech !== type ? 150 : 100);
@@ -1619,10 +1624,36 @@
         // ==========================================
         const $ = (id) => document.getElementById(id);
         const sfxParryEl = document.getElementById('sfxParry');
+        let parryUnlocked = false;
+
+        function unlockParrySfx() {
+            if (!sfxParryEl || parryUnlocked) return;
+            parryUnlocked = true;
+            try {
+                sfxParryEl.muted = true;
+                const p = sfxParryEl.play();
+                if (p && typeof p.then === 'function') {
+                    p.then(() => {
+                        sfxParryEl.pause();
+                        sfxParryEl.currentTime = 0;
+                        sfxParryEl.muted = false;
+                    }).catch(() => {
+                        sfxParryEl.muted = false;
+                    });
+                } else {
+                    sfxParryEl.pause();
+                    sfxParryEl.currentTime = 0;
+                    sfxParryEl.muted = false;
+                }
+            } catch (_) {
+                sfxParryEl.muted = false;
+            }
+        }
 
         function playParrySfx() {
             if (!sfxParryEl) return;
             try {
+                sfxParryEl.muted = false;
                 sfxParryEl.currentTime = 0;
                 sfxParryEl.volume = 0.85;
                 sfxParryEl.play().catch(() => {});
