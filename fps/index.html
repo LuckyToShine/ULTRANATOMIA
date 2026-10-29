@@ -9,6 +9,9 @@
     <title>ULTRANATOMIA - Modo FPS</title>
     <!-- Cargar Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; color: #fff; user-select: none; -webkit-user-select: none; touch-action: none; }
@@ -146,6 +149,103 @@
         @media (orientation: portrait) and (max-width: 900px) {
             #rotate-overlay { display: flex; }
         }
+
+        /* ULTRAKILL Authentic Death Screen Styles */
+        .uk-death-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            pointer-events: auto;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+            font-family: 'VCR OSD Mono', 'VT323', 'Courier New', monospace;
+        }
+        .uk-death-overlay.hidden {
+            display: none;
+        }
+        .uk-death-distortion {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, transparent 25%, rgba(180, 0, 0, 0.45) 75%, rgba(0, 0, 0, 0.96) 100%);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s linear;
+        }
+        .uk-death-distortion::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.45) 0px, rgba(0, 0, 0, 0.45) 2px, transparent 2px, transparent 4px);
+            pointer-events: none;
+        }
+        .uk-death-screen {
+            position: absolute;
+            inset: 0;
+            background: #000000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: clamp(24px, 5vh, 60px) 20px clamp(16px, 3vh, 36px);
+            box-sizing: border-box;
+            opacity: 0;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+        .uk-death-top {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: clamp(6px, 1.5vh, 16px);
+            text-align: center;
+        }
+        .uk-death-title {
+            color: #e50000;
+            font-size: clamp(32px, 5.5vw, 64px);
+            font-weight: 900;
+            letter-spacing: clamp(2px, 0.4vw, 5px);
+            text-shadow: 0 0 12px rgba(229, 0, 0, 0.7), 2px 2px 0px #300;
+            text-transform: uppercase;
+        }
+        .uk-death-prompt {
+            color: #e50000;
+            font-size: clamp(16px, 2.6vw, 28px);
+            font-weight: 700;
+            letter-spacing: clamp(1px, 0.2vw, 3px);
+            text-shadow: 0 0 8px rgba(229, 0, 0, 0.5);
+            text-transform: uppercase;
+        }
+        .uk-death-center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex: 1;
+        }
+        .uk-laughing-skull {
+            width: clamp(130px, 22vw, 220px);
+            height: clamp(130px, 22vw, 220px);
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.25));
+            animation: ukSkullBob 0.6s ease-in-out infinite alternate;
+        }
+        @keyframes ukSkullBob {
+            0% { transform: translateY(0px) scale(1); }
+            100% { transform: translateY(-8px) scale(1.03); }
+        }
+        .uk-death-bottom {
+            text-align: center;
+        }
+        .uk-death-subprompt {
+            color: #777777;
+            font-size: clamp(11px, 1.6vw, 16px);
+            letter-spacing: 1px;
+        }
+        .uk-key-hint {
+            color: #ff8800;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -156,6 +256,8 @@
     </div>
     <canvas id="three-canvas"></canvas>
     <audio id="sfxParry" src="../game/parry.mp3" preload="auto"></audio>
+    <audio id="sfxDeathSequence" src="../game/DeathSequence.mp3" preload="auto"></audio>
+    <audio id="sfxSkullLaugh" src="../game/skullLaugh.mp3" preload="auto" loop></audio>
     <div id="hurt"></div>
     <div id="parry-flash"></div>
     <div id="crosshair"></div>
@@ -225,6 +327,23 @@
 
     <div id="death" class="overlay hidden">VITALIDAD AGOTADA
 Reiniciando al inicio de la capa...</div>
+
+    <!-- ULTRAKILL Authentic Death Screen Overlay -->
+    <div id="uk-death-overlay" class="uk-death-overlay hidden">
+        <div id="uk-death-distortion" class="uk-death-distortion"></div>
+        <div id="uk-death-screen" class="uk-death-screen">
+            <div class="uk-death-top">
+                <div class="uk-death-title">[YOU ARE DEAD]</div>
+                <div class="uk-death-prompt">Press [R] TO RESTART</div>
+            </div>
+            <div class="uk-death-center">
+                <img id="uk-laughing-skull" class="uk-laughing-skull" src="../game/skull_laugh.gif" alt="Laughing Skull" />
+            </div>
+            <div class="uk-death-bottom">
+                <div class="uk-death-subprompt">Press <span class="uk-key-hint">ESC</span> to return to menu &middot; Tap or Click anywhere to restart</div>
+            </div>
+        </div>
+    </div>
 
     <script>
         // ==========================================
@@ -1072,6 +1191,138 @@ Reiniciando al inicio de la capa...</div>
             } catch (_) {}
         }
 
+        // ==========================================
+        // CONTROLADOR DE PANTALLA DE MUERTE ULTRAKILL
+        // ==========================================
+        const sfxDeathSequenceEl = document.getElementById('sfxDeathSequence');
+        const sfxSkullLaughEl = document.getElementById('sfxSkullLaugh');
+        const ukDeathOverlayEl = document.getElementById('uk-death-overlay');
+        const ukDeathDistortionEl = document.getElementById('uk-death-distortion');
+        const ukDeathScreenEl = document.getElementById('uk-death-screen');
+        const ukLaughingSkullEl = document.getElementById('uk-laughing-skull');
+
+        let ukDeathActive = false;
+        let ukDeathPhase = 0; // 0=inactivo, 1=secuencia con distorsión (2s), 2=pantalla de muerte con calavera
+        let ukDeathTimer = 0;
+        let ukDeathRespawnCb = null;
+        let ukDeathMenuCb = null;
+        let ukSkullAnimTimer = null;
+
+        const skullFrames = [
+            '../game/skull_frame_1.png',
+            '../game/skull_frame_2.png',
+            '../game/skull_frame_3.png',
+            '../game/skull_frame_4.png',
+            '../game/skull_frame_3.png',
+            '../game/skull_frame_2.png'
+        ];
+        let skullFrameIdx = 0;
+
+        function startUkDeathSequence(onRespawn, onMenu) {
+            if (ukDeathActive) return;
+            ukDeathActive = true;
+            ukDeathPhase = 1;
+            ukDeathTimer = 0;
+            ukDeathRespawnCb = onRespawn;
+            ukDeathMenuCb = onMenu;
+
+            if (document.pointerLockElement) {
+                try { document.exitPointerLock(); } catch (_) {}
+            }
+
+            if (ukDeathOverlayEl) ukDeathOverlayEl.classList.remove('hidden');
+            if (ukDeathDistortionEl) ukDeathDistortionEl.style.opacity = '0.9';
+            if (ukDeathScreenEl) ukDeathScreenEl.style.opacity = '0';
+
+            if (sfxDeathSequenceEl) {
+                try {
+                    sfxDeathSequenceEl.currentTime = 0;
+                    sfxDeathSequenceEl.volume = 0.9;
+                    sfxDeathSequenceEl.play().catch(() => {});
+                } catch (_) {}
+            }
+            shake(0.7);
+        }
+
+        function endUkDeathSequence() {
+            if (!ukDeathActive || ukDeathPhase === 2) return;
+            ukDeathPhase = 2;
+
+            if (sfxDeathSequenceEl) {
+                try { sfxDeathSequenceEl.pause(); sfxDeathSequenceEl.currentTime = 0; } catch (_) {}
+            }
+
+            if (ukDeathDistortionEl) ukDeathDistortionEl.style.opacity = '0';
+            if (ukDeathScreenEl) ukDeathScreenEl.style.opacity = '1';
+
+            if (sfxSkullLaughEl) {
+                try {
+                    sfxSkullLaughEl.currentTime = 0;
+                    sfxSkullLaughEl.volume = 0.85;
+                    sfxSkullLaughEl.play().catch(() => {});
+                } catch (_) {}
+            }
+
+            if (ukSkullAnimTimer) clearInterval(ukSkullAnimTimer);
+            skullFrameIdx = 0;
+            ukSkullAnimTimer = setInterval(() => {
+                if (ukDeathPhase !== 2) return;
+                skullFrameIdx = (skullFrameIdx + 1) % skullFrames.length;
+                if (ukLaughingSkullEl) {
+                    ukLaughingSkullEl.src = skullFrames[skullFrameIdx];
+                }
+            }, 90);
+        }
+
+        function triggerUkRestart() {
+            if (!ukDeathActive) return;
+            resetUkDeath();
+            if (typeof ukDeathRespawnCb === 'function') {
+                const cb = ukDeathRespawnCb;
+                ukDeathRespawnCb = null;
+                cb();
+            }
+        }
+
+        function triggerUkMenu() {
+            if (!ukDeathActive) return;
+            resetUkDeath();
+            if (typeof ukDeathMenuCb === 'function') {
+                const cb = ukDeathMenuCb;
+                ukDeathMenuCb = null;
+                cb();
+            }
+        }
+
+        function resetUkDeath() {
+            ukDeathActive = false;
+            ukDeathPhase = 0;
+            ukDeathTimer = 0;
+            if (ukSkullAnimTimer) { clearInterval(ukSkullAnimTimer); ukSkullAnimTimer = null; }
+            if (sfxDeathSequenceEl) { try { sfxDeathSequenceEl.pause(); sfxDeathSequenceEl.currentTime = 0; } catch (_) {} }
+            if (sfxSkullLaughEl) { try { sfxSkullLaughEl.pause(); sfxSkullLaughEl.currentTime = 0; } catch (_) {} }
+            if (ukDeathOverlayEl) ukDeathOverlayEl.classList.add('hidden');
+            if (ukDeathDistortionEl) ukDeathDistortionEl.style.opacity = '0';
+            if (ukDeathScreenEl) ukDeathScreenEl.style.opacity = '0';
+        }
+
+        if (ukDeathScreenEl) {
+            ukDeathScreenEl.addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                if (ukDeathPhase === 2) {
+                    triggerUkRestart();
+                }
+            });
+        }
+        if (ukDeathOverlayEl) {
+            ukDeathOverlayEl.addEventListener('pointerdown', (e) => {
+                if (ukDeathPhase === 1) {
+                    e.stopPropagation();
+                    endUkDeathSequence();
+                }
+            });
+        }
+
         function parryBolt(b) {
             if (typeof playParrySfx === 'function') playParrySfx();
             triggerParryFlash();
@@ -1448,11 +1699,16 @@ Reiniciando al inicio de la capa...</div>
             G.vel.set(0, 0, 0);
             G.dashT = 0;
             clearInput();
-            ui.death.classList.remove('hidden');
-            G.later(1500, respawnPlayer);
+            if (typeof startUkDeathSequence === 'function') {
+                startUkDeathSequence(respawnPlayer, toMenu);
+            } else {
+                ui.death.classList.remove('hidden');
+                G.later(1500, respawnPlayer);
+            }
         }
 
         function respawnPlayer() {
+            if (typeof resetUkDeath === 'function') resetUkDeath();
             clearBolts();
             G.hp = G.maxHp;
             G.meter = 0;
@@ -1675,10 +1931,26 @@ Reiniciando al inicio de la capa...</div>
         document.addEventListener('contextmenu', (e) => e.preventDefault());
 
         window.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            if (typeof ukDeathActive !== 'undefined' && ukDeathActive) {
+                if (e.code === 'KeyR' || e.code === 'Space' || e.code === 'Enter') {
+                    e.preventDefault();
+                    if (ukDeathPhase === 1) {
+                        endUkDeathSequence();
+                    } else if (ukDeathPhase === 2) {
+                        triggerUkRestart();
+                    }
+                    return;
+                }
+                if (e.code === 'Escape') {
+                    e.preventDefault();
+                    triggerUkMenu();
+                    return;
+                }
+            }
             if (G.phase !== 'play') return;
             keys[e.code] = true;
             if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
-            if (e.repeat) return;
             if (e.code === 'Space') jump();
             else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') dash();
             else if (e.code === 'KeyF') golpe();
@@ -1974,6 +2246,14 @@ Reiniciando al inicio de la capa...</div>
             requestAnimationFrame(animate);
             const rawDt = Math.min(clock.getDelta(), 0.05);
             const isPortraitMobile = window.innerHeight > window.innerWidth && window.innerWidth <= 900;
+
+            if (ukDeathActive && ukDeathPhase === 1) {
+                ukDeathTimer += rawDt;
+                if (ukDeathTimer >= 2.0) {
+                    endUkDeathSequence();
+                }
+            }
+
             const unscaledDt = (isPortraitMobile || G.phase === 'paused') ? 0 : rawDt;
             if (timeController.currentStop > 0) {
                 timeController.currentStop -= unscaledDt;
@@ -1984,7 +2264,7 @@ Reiniciando al inicio de la capa...</div>
             }
             const dt = unscaledDt * timeController.timeScale;
             if (timeController.flashTimer > 0) {
-                timeController.flashTimer -= dt;
+                timeController.flashTimer -= unscaledDt;
                 if (timeController.flashTimer <= 0) {
                     timeController.flashTimer = 0;
                     if (parryFlashEl) parryFlashEl.style.opacity = '0';
