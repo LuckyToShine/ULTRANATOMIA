@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; color: #fff; user-select: none; -webkit-user-select: none; touch-action: none; }
@@ -35,14 +35,23 @@
         #hud-time { font-size: 18px; margin-top: 4px; }
         #hud-kills { font-size: 15px; color: #aaa; margin-top: 4px; }
         #hud-layer { font-size: 13px; margin-top: 4px; }
-        #rank { margin-top: 10px; margin-left: auto; width: 200px; border: 2px solid currentColor; background: rgba(0, 0, 0, .6); padding: 6px 8px; text-align: left; display: none; }
-        #rank-name { font-size: 20px; letter-spacing: 2px; white-space: nowrap; }
-        #rank-meter { height: 6px; background: #222; margin-top: 5px; }
-        #rank-fill { height: 100%; width: 0; background: currentColor; }
+        /* HUD de estilo ULTRAKILL (StyleCanvas: panel 442x496, 1u = 1px del lienzo original) */
+        #uk-style { --w: clamp(150px, 21vw, 300px); --u: calc(var(--w) / 442); margin-top: 10px; margin-left: auto; width: var(--w); background: rgba(0, 0, 0, .49); text-align: left; display: none; text-shadow: none; }
+        #uk-style.on { display: block; }
+        #uk-style-top { height: calc(var(--u) * 150); background: rgba(0, 0, 0, .5); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #uk-style-rank { font-family: 'Anton', Impact, 'Arial Narrow', sans-serif; font-weight: 400; font-size: calc(var(--u) * 112); line-height: 1; white-space: nowrap; color: #fff; letter-spacing: calc(var(--u) * 2); }
+        #uk-style-rank.ultra { color: #ffd700; text-shadow: calc(var(--u) * 3) calc(var(--u) * 4) 0 #ff6a00; }
+        #uk-style-track { height: calc(var(--u) * 25); margin: calc(var(--u) * 5) 0; background: #000; }
+        #uk-style-fill { height: 100%; width: 0; background: #fff; }
+        #uk-style-feed { height: calc(var(--u) * 250); background: rgba(0, 0, 0, .5); padding: calc(var(--u) * 6) calc(var(--u) * 10); overflow: hidden; font-family: 'VT323', 'Courier New', monospace; font-weight: 400; font-size: calc(var(--u) * 46); line-height: 1.02; color: #fff; }
+        #uk-style-feed div { white-space: nowrap; }
         #boss-hud { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 3; pointer-events: none; width: min(420px, 52vw); background: rgba(20, 8, 0, .88); border: 2px solid #ffdd66; padding: 6px 10px; text-align: center; display: none; box-shadow: 0 0 18px rgba(255, 221, 102, .35); }
         #boss-title { font-size: 13px; font-weight: bold; letter-spacing: 2px; color: #ffdd66; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         #boss-bar-bg { position: relative; width: 100%; height: 12px; background: #331600; }
         #boss-bar { position: absolute; top: 0; left: 0; height: 100%; width: 100%; background: linear-gradient(90deg, #ff3344, #ffdd66); transition: width .15s; }
+        /* Barra secundaria del jefe (BossHealthBar.secondaryBar): tiempo hasta la siguiente oleada de células */
+        #boss-bar2-bg { position: relative; width: 100%; height: 5px; margin-top: 3px; background: #221100; }
+        #boss-bar2 { position: absolute; top: 0; left: 0; height: 100%; width: 0; background: #ffffff; }
         #banner { position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%); z-index: 3; pointer-events: none; font-size: 26px; font-weight: bold; text-align: center; white-space: pre-line; line-height: 1.3; opacity: 0; transition: opacity .55s; width: 92vw; text-shadow: 2px 2px 3px black; }
         #banner.show { opacity: 1; transition: none; }
 
@@ -91,8 +100,7 @@
             #hud-style { font-size: 16px; }
             #hud-time { font-size: 14px; }
             #hud-kills, #hud-layer { font-size: 11px; }
-            #rank { width: 150px; padding: 4px 6px; margin-top: 6px; }
-            #rank-name { font-size: 13px; letter-spacing: 1px; }
+            #uk-style { --w: clamp(130px, 19vw, 210px); margin-top: 6px; }
             #boss-hud { top: 8px; padding: 4px 8px; width: min(320px, 46vw); }
             #boss-title { font-size: 11px; margin-bottom: 3px; }
             #boss-bar-bg { height: 9px; }
@@ -314,11 +322,16 @@
         <div id="hud-time">00:00.0</div>
         <div id="hud-kills">BAJAS 0</div>
         <div id="hud-layer"></div>
-        <div id="rank"><div id="rank-name"></div><div id="rank-meter"><div id="rank-fill"></div></div></div>
+        <div id="uk-style">
+            <div id="uk-style-top"><div id="uk-style-rank"></div></div>
+            <div id="uk-style-track"><div id="uk-style-fill"></div></div>
+            <div id="uk-style-feed"></div>
+        </div>
     </div>
     <div id="boss-hud">
         <div id="boss-title">JEFE FINAL · OVOCITO II</div>
         <div id="boss-bar-bg"><div id="boss-bar"></div></div>
+        <div id="boss-bar2-bg"><div id="boss-bar2"></div></div>
     </div>
     <div id="banner"></div>
     <div id="instructions">WASD mover &middot; Rat&oacute;n apuntar &middot; Clic DISPARO &middot; F / Clic der. GOLPE &middot; Espacio salto &middot; Shift dash &middot; Esc pausa</div>
@@ -345,7 +358,7 @@
             <span class="mech-pill" style="color:#ffd400;border-color:#ffd400">DISPARO &middot; Clic (punto d&eacute;bil: gl&aacute;ndula)</span>
             <span class="mech-pill" style="color:#ff3344;border-color:#ff3344">GOLPE &middot; F (rompe el epitelio)</span>
             <span class="mech-pill" style="color:#2a9dff;border-color:#2a9dff">PARRY &middot; Golpea o dispara una hormona (+Vida)</span>
-            <span class="mech-pill" style="color:#ffdd66;border-color:#ffdd66">JEFE &middot; Ovocito II (Corona, Zona Pel&uacute;cida y N&uacute;cleo)</span>
+            <span class="mech-pill" style="color:#ffdd66;border-color:#ffdd66">JEFE &middot; Ovocito II (destruye sus c&eacute;lulas antes de que lo curen)</span>
         </div>
         <div>
             <button id="startFps">ENTRAR AL MODO FPS</button>
@@ -427,15 +440,181 @@ Reiniciando al inicio de la capa...</div>
             { type: 'disparo', x: 0,    z: -318 }
         ];
 
-        const STYLE_RANKS = [
-            { name: 'D · DESTRUCTIVO', css: '#4aa8ff' },
-            { name: 'C · CAÓTICO', css: '#4cff6a' },
-            { name: 'B · BRUTAL', css: '#ffd400' },
-            { name: 'A · ANÁRQUICO', css: '#ff8a00' },
-            { name: 'S · SUPREMO', css: '#ff3344' },
-            { name: 'SS · SÁDICO', css: '#ff3344' },
-            { name: 'ULTRANATÓMICO', css: '#ffffff' }
+        // ==========================================
+        // HUD DE ESTILO ULTRAKILL (port de StyleHUD.cs)
+        // ==========================================
+        // maxMeter y drainSpeed son los valores serializados del StyleHUD original.
+        // Colores muestreados de los sprites RankD..RankU: letra(s) de color + resto de la palabra en blanco.
+        const UK_STYLE_RANKS = [
+            { l: 'D',   w: 'ESTRUCTIVO', max: 200,  drain: 1.0,  c: ['#0094ff'] },
+            { l: 'C',   w: 'AÓTICO',     max: 300,  drain: 1.25, c: ['#4cff00'] },
+            { l: 'B',   w: 'RUTAL',      max: 400,  drain: 1.5,  c: ['#ffd800'] },
+            { l: 'A',   w: 'NÁRQUICO',   max: 500,  drain: 2.0,  c: ['#ff6a00'] },
+            { l: 'S',   w: 'UPREMO',     max: 700,  drain: 3.0,  c: ['#ff0000'] },
+            { l: 'SS',  w: 'ÁDICO',      max: 850,  drain: 4.0,  c: ['#d10000', '#ff0000'] },
+            { l: 'SSS', w: 'ANGUINARIO', max: 1000, drain: 6.0,  c: ['#d10000', '#d10000', '#ff0000'] },
+            { l: 'ULTRANATÓMICO', w: '', max: 1500, drain: 8.0, ultra: true }
         ];
+        // Colores de etiqueta de TextMeshPro usados en los bonus de ULTRAKILL
+        const UK_GREEN = '#00ff00', UK_ORANGE = '#ff8000', UK_CYAN = '#00ffff';
+
+        const UKStyle = {
+            el: document.getElementById('uk-style'),
+            rankEl: document.getElementById('uk-style-rank'),
+            fillEl: document.getElementById('uk-style-fill'),
+            feedEl: document.getElementById('uk-style-feed'),
+            meter: 0,
+            rank: 0,
+            combo: false,
+            maxReached: 0,
+            shaking: 0,
+            scale: 0,
+            queue: [],
+            queueWait: 0,
+            lines: [],
+            removals: [],
+            needsFit: true,
+
+            cur() { return UK_STYLE_RANKS[this.rank]; },
+
+            setRank(i) {
+                this.rank = Math.max(0, Math.min(UK_STYLE_RANKS.length - 1, i));
+                const r = this.cur();
+                this.rankEl.classList.toggle('ultra', !!r.ultra);
+                this.rankEl.innerHTML = r.ultra
+                    ? r.l
+                    : r.l.split('').map((ch, k) => '<span style="color:' + r.c[k] + '">' + ch + '</span>').join('') + r.w;
+                this.rankEl.style.fontSize = '';
+                this.needsFit = true;
+            },
+
+            // Ajusta el texto del rango al ancho del panel (el sprite original conserva su proporción)
+            fit() {
+                if (!this.el.classList.contains('on')) return;
+                this.needsFit = false;
+                const avail = this.rankEl.parentElement.clientWidth * 0.94;
+                const w = this.rankEl.scrollWidth;
+                if (w > avail && w > 0) {
+                    const base = parseFloat(getComputedStyle(this.rankEl).fontSize);
+                    this.rankEl.style.fontSize = (base * avail / w) + 'px';
+                }
+            },
+
+            comboStart() {
+                this.meter = Math.max(this.meter, Math.floor(this.cur().max / 4));
+                this.combo = true;
+            },
+
+            comboOver() {
+                this.meter = 0;
+                this.setRank(0);
+                this.combo = false;
+            },
+
+            ascend() {
+                while (this.meter >= this.cur().max) {
+                    this.meter -= this.cur().max;
+                    this.setRank(this.rank + 1);
+                    if (this.rank + 1 === UK_STYLE_RANKS.length - 1) break;
+                }
+                this.meter = Math.max(this.meter, Math.floor(this.cur().max / 4));
+                this.maxReached = Math.max(this.maxReached, this.rank);
+            },
+
+            descend() {
+                if (!this.combo) return;
+                if (this.rank > 0) {
+                    this.setRank(this.rank - 1);
+                    this.meter = this.cur().max - Math.floor(this.cur().max / 4);
+                } else {
+                    this.comboOver();
+                }
+            },
+
+            // AddPoints: devuelve los puntos reales sumados al estilo total (x1.5 contra jefes)
+            add(points, label, opts) {
+                const o = opts || {};
+                let gained = 0;
+                if (points > 0) {
+                    const num = points * (o.boss ? 1.5 : 1);
+                    gained = Math.round(num);
+                    this.meter += num;
+                    this.scale = 0.2;
+                }
+                if (label) this.queue.push({ label, color: o.color, count: o.count });
+                if (this.meter >= this.cur().max && this.rank < 7) this.ascend();
+                else if (this.meter > this.cur().max) this.meter = this.cur().max;
+                return gained;
+            },
+
+            // NewMovement.GetHurt: RemovePoints(0) + DescendRank()
+            hurt() {
+                this.shaking = 5;
+                this.descend();
+            },
+
+            reset() {
+                this.queue.length = 0;
+                this.lines.length = 0;
+                this.removals.length = 0;
+                this.queueWait = 0;
+                this.maxReached = 0;
+                this.shaking = this.scale = 0;
+                this.comboOver();
+                this.renderFeed();
+                this.el.classList.remove('on');
+            },
+
+            renderFeed() {
+                this.feedEl.innerHTML = this.lines.map(l => {
+                    const name = String(l.label).replace(/[<>&]/g, '');
+                    const tag = l.color ? '<span style="color:' + l.color + '">' + name + '</span>' : name;
+                    return '<div>+ ' + tag + (l.count >= 0 ? ' x' + l.count : '') + '</div>';
+                }).join('');
+            },
+
+            update(dt) {
+                if (this.meter > 0 && !this.combo) this.comboStart();
+                if (this.meter < 0) this.descend();
+                else this.meter -= dt * this.cur().drain * 15;
+                const show = this.combo;
+                if (this.el.classList.contains('on') !== show) this.el.classList.toggle('on', show);
+
+                // Lista de bonus: una entrada nueva cada 0.05s, cada una desaparece a los 3s
+                let changed = false;
+                if (this.queueWait > 0) this.queueWait -= dt;
+                if (this.queue.length && this.queueWait <= 0) {
+                    this.lines.unshift(this.queue.shift());
+                    this.removals.push(3);
+                    this.queueWait = 0.05;
+                    changed = true;
+                }
+                for (let i = this.removals.length - 1; i >= 0; i--) {
+                    this.removals[i] -= dt;
+                    if (this.removals[i] <= 0) {
+                        this.removals.splice(i, 1);
+                        this.lines.pop();
+                        changed = true;
+                    }
+                }
+                if (changed) this.renderFeed();
+                if (!show) return;
+                if (this.needsFit) this.fit();
+
+                this.fillEl.style.width = Math.max(0, Math.min(1, this.meter / this.cur().max)) * 100 + '%';
+                const u = this.el.clientWidth / 442;
+                let tx = 0, ty = 0;
+                if (this.shaking > 0) {
+                    tx = this.shaking * (Math.floor(Math.random() * 6) - 3) * u;
+                    ty = this.shaking * (Math.floor(Math.random() * 6) - 3) * u;
+                    this.shaking -= dt * 5;
+                }
+                const sc = this.scale > 0 ? 1 + this.scale : 1;
+                if (this.scale > 0) this.scale -= dt;
+                this.rankEl.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + sc + ')';
+            }
+        };
+        UKStyle.setRank(0);
 
         // ==========================================
         // 1. CONSTANTES DE JUEGO
@@ -462,12 +641,29 @@ Reiniciando al inicio de la capa...</div>
         const BOLT_DMG = 20;
         const FIRE_RANGE = 34;
         const RESPAWN_TIME = 8;
-        const METER_STEP = 150;
         const OOCYTE_Z = -336;
-        const BOSS_MAX_HP = 45;
+        const BOSS_MAX_HP = 100;
         const BOSS_ENGAGE_Z = -265;
-        const BOSS_FIRE_RANGE = 42;
         const LAYER_START_Z = [4, -100, -180, -260];
+
+        // Jefe final con la IA de la FLESH PRISON (FleshPrison.cs, dificultad Standard).
+        // Tiempos, cantidades y daños son los originales (salvo los proyectiles teledirigidos, que usan el
+        // daño de las hormonas de este modo); distancias y velocidades se escalan al conducto
+        // (16.45 u/s es la velocidad de V1 que usa VirtueInsignia para predecir).
+        const DEG = Math.PI / 180;
+        const SPEED_K = MOVE_SPEED / 16.45;
+        const FP = {
+            rotIdle: 45, rotBarrage: 360,
+            droneCdFirst: 3, droneCd: 25, attackCdStart: 5, windup: 1,
+            attackCd: [4, 1, 2],                  // 0 sello de luz · 1 ráfaga teledirigida · 2 agujero negro
+            attackColor: [0xffffff, 0x00ffe6, 0xff00ff],
+            drones: [10, 12], healPerDrone: 10, healDelay: 5, healStep: 0.25, healDamageMult: 0.1,
+            orbs: [50, 75], orbRing: 4.2, orbAccel: 25 * SPEED_K, orbTurn: 185 * 0.5, orbDmg: BOLT_DMG, orbLife: 10,
+            insCharges: [2, 3], insWindup: 0.5, insDmg: 30, insR: 3.0,
+            holeSpeed: 8 * SPEED_K, holeTurn: 80,
+            droneBeamDmg: 15, droneWarn: 0.5, droneRx: 6.2, droneRy: 3.4, droneY: 4.2, droneZ: 4.5
+        };
+        const BOSS_C = new THREE.Vector3(0, 3.2, OOCYTE_Z);
 
         // ==========================================
         // 2. ENTORNO 3D (THREE.JS): CAPAS ANATÓMICAS Y MODELOS
@@ -644,8 +840,12 @@ Reiniciando al inicio de la capa...</div>
                 coronaCells.add(cell);
             }
 
-            g.add(core, zona, coronaRing, coronaCells);
-            g.userData = { core, zona, coronaRing, coronaCells, t: 0 };
+            // La corona radiata hace de "rotationBone" de la Flesh Prison: gira y de ella salen los proyectiles
+            const bone = new THREE.Group();
+            bone.add(coronaRing, coronaCells);
+
+            g.add(core, zona, bone);
+            g.userData = { core, zona, coronaRing, coronaCells, bone, t: 0 };
             g.traverse(m => { m.userData.boss = true; });
             scene.add(g);
             return g;
@@ -919,9 +1119,7 @@ Reiniciando al inicio de la capa...</div>
                 u.core.scale.setScalar(1 + 0.06 * Math.sin(u.t * 3));
                 u.zona.rotation.y += dt * 0.5;
                 u.zona.rotation.x += dt * 0.3;
-                u.coronaRing.rotation.z -= dt * 0.8;
                 u.coronaCells.rotation.y -= dt * 0.7;
-                u.coronaCells.rotation.z += dt * 0.4;
             }
         }
 
@@ -1033,18 +1231,19 @@ Reiniciando al inicio de la capa...</div>
             hp: 100,
             maxHp: 100,
             style: 0,
-            meter: 0,
             kills: 0,
             time: 0,
             lastSrc: null,
+            multikill: 0,
+            multikillT: 0,
             layerIdx: 0,
             fert: false,
             bossAlive: true,
             bossHp: BOSS_MAX_HP,
             bossMaxHp: BOSS_MAX_HP,
-            bossFireCd: 2.0,
             bossHitT: 0,
             bossEngaged: false,
+            fp: null,
             pos: new THREE.Vector3(0, 0, LAYER_START_Z[0]),
             vel: new THREE.Vector3(),
             yaw: 0,
@@ -1073,8 +1272,8 @@ Reiniciando al inicio de la capa...</div>
         const $ = (id) => document.getElementById(id);
         const ui = {
             hpBar: $('hp-bar'), style: $('hud-style'), time: $('hud-time'), kills: $('hud-kills'),
-            layer: $('hud-layer'), rank: $('rank'), rankName: $('rank-name'), rankFill: $('rank-fill'),
-            bossHud: $('boss-hud'), bossTitle: $('boss-title'), bossBar: $('boss-bar'),
+            layer: $('hud-layer'),
+            bossHud: $('boss-hud'), bossTitle: $('boss-title'), bossBar: $('boss-bar'), bossBar2: $('boss-bar2'),
             banner: $('banner'), hurt: $('hurt'), menu: $('menu'), pause: $('pause'),
             pauseNote: $('pause-note'), death: $('death')
         };
@@ -1093,38 +1292,44 @@ Reiniciando al inicio de la capa...</div>
         }
 
         function updateBossHud() {
-            if (!G.bossAlive || G.pos.z > BOSS_ENGAGE_Z) {
+            if (!G.bossAlive || (!G.bossEngaged && G.pos.z > BOSS_ENGAGE_Z)) {
                 ui.bossHud.style.display = 'none';
                 return;
             }
             ui.bossHud.style.display = 'block';
             const frac = Math.max(0, G.bossHp / G.bossMaxHp);
             ui.bossBar.style.width = (frac * 100) + '%';
-            const phaseLabel = G.bossHp > 30
-                ? 'CORONA RADIATA · DISPARA'
-                : (G.bossHp > 15 ? 'ZONA PELÚCIDA · GOLPE (F) / PARRY' : 'REACCIÓN CORTICAL · PARRY / DISPARO');
-            ui.bossTitle.textContent = 'JEFE: OVOCITO II · ' + phaseLabel;
+            ui.bossBar2.style.width = (G.fp ? Math.max(0, Math.min(1, G.fp.secondary)) * 100 : 0) + '%';
+            const f = G.fp;
+            const state = f && f.healing && f.drones.length && !f.spawning
+                ? '¡CURACIÓN!'
+                : (f && f.drones.length ? 'CÉLULAS ×' + f.drones.length : '');
+            ui.bossTitle.textContent = 'OVOCITO II' + (state ? ' · ' + state : '');
         }
 
         function resetBossVisuals() {
+            if (typeof fpClear === 'function') fpClear();
             G.bossAlive = true;
             G.bossHp = BOSS_MAX_HP;
             G.bossMaxHp = BOSS_MAX_HP;
-            G.bossFireCd = 1.8;
             G.bossHitT = 0;
             G.bossEngaged = false;
+            G.fp = fpState();
             if (finishMarker && finishMarker.userData) {
                 finishMarker.visible = true;
                 finishMarker.scale.setScalar(1);
                 const u = finishMarker.userData;
                 u.core.visible = true;
                 u.core.scale.setScalar(1);
+                u.core.position.set(0, 0, 0);
                 u.core.material.color.setHex(0xffdd66);
                 u.core.material.emissive.setHex(0xffaa22);
                 u.core.material.emissiveIntensity = 0.65;
                 u.zona.visible = true;
                 u.zona.scale.setScalar(1);
                 u.zona.material.opacity = 0.55;
+                u.bone.rotation.set(0, 0, 0);
+                u.bone.position.set(0, 0, 0);
                 u.coronaRing.visible = true;
                 u.coronaRing.scale.setScalar(1);
                 u.coronaRing.material.opacity = 0.85;
@@ -1134,9 +1339,18 @@ Reiniciando al inicio de la capa...</div>
             updateBossHud();
         }
 
-        function addStyle(n) {
-            G.style = Math.max(0, G.style + n);
-            G.meter = Math.min(METER_STEP * STYLE_RANKS.length, G.meter + n);
+        // Toda la puntuación pasa por el StyleHUD; el estilo total suma los puntos reales (x1.5 contra el jefe)
+        function addStyle(n, label, opts) {
+            G.style = Math.max(0, G.style + UKStyle.add(n, label, opts));
+        }
+
+        // StyleCalculator.AddToMultiKill: ventana de 0.5s (temporizador 5 que baja a 10/s)
+        function addKillCombo() {
+            G.multikill++;
+            G.multikillT = 5;
+            if (G.multikill === 2) addStyle(25, 'DOBLE BAJA', { color: UK_ORANGE });
+            else if (G.multikill === 3) addStyle(50, 'TRIPLE BAJA', { color: UK_ORANGE });
+            else if (G.multikill > 3) addStyle(100, 'MULTIBAJA', { color: UK_ORANGE, count: G.multikill });
         }
 
         function eyePos(v) {
@@ -1161,10 +1375,12 @@ Reiniciando al inicio de la capa...</div>
             SPAWNS.forEach(s => { s.respawnAt = 0; createObstacle(s); });
             G.hp = G.maxHp;
             G.style = 0;
-            G.meter = 0;
+            UKStyle.reset();
             G.kills = 0;
             G.time = 0;
             G.lastSrc = null;
+            G.multikill = 0;
+            G.multikillT = 0;
             G.layerIdx = 0;
             G.fert = false;
             resetBossVisuals();
@@ -1403,7 +1619,7 @@ Reiniciando al inicio de la capa...</div>
             b.mesh.material.color.set(MECH.parry.color);
             G.hp = G.maxHp;
             updateHp();
-            addStyle(100);
+            addStyle(100, 'PARRY', { color: UK_GREEN });
             banner('¡PARRY! VITALIDAD 100%', MECH.parry.css);
             flashRing(b.mesh.position, MECH.parry.color);
             shake(0.4);
@@ -1441,6 +1657,7 @@ Reiniciando al inicio de la capa...</div>
             const targets = [tube];
             obstacles.forEach(o => { if (o.alive) targets.push(o.group); });
             if (G.bossAlive && finishMarker && finishMarker.visible) targets.push(finishMarker);
+            if (G.fp) G.fp.drones.forEach(d => targets.push(d.group));
             bolts.forEach(b => { if (!b.reflected) targets.push(b.mesh); });
             const hit = raycaster.intersectObjects(targets, true)[0];
             const floorT = ray.direction.y < -1e-4 ? -ray.origin.y / ray.direction.y : Infinity;
@@ -1451,10 +1668,10 @@ Reiniciando al inicio de la capa...</div>
                 const obj = hit.object;
                 if (obj.userData.bolt) {
                     parryBolt(obj.userData.bolt);
+                } else if (obj.userData.drone) {
+                    killDrone(obj.userData.drone, 'shot');
                 } else if (obj.userData.boss) {
-                    const u = finishMarker.userData;
-                    const hitCorona = u && ((u.coronaCells && isDescendant(obj, u.coronaCells)) || obj === u.coronaRing);
-                    hitBoss(hitCorona ? 2.5 : 1, hitCorona ? 'disparo' : 'shot', hit.point);
+                    hitBoss(1, 'shot', hit.point);
                 } else if (obj.userData.obs) {
                     const o = obj.userData.obs;
                     const weak = o.type === 'disparo' && o.parts.target && isDescendant(obj, o.parts.target);
@@ -1496,10 +1713,18 @@ Reiniciando al inicio de la capa...</div>
                 hitEnemy(o, o.type === 'golpe' ? o.hp : GOLPE_DMG, 'golpe', point);
                 hitAny = true;
             });
+            if (G.fp) {
+                G.fp.drones.slice().forEach(d => {
+                    const dp = d.group.position;
+                    if (Math.hypot(px - dp.x, pz - dp.z) < 2.4 && Math.abs(dp.y - eye.y) < 2.6) {
+                        killDrone(d, 'golpe');
+                        hitAny = true;
+                    }
+                });
+            }
             if (G.bossAlive && Math.hypot(px, pz - OOCYTE_Z) < 5.8) {
                 const point = new THREE.Vector3(px * 0.5, 3.2, OOCYTE_Z + 3.2);
-                const zonaBonus = G.bossHp <= 30 && G.bossHp > 15;
-                hitBoss(zonaBonus ? 8 : 5, 'golpe', point);
+                hitBoss(5, 'golpe', point);
                 hitAny = true;
             }
             if (hitAny) {
@@ -1513,32 +1738,28 @@ Reiniciando al inicio de la capa...</div>
 
         function hitBoss(dmg, src, point) {
             if (!G.bossAlive) return;
+            const f = G.fp;
             const prevHp = G.bossHp;
-            G.bossHp = Math.max(0, G.bossHp - dmg);
+            // Mientras absorbe a sus células solo recibe el 10% del daño (totalDamageTakenMultiplier)
+            const real = dmg * f.dmgMult;
+            G.bossHp = Math.max(0, G.bossHp - real);
+            // CheckHealth: cada punto de daño adelanta la siguiente oleada de células
+            const n = f.drones.length;
+            f.droneCd -= real * (n === 0 ? 0.133 : n <= 5 ? 0.2 : n <= 8 ? 0.4 : 1.5);
             G.bossHitT = 0.18;
+            if (!f.inAction) f.hurtT = 0.15;
             const col = src === 'golpe' ? MECH.golpe.color : (src === 'parry' ? MECH.parry.color : 0xffdd66);
             burst(point, col, src === 'golpe' || src === 'parry' ? 18 : 9, 8);
-            addStyle(src === 'parry' ? 60 : (src === 'golpe' ? 35 : 15));
+            addStyle(src === 'parry' ? 60 : (src === 'golpe' ? 35 : 15), '', { boss: true });
 
             const u = finishMarker && finishMarker.userData;
-            if (prevHp > 30 && G.bossHp <= 30 && u) {
-                burst(new THREE.Vector3(0, 3.2, OOCYTE_Z), MECH.disparo.color, 55, 13);
-                flashRing(new THREE.Vector3(0, 3.2, OOCYTE_Z + 3), MECH.disparo.color);
-                shake(0.6);
-                if (u.coronaCells) u.coronaCells.visible = false;
-                if (u.coronaRing) u.coronaRing.visible = false;
-                banner('¡CORONA RADIATA DISPERSADA!\nRompe la Zona Pelúcida con GOLPE (F) o PARRY', '#ffd400');
-            }
-            if (prevHp > 15 && G.bossHp <= 15 && u) {
-                burst(new THREE.Vector3(0, 3.2, OOCYTE_Z), MECH.golpe.color, 60, 14);
+            if (prevHp > G.bossMaxHp / 2 && G.bossHp <= G.bossMaxHp / 2 && u) {
+                // Mitad de vida: más células por oleada, más proyectiles y un pilar extra (igual que la Flesh Prison)
+                burst(BOSS_C, MECH.golpe.color, 60, 14);
                 flashRing(new THREE.Vector3(0, 3.2, OOCYTE_Z + 3), MECH.golpe.color);
                 shake(0.7);
                 if (u.zona) u.zona.visible = false;
-                if (u.core) {
-                    u.core.material.color.setHex(0xff77cc);
-                    u.core.material.emissive.setHex(0xcc1166);
-                }
-                banner('¡ZONA PELÚCIDA PERFORADA!\nDevuelve sus ondas con PARRY o dispara al Ovocito II', '#ff3344');
+                banner('¡ZONA PELÚCIDA PERFORADA!\nEl Ovocito II se enfurece', '#ff3344');
             }
             updateBossHud();
             if (G.bossHp <= 0) killBoss(src);
@@ -1548,9 +1769,10 @@ Reiniciando al inicio de la capa...</div>
             G.bossAlive = false;
             G.fert = true;
             G.kills++;
+            fpForceOff();
             clearBolts();
             updateBossHud();
-            addStyle(600);
+            addStyle(600, 'FECUNDACIÓN', { color: UK_CYAN, boss: true });
             shake(0.95);
             const center = new THREE.Vector3(0, 3.2, OOCYTE_Z);
             burst(center, 0xffdd66, 95, 16);
@@ -1573,7 +1795,7 @@ Reiniciando al inicio de la capa...</div>
             o.hp -= dmg;
             o.hitT = 0.15;
             burst(point, MECH[o.type].color, src === 'golpe' ? 14 : 7, 7);
-            addStyle(src === 'golpe' ? 25 : 10);
+            addStyle(src === 'golpe' ? 25 : 10, '');
 
             // Retraer valvas del esfínter progresivamente con cada impacto
             if (o.type === 'qte' && o.parts.valves) {
@@ -1591,23 +1813,29 @@ Reiniciando al inicio de la capa...</div>
         }
 
         const SPECIAL = { golpe: '¡GOLPE!', disparo: '¡DISPARO CERTERO!', parry: '¡PARRY!' };
+        const SPECIAL_STYLE = {
+            golpe: { label: 'GOLPE CRÍTICO', color: null },
+            disparo: { label: 'DISPARO CERTERO', color: UK_CYAN },
+            parry: { label: 'DEVOLUCIÓN', color: UK_GREEN }
+        };
 
         function killEnemy(o, src) {
             o.alive = false;
             G.kills++;
             const def = ENEMY_DEF[o.type];
-            let pts = def.pts;
             let text = def.label + ' DESTRUIDO';
             let color = MECH[o.type].css;
             const special = (src === 'golpe' && o.type === 'golpe') || src === 'disparo' || src === 'parry';
+            // Mismos puntos de siempre, desglosados como en la lista de bonus de ULTRAKILL
+            addStyle(def.pts, 'BAJA');
             if (special) {
-                pts += 100;
                 text = SPECIAL[src] + '\n' + text;
                 color = MECH[src].css;
+                addStyle(100, SPECIAL_STYLE[src].label, { color: SPECIAL_STYLE[src].color });
             }
-            if (G.lastSrc && G.lastSrc !== src) pts += 50;
+            if (G.lastSrc && G.lastSrc !== src) addStyle(50, 'ARSENAL', { color: UK_CYAN });
             G.lastSrc = src;
-            addStyle(pts);
+            addKillCombo();
             banner(text, color);
             o.spawn.respawnAt = G.time + RESPAWN_TIME;
             DEATH[o.type](o);
@@ -1674,6 +1902,30 @@ Reiniciando al inicio de la capa...</div>
             bolts.push(b);
         }
 
+        // Projectile Homing de la Flesh Prison (HomingType.Gradual): nace casi parado, acelera y gira
+        // como mucho 185·0.5 °/s hacia el jugador. Se puede devolver con PARRY igual que una hormona.
+        function fireOrb(from, dir) {
+            const mesh = glowSphere(0x00ffe6, 0.34);
+            mesh.position.copy(from);
+            const b = {
+                mesh, owner: 'boss', reflected: false, life: FP.orbLife, dmg: FP.orbDmg,
+                vel: new THREE.Vector3(), homing: { speed: 0.025, dir: dir.clone().normalize() }
+            };
+            mesh.userData.bolt = b;
+            bolts.push(b);
+        }
+
+        const tmpQ = new THREE.Quaternion();
+        const IDENT_Q = new THREE.Quaternion();
+        // Quaternion.RotateTowards sobre una dirección
+        function turnTowards(dir, want, maxRad) {
+            const ang = dir.angleTo(want);
+            if (ang < 1e-5) return;
+            tmpQ.setFromUnitVectors(dir, want);
+            if (ang > maxRad) tmpQ.slerpQuaternions(IDENT_Q, tmpQ, maxRad / ang);
+            dir.applyQuaternion(tmpQ).normalize();
+        }
+
         function enemyAt(p, pad, skip) {
             return obstacles.find(o => {
                 if (!o.alive || o === skip) return false;
@@ -1700,20 +1952,6 @@ Reiniciando al inicio de la capa...</div>
                     const from = new THREE.Vector3(o.x, o.parts.core.position.y, o.z);
                     if (from.distanceTo(eye) < FIRE_RANGE) fireBolt(o, from);
                 });
-                if (G.bossAlive) {
-                    const bossPos = new THREE.Vector3(0, 3.2, OOCYTE_Z);
-                    if (bossPos.distanceTo(eye) < BOSS_FIRE_RANGE) {
-                        G.bossFireCd -= dt;
-                        if (G.bossFireCd <= 0) {
-                            const rate = G.bossHp <= 15 ? 1.1 : (G.bossHp <= 30 ? 1.45 : 1.85);
-                            G.bossFireCd = rate + Math.random() * 0.5;
-                            const ang = Math.random() * Math.PI * 2;
-                            const r = G.bossHp > 30 ? 3.2 : 1.8;
-                            const from = new THREE.Vector3(Math.cos(ang) * r, 3.2 + Math.sin(ang) * r * 0.6, OOCYTE_Z + 2.8);
-                            fireBolt('boss', from);
-                        }
-                    }
-                }
             }
 
             const eye = eyePos(tmpA);
@@ -1721,13 +1959,19 @@ Reiniciando al inicio de la capa...</div>
                 const b = bolts[i];
                 const p = b.mesh.position;
                 b.life -= dt;
+                if (b.homing && !b.reflected && dt > 0) {
+                    const h = b.homing;
+                    h.speed += FP.orbAccel * dt;
+                    turnTowards(h.dir, tmpB.subVectors(eye, p).normalize(), FP.orbTurn * DEG * dt);
+                    b.vel.copy(h.dir).multiplyScalar(h.speed);
+                }
                 p.addScaledVector(b.vel, dt);
                 b.mesh.scale.setScalar(1 + 0.15 * Math.sin(b.life * 20));
 
                 if (!b.reflected) {
                     if (p.distanceTo(eye) < 0.9) {
-                        hurt(BOLT_DMG);
-                        killBolt(i, 0x66ff88);
+                        hurt(b.dmg || BOLT_DMG);
+                        killBolt(i, b.homing ? 0x00ffe6 : 0x66ff88);
                         continue;
                     }
                     if (enemyAt(p, 0.2, b.owner)) {
@@ -1737,6 +1981,12 @@ Reiniciando al inicio de la capa...</div>
                 } else {
                     if (G.bossAlive && Math.hypot(p.x, p.z - OOCYTE_Z) < 4.2 && p.y < 8) {
                         hitBoss(10, 'parry', p.clone());
+                        killBolt(i, MECH.parry.color);
+                        continue;
+                    }
+                    const d = G.fp && G.fp.drones.find(dr => dr.group.position.distanceTo(p) < 1.1);
+                    if (d) {
+                        killDrone(d, 'parry');
                         killBolt(i, MECH.parry.color);
                         continue;
                     }
@@ -1757,7 +2007,9 @@ Reiniciando al inicio de la capa...</div>
             if (G.phase !== 'play' || G.hurtCd > 0) return;
             G.hurtCd = 0.3;
             G.hp = Math.max(0, G.hp - n);
-            G.meter = Math.max(0, G.meter - 120);
+            // NewMovement.GetHurt: el rango baja un nivel y el estilo total pierde daño x5
+            UKStyle.hurt();
+            G.style = Math.max(0, G.style - (n <= 200 ? n * 5 : 1000));
             G.hurtFlash = 1;
             updateHp();
             shake(0.5);
@@ -1781,7 +2033,7 @@ Reiniciando al inicio de la capa...</div>
             if (typeof resetUkDeath === 'function') resetUkDeath();
             clearBolts();
             G.hp = G.maxHp;
-            G.meter = 0;
+            UKStyle.comboOver();
             G.lastSrc = null;
             if (G.bossAlive && G.layerIdx === 3) {
                 resetBossVisuals();
@@ -1798,6 +2050,475 @@ Reiniciando al inicio de la capa...</div>
             banner('REAPARICIÓN · ' + LAYERS[G.layerIdx].title, '#ffffff');
             if (!TOUCH && document.pointerLockElement !== canvas) pause();
             else G.phase = 'play';
+        }
+
+        // ==========================================
+        // 4c. IA DEL JEFE: OVOCITO II = FLESH PRISON (port de FleshPrison.cs)
+        // ==========================================
+        // Bucle original: cada FP.droneCd segundos genera un anillo de células (drones); si siguen vivas
+        // en la siguiente oleada, el jefe las absorbe y se cura 10 PV por célula. Entre oleadas elige
+        // (sin repetir) entre el sello de luz, la ráfaga teledirigida y el agujero negro.
+        function fpState() {
+            return {
+                started: false, inAction: false, rot: FP.rotIdle, rotTarget: FP.rotIdle,
+                droneCd: FP.droneCdFirst, attackCd: FP.attackCdStart, prev: 666,
+                drones: [], droneAmount: FP.drones[0], curDrone: 0, spawning: false, healing: false, timesHealed: 0,
+                projAmount: 40, curProj: 40, projCd: 0, secondary: 0, dmgMult: 1,
+                shaking: false, hurtT: 0, idleT: 0.5, idleTex: 0,
+                hole: null, insignias: [], timers: []
+            };
+        }
+
+        function fpMaxDroneCd(f) { return f.started ? FP.droneCd : FP.droneCdFirst; }
+        function fpLater(f, t, fn) { f.timers.push({ t, fn }); }
+        function moveTowards(a, b, d) { return Math.abs(b - a) <= d ? b : a + Math.sign(b - a) * d; }
+
+        function makeLine(from, to, color, opacity) {
+            const line = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints([from, to]),
+                new THREE.LineBasicMaterial({ color, transparent: true, opacity })
+            );
+            scene.add(line);
+            return line;
+        }
+
+        function removeLine(line) {
+            if (line) dropMesh(line);
+        }
+
+        function fpDropDroneFx(d) {
+            removeLine(d.warn);
+            removeLine(d.heal);
+            d.warn = d.heal = null;
+        }
+
+        // Elimina todo lo que ha generado el jefe (reinicio o reaparición)
+        function fpClear() {
+            const f = G.fp;
+            if (!f) return;
+            f.drones.forEach(d => { fpDropDroneFx(d); dropMesh(d.group); });
+            f.drones.length = 0;
+            if (f.hole) { dropMesh(f.hole.group); f.hole = null; }
+            f.insignias.forEach(s => dropMesh(s.group));
+            f.insignias.length = 0;
+            f.timers.length = 0;
+            f.shaking = false;
+        }
+
+        // ForceDronesOff: al morir explotan sus células, el agujero negro y los sellos pendientes
+        function fpForceOff() {
+            const f = G.fp;
+            if (!f) return;
+            f.drones.forEach(d => burst(d.group.position, 0xffb84d, 12, 6));
+            if (f.hole) burst(f.hole.group.position, 0xb300ff, 30, 9);
+            fpClear();
+        }
+
+        // Rotación del rotationBone y "texturas" del núcleo (reposo / herido / atacando)
+        function fpVisual(f, dt) {
+            const u = finishMarker.userData;
+            const absRot = Math.max(45, Math.abs(f.rot));
+            if (f.rot !== f.rotTarget) f.rot = moveTowards(f.rot, f.rotTarget, dt * (absRot / 2 + 5));
+            u.bone.rotation.z += dt * f.rot * DEG;
+            const m = u.core.material;
+            if (f.inAction) {
+                m.color.setHex(0xff99aa);
+                m.emissive.setHex(0xff2255);
+                f.idleT = 0;
+                f.hurtT = 0;
+                u.core.position.set(0, 0, 0);
+                u.bone.position.set(0, 0, 0);
+            } else if (f.hurtT > 0) {
+                f.hurtT = Math.max(0, f.hurtT - dt);
+                m.color.setHex(0xffffff);
+                m.emissive.setHex(0xff5566);
+                const j = f.hurtT * 2;
+                u.core.position.set((Math.random() * 2 - 1) * j, 0, (Math.random() * 2 - 1) * j);
+                u.bone.position.copy(u.core.position);
+            } else {
+                u.core.position.set(0, 0, 0);
+                u.bone.position.set(0, 0, 0);
+                f.idleT -= dt;
+                if (f.idleT <= 0) {
+                    f.idleTex = f.idleTex ? 0 : 1;
+                    f.idleT = f.idleTex ? 0.25 : 0.5 + Math.random() * 0.5;
+                }
+                m.color.setHex(f.idleTex ? 0xffeeaa : 0xffdd66);
+                m.emissive.setHex(f.idleTex ? 0xffd24a : 0xffaa22);
+            }
+        }
+
+        function fpUpdate(dt) {
+            const f = G.fp;
+            if (!f || !finishMarker.visible || dt <= 0) return;
+            fpVisual(f, dt);
+            if (!G.bossAlive) return;
+            fpUpdateHole(f, dt);
+            fpUpdateInsignias(f, dt);
+            fpUpdateDrones(f, dt);
+            if (!G.bossEngaged || G.phase !== 'play') return;
+
+            const due = [];
+            f.timers = f.timers.filter(t => {
+                t.t -= dt;
+                if (t.t <= 0) { due.push(t); return false; }
+                return true;
+            });
+            due.forEach(t => { if (G.fp === f && G.bossAlive) t.fn(); });
+            if (G.fp !== f || !G.bossAlive) return;
+
+            // CheckHealth: la barra secundaria muestra el tiempo hasta la siguiente oleada
+            if (!f.healing) {
+                const target = f.droneCd / fpMaxDroneCd(f);
+                f.secondary = moveTowards(f.secondary, target, (Math.abs(f.secondary - target) + 1) * dt);
+            }
+            // UpdateCooldowns
+            if (f.droneCd > 0) f.droneCd = moveTowards(f.droneCd, 0, dt);
+            if (f.attackCd > 0) f.attackCd = moveTowards(f.attackCd, 0, dt);
+            if (f.shaking) shake(0.25);
+
+            if (!f.inAction) {
+                if (f.droneCd <= 0) fpStartDrones(f);
+                else if (f.droneCd > 3 && f.attackCd <= 0) fpChooseAttack(f);
+            } else if (f.curProj < f.projAmount) {
+                fpBarrage(f, dt);
+            }
+        }
+
+        const FP_ATTACK_BANNER = [
+            ['¡ONDA DE CALCIO!\nNo te quedes quieto', '#ffffff'],
+            ['¡GRÁNULOS CORTICALES!\nEsquívalos o devuélvelos con PARRY', '#00ffe6'],
+            ['¡BLOQUEO DE POLISPERMIA!\nQue no te alcance la singularidad', '#ff66ff']
+        ];
+
+        function fpChooseAttack(f) {
+            const n = f.hole ? 2 : 3;
+            let a = Math.floor(Math.random() * n);
+            if (a === f.prev) a = a + 1 < n ? a + 1 : 0;
+            f.inAction = true;
+            f.attackCd = FP.attackCd[a];
+            // AttackWindup: destello del color del ataque 1 s antes de lanzarlo
+            const front = BOSS_C.clone();
+            front.z += 3;
+            flashRing(front, FP.attackColor[a]);
+            burst(front, FP.attackColor[a], 14, 5);
+            banner(FP_ATTACK_BANNER[a][0], FP_ATTACK_BANNER[a][1]);
+            const fn = [fpInsignia, fpHoming, fpBlackHole][a];
+            fpLater(f, FP.windup, () => fn(f));
+            f.prev = a;
+        }
+
+        // --- Ataque 0: sello de luz (VirtueInsignia predictiva, 2-3 cargas) ---
+        function fpInsignia(f) {
+            f.inAction = false;
+            fpSpawnInsignia(f, G.bossHp > G.bossMaxHp / 2 ? FP.insCharges[0] : FP.insCharges[1]);
+            if (f.droneCd < 1) f.droneCd = 1;
+        }
+
+        function fpSpawnInsignia(f, charges) {
+            // Predicción original: 1.3 s de movimiento a velocidad completa (21.4u) con un pilar de radio 24u;
+            // se conserva esa proporción con el radio adaptado al conducto.
+            const pos = new THREE.Vector3(G.pos.x, 0, G.pos.z);
+            const hv = Math.hypot(G.vel.x, G.vel.z);
+            if (hv > 0.5) {
+                const lead = FP.insR * (21.385 / 24);
+                pos.x += G.vel.x / hv * lead;
+                pos.z += G.vel.z / hv * lead;
+            }
+            pos.x = THREE.MathUtils.clamp(pos.x, -HALF_W, HALF_W);
+            pos.z = THREE.MathUtils.clamp(pos.z, Z_MIN, Z_MAX);
+
+            const group = new THREE.Group();
+            group.position.copy(pos);
+            const rings = [];
+            for (let i = 0; i < 4; i++) {
+                const r = new THREE.Mesh(
+                    new THREE.RingGeometry(FP.insR * 0.8, FP.insR, 6),
+                    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: i ? 0.5 : 0.9, side: THREE.DoubleSide, depthWrite: false })
+                );
+                r.rotation.x = -Math.PI / 2;
+                r.position.y = 0.06;
+                group.add(r);
+                rings.push(r);
+            }
+            const pillarMat = new THREE.MeshBasicMaterial({ color: 0xfff4d6, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+            const pillar = new THREE.Mesh(new THREE.CylinderGeometry(FP.insR, FP.insR, 14, 32, 1, true), pillarMat);
+            const inner = new THREE.Mesh(new THREE.CylinderGeometry(FP.insR * 0.5, FP.insR * 0.5, 14, 24, 1, true), pillarMat.clone());
+            pillar.add(inner);
+            pillar.position.y = 7;
+            pillar.visible = false;
+            group.add(pillar);
+            scene.add(group);
+            f.insignias.push({ group, rings, pillar, charges, act: 0, dist: 0, len: 0, exploded: false, hit: false });
+        }
+
+        function fpUpdateInsignias(f, dt) {
+            for (let i = f.insignias.length - 1; i >= 0; i--) {
+                const s = f.insignias[i];
+                if (!s.exploded) {
+                    // Carga: gira a 720 °/s y sus anillos se separan marcando la columna
+                    s.group.rotation.y += dt * 720 * DEG;
+                    s.act = Math.min(1, s.act + dt * FP.insWindup);
+                    s.dist = moveTowards(s.dist, 1, dt * (FP.insWindup * 2 * (1 - s.dist)));
+                    s.rings.forEach((r, k) => { r.position.y = 0.06 + 3 * k * s.dist; });
+                    if (s.act >= 1) {
+                        s.exploded = true;
+                        s.len = 2;              // explosionLength (1) + 1: 1 s a tamaño completo y 1 s encogiéndose
+                        s.rings.forEach(r => { r.visible = false; });
+                        s.pillar.visible = true;
+                        shake(0.9);
+                        if (s.charges > 1) fpSpawnInsignia(f, s.charges - 1);
+                    }
+                } else {
+                    s.len = moveTowards(s.len, 0, dt);
+                    const w = Math.min(1, s.len);
+                    s.pillar.scale.set(Math.max(0.001, w), 1, Math.max(0.001, w));
+                    if (!s.hit && w > 0 && G.phase === 'play') {
+                        const d = Math.hypot(G.pos.x - s.group.position.x, G.pos.z - s.group.position.z);
+                        if (d < FP.insR * w + PLAYER_R) {
+                            // LaunchFromPoint + GetHurt(30)
+                            s.hit = true;
+                            G.vel.y = 18;
+                            G.grounded = false;
+                            hurt(FP.insDmg);
+                        }
+                    }
+                    if (s.len <= 0) {
+                        dropMesh(s.group);
+                        f.insignias.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+        // --- Ataque 1: ráfaga teledirigida (50 / 75 proyectiles en espiral) ---
+        function fpHoming(f) {
+            f.inAction = true;
+            f.projCd = 1;
+            f.curProj = 0;
+            f.rotTarget = Math.random() < 0.5 ? FP.rotBarrage : -FP.rotBarrage;
+            if ((f.rotTarget > 0 && f.rot < 0) || (f.rotTarget < 0 && f.rot > 0)) f.rot = 0;
+            f.projAmount = G.bossHp > G.bossMaxHp / 2 ? FP.orbs[0] : FP.orbs[1];
+        }
+
+        function fpBarrage(f, dt) {
+            // El intervalo depende de la velocidad de giro: lento al principio, ~36/s a 360 °/s
+            f.projCd = moveTowards(f.projCd, 0, dt * (Math.abs(f.rot) / 10));
+            if (f.projCd <= 0) {
+                // Nace en rotationBone.up * radio y sale con la rotación del hueso: hacia delante, por su eje de giro
+                const a = finishMarker.userData.bone.rotation.z;
+                const up = new THREE.Vector3(-Math.sin(a), Math.cos(a), 0);
+                const from = new THREE.Vector3(up.x * FP.orbRing, BOSS_C.y + up.y * 2.9, OOCYTE_Z + 1.2);
+                fireOrb(from, new THREE.Vector3(0, 0, 1));
+                f.projCd = 1;
+                f.curProj++;
+            }
+            if (f.curProj >= f.projAmount) {
+                f.inAction = false;
+                f.rotTarget = f.rot >= 0 ? FP.rotIdle : -FP.rotIdle;
+                if (f.droneCd < 1) f.droneCd = 1;
+            }
+        }
+
+        // --- Ataque 2: agujero negro que persigue al jugador y deja su vitalidad en 1 ---
+        function fpBlackHole(f) {
+            const group = new THREE.Group();
+            group.position.copy(BOSS_C);
+            group.position.z += 3;
+            const body = new THREE.Mesh(new THREE.SphereGeometry(0.75, 16, 12), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+            const aura = new THREE.Mesh(
+                new THREE.SphereGeometry(1.25, 16, 12),
+                new THREE.MeshBasicMaterial({ color: 0xb300ff, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false })
+            );
+            group.add(body, aura);
+            scene.add(group);
+            const dir = eyePos(new THREE.Vector3()).sub(group.position).normalize();
+            f.hole = { group, aura, dir, zap: 0.5 + Math.random() };
+            burst(group.position, 0xb300ff, 30, 8);
+            f.inAction = false;
+            if (f.droneCd < 1) f.droneCd = 1;
+        }
+
+        function fpUpdateHole(f, dt) {
+            const h = f.hole;
+            if (!h) return;
+            const p = h.group.position;
+            const target = tmpC.set(G.pos.x, G.pos.y + 1.4, G.pos.z);
+            turnTowards(h.dir, tmpB.subVectors(target, p).normalize(), FP.holeTurn * DEG * dt);
+            p.addScaledVector(h.dir, FP.holeSpeed * dt);
+            h.aura.position.set((Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.1);
+            h.zap -= dt;
+            if (h.zap <= 0) {
+                h.zap = 0.5 + Math.random() * 2.5;
+                const n = 2 + Math.floor(Math.random() * 4);
+                for (let i = 0; i < n; i++) {
+                    const dir = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+                    tracer(p.clone(), p.clone().addScaledVector(dir, 6), 0xd27bff);
+                }
+            }
+            if (G.phase === 'play' && p.distanceTo(target) < 1.8) {
+                burst(p, 0xb300ff, 40, 10);
+                flashRing(p.clone(), 0xff00ff);
+                dropMesh(h.group);
+                f.hole = null;
+                shake(0.8);
+                hurt(G.hp > 10 ? G.hp - 1 : 10);
+            }
+        }
+
+        // --- Oleadas de células (DroneFlesh) y curación ---
+        function fpStartDrones(f) {
+            f.started = true;
+            f.droneCd = fpMaxDroneCd(f);
+            f.attackCd = 3;
+            f.inAction = true;
+            f.rot = f.rotTarget = 0;
+            f.droneAmount = G.bossHp > G.bossMaxHp / 2 ? FP.drones[0] : FP.drones[1];
+            f.timesHealed++;
+            f.shaking = true;
+            if (f.drones.length <= 0) {
+                f.healing = true;
+                f.secondary = 0;
+                banner('¡CÉLULAS DE LA CORONA!\nDestrúyelas antes de que curen al Ovocito II', '#ffb84d');
+                fpLater(f, 1, () => fpSpawnDrones(f));
+            } else {
+                fpStartHealing(f);
+            }
+        }
+
+        function fpSpawnDrones(f) {
+            f.spawning = true;
+            const n = f.droneAmount;
+            if (f.curDrone < n) {
+                f.secondary = f.curDrone / n;
+                const step = Math.PI * 2 / n;
+                const ang = step / 2 + f.curDrone * step;
+                fpMakeDrone(f, new THREE.Vector3(Math.sin(ang) * FP.droneRx, FP.droneY + Math.cos(ang) * FP.droneRy, OOCYTE_Z + FP.droneZ));
+                f.curDrone++;
+                fpLater(f, 0.1, () => fpSpawnDrones(f));
+            } else {
+                f.inAction = false;
+                f.rotTarget = Math.random() < 0.5 ? FP.rotIdle : -FP.rotIdle;
+                f.shaking = false;
+                f.curDrone = 0;
+                f.droneCd = FP.droneCd;
+                f.healing = false;
+                f.spawning = false;
+            }
+            updateBossHud();
+        }
+
+        function fpMakeDrone(f, pos) {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 10), new THREE.MeshPhongMaterial({ color: 0xffb84d, emissive: 0xaa3300, shininess: 50 }));
+            const eyeBall = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+            eyeBall.position.z = 0.42;
+            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: 0xcc0022 }));
+            pupil.position.z = 0.62;
+            const charge = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff3344, transparent: true, opacity: 0.85 }));
+            charge.position.z = 0.95;
+            charge.visible = false;
+            group.add(body, eyeBall, pupil, charge);
+            group.position.copy(pos);
+            const d = { group, charge, base: pos.clone(), t: Math.random() * 6, cd: 2 + Math.random(), inAction: false, shootT: 0, aim: new THREE.Vector3(), warn: null, heal: null };
+            group.traverse(m => { m.userData.drone = d; });
+            scene.add(group);
+            f.drones.push(d);
+            burst(pos, 0xffb84d, 10, 5);
+        }
+
+        function fpUpdateDrones(f, dt) {
+            const eye = eyePos(new THREE.Vector3());
+            f.drones.slice().forEach(d => {
+                d.t += dt;
+                // Durante la curación quedan inmóviles (Rigidbody cinemático)
+                if (!d.heal) d.group.position.set(d.base.x + Math.sin(d.t * 1.7) * 0.35, d.base.y + Math.sin(d.t * 2.3) * 0.3, d.base.z + Math.cos(d.t * 1.3) * 0.3);
+                d.group.lookAt(d.inAction ? d.aim : eye);
+                if (!G.bossEngaged || G.phase !== 'play') return;
+                if (d.inAction) {
+                    d.shootT -= dt;
+                    if (d.shootT <= 0) fpDroneShoot(d);
+                    return;
+                }
+                if (d.cd > 0) {
+                    d.cd = moveTowards(d.cd, 0, dt);
+                    if (d.cd <= 1) {
+                        d.charge.visible = true;
+                        d.charge.scale.setScalar(Math.max(0.001, (1 - d.cd) * 2.5 * 0.4));
+                    }
+                } else {
+                    // PrepareBeam: fija la puntería y muestra la línea de aviso 0.5 s
+                    d.inAction = true;
+                    d.cd = 1 + Math.random() * 2;
+                    d.aim.copy(eye);
+                    const from = d.group.position.clone();
+                    const dir = d.aim.clone().sub(from).normalize();
+                    d.warn = makeLine(from, from.clone().addScaledVector(dir, 60), 0xff2244, 0.6);
+                    d.shootT = FP.droneWarn;
+                }
+            });
+        }
+
+        function rayPointDist(from, dir, pt) {
+            const t = tmpB.subVectors(pt, from).dot(dir);
+            if (t < 0) return Infinity;
+            return tmpB.copy(from).addScaledVector(dir, t).distanceTo(pt);
+        }
+
+        function fpDroneShoot(d) {
+            removeLine(d.warn);
+            d.warn = null;
+            d.charge.visible = false;
+            d.inAction = false;
+            const from = d.group.position.clone();
+            const dir = d.aim.clone().sub(from).normalize();
+            tracer(from, from.clone().addScaledVector(dir, 60), 0xff3344);
+            // Haz instantáneo (RevolverBeam enemigo): daña si el jugador sigue sobre la línea de aviso
+            const eye = eyePos(new THREE.Vector3());
+            const body = new THREE.Vector3(G.pos.x, G.pos.y + 1.1, G.pos.z);
+            if (Math.min(rayPointDist(from, dir, eye), rayPointDist(from, dir, body)) < 0.75) hurt(FP.droneBeamDmg);
+        }
+
+        function killDrone(d, src) {
+            const f = G.fp;
+            if (!f) return;
+            const i = f.drones.indexOf(d);
+            if (i < 0) return;
+            f.drones.splice(i, 1);
+            fpDropDroneFx(d);
+            burst(d.group.position, 0xffb84d, 18, 7);
+            dropMesh(d.group);
+            if (src === 'parry') addStyle(80, 'DEVOLUCIÓN', { color: UK_GREEN });
+            else addStyle(50, 'BAJA');
+            addKillCombo();
+            updateBossHud();
+        }
+
+        function fpStartHealing(f) {
+            f.healing = true;
+            f.secondary = 0;
+            f.drones.forEach(d => { d.heal = makeLine(d.group.position.clone(), BOSS_C.clone(), 0x66ff88, 0.9); });
+            f.dmgMult = FP.healDamageMult;
+            banner('¡CURACIÓN!\nDestruye las células antes de que el Ovocito II las absorba', '#66ff88');
+            fpLater(f, FP.healDelay, () => fpHealFromDrone(f));
+            updateBossHud();
+        }
+
+        function fpHealFromDrone(f) {
+            if (G.bossHp <= 0) return;
+            if (f.drones.length <= 0) {
+                f.dmgMult = 1;
+                fpSpawnDrones(f);
+                return;
+            }
+            const d = f.drones.shift();
+            G.bossHp = Math.min(G.bossMaxHp, G.bossHp + FP.healPerDrone);
+            burst(BOSS_C, 0x66ff88, 16, 6);
+            fpDropDroneFx(d);
+            burst(d.group.position, 0xffb84d, 14, 6);
+            dropMesh(d.group);
+            updateBossHud();
+            fpLater(f, FP.healStep, () => fpHealFromDrone(f));
         }
 
         // ==========================================
@@ -1920,7 +2641,7 @@ Reiniciando al inicio de la capa...</div>
 
             if (G.bossAlive && G.pos.z <= BOSS_ENGAGE_Z && !G.bossEngaged) {
                 G.bossEngaged = true;
-                banner('¡JEFE FINAL: OVOCITO II!\nDispara a la Corona, usa GOLPE (F) y devuelve sus ondas con PARRY', '#ffdd66');
+                banner('¡JEFE FINAL: OVOCITO II!\nDestruye sus células antes de que lo curen · devuelve sus gránulos con PARRY', '#ffdd66');
             }
             updateBossHud();
         }
@@ -2291,17 +3012,6 @@ Reiniciando al inicio de la capa...</div>
             ui.kills.textContent = 'BAJAS ' + G.kills;
             ui.layer.textContent = L.title;
             ui.layer.style.color = L.css;
-            if (G.meter > 0) {
-                const idx = Math.min(STYLE_RANKS.length - 1, Math.floor(G.meter / METER_STEP));
-                const r = STYLE_RANKS[idx];
-                const frac = idx === STYLE_RANKS.length - 1 ? 1 : (G.meter - idx * METER_STEP) / METER_STEP;
-                ui.rank.style.display = 'block';
-                ui.rank.style.color = r.css;
-                ui.rankName.textContent = r.name;
-                ui.rankFill.style.width = (frac * 100) + '%';
-            } else {
-                ui.rank.style.display = 'none';
-            }
         }
 
         // ==========================================
@@ -2344,11 +3054,14 @@ Reiniciando al inicio de la capa...</div>
             updatePlayer(dt);
             updateSpawns();
             updateBolts(dt);
+            fpUpdate(dt);
             updateAnims(dt);
             animateObstacles(dt);
             updateFx(dt);
             swimTime += dt;
-            if (G.phase === 'play') G.meter = Math.max(0, G.meter - dt * (18 + Math.floor(G.meter / METER_STEP) * 10));
+            if (G.phase === 'play') UKStyle.update(dt);
+            if (G.multikillT > 0) G.multikillT -= dt * 10;
+            else if (G.multikill !== 0) G.multikill = 0;
 
             const pz = G.pos.z;
 

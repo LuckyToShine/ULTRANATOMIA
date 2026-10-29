@@ -13,7 +13,7 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; color: #fff; user-select: none; -webkit-user-select: none; touch-action: none; }
@@ -136,6 +136,56 @@
             .diff-btn .diff-sub { font-size: 8px; }
             .diff-info { font-size: 10px; min-height: 18px; margin-top: 2px; }
         }
+
+        /* HUD de estilo ULTRAKILL (StyleCanvas: panel 442x496, 1u = 1px del lienzo original) */
+        #uk-style { --w: clamp(150px, 21vw, 300px); --u: calc(var(--w) / 442); position: absolute; top: 136px; right: 14px; z-index: 3; pointer-events: none; width: var(--w); background: rgba(0, 0, 0, .49); display: none; }
+        #uk-style.on { display: block; }
+        #uk-style-top { height: calc(var(--u) * 150); background: rgba(0, 0, 0, .5); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #uk-style-rank { font-family: 'Anton', Impact, 'Arial Narrow', sans-serif; font-weight: 400; font-size: calc(var(--u) * 112); line-height: 1; white-space: nowrap; color: #fff; letter-spacing: calc(var(--u) * 2); }
+        #uk-style-rank.ultra { color: #ffd700; text-shadow: calc(var(--u) * 3) calc(var(--u) * 4) 0 #ff6a00; }
+        #uk-style-track { height: calc(var(--u) * 25); margin: calc(var(--u) * 5) 0; background: #000; }
+        #uk-style-fill { height: 100%; width: 0; background: #fff; }
+        #uk-style-feed { height: calc(var(--u) * 250); background: rgba(0, 0, 0, .5); padding: calc(var(--u) * 6) calc(var(--u) * 10); overflow: hidden; font-family: 'VT323', 'Courier New', monospace; font-size: calc(var(--u) * 46); line-height: 1.02; color: #fff; }
+        #uk-style-feed div { white-space: nowrap; }
+        @media (max-height: 500px) and (orientation: landscape) {
+            #uk-style { --w: clamp(130px, 19vw, 210px); top: 124px; }
+        }
+
+        /* Pantalla de rango final de ULTRAKILL (FinalRank): lienzo virtual de 1000x700 escalado a la pantalla */
+        #uk-final { position: fixed; inset: 0; z-index: 9; font-family: 'VT323', 'Courier New', monospace; color: #fff; cursor: pointer; }
+        #uk-final.hidden { display: none; }
+        /* StatsManager.HideShit: el HUD de juego se oculta durante la pantalla de rango */
+        body.ukf-on #top-actions, body.ukf-on #instructions { display: none; }
+        #ukf-box { position: absolute; left: 50%; top: 50%; width: 1000px; height: 700px; transform-origin: center; }
+        .ukf-panel { position: absolute; background: rgba(0, 0, 0, .63); overflow: hidden; visibility: hidden; }
+        .ukf-panel.on, .ukf-item.on { visibility: visible; }
+        .ukf-item { visibility: hidden; }
+        .ukf-panel.on.pop { animation: ukfOpen .16s linear backwards; }
+        @keyframes ukfOpen {
+            0% { transform: scale(.05, .05); animation-timing-function: cubic-bezier(.15, .8, .3, 1); }
+            50% { transform: scale(1, .05); animation-timing-function: cubic-bezier(.15, .8, .3, 1); }
+            100% { transform: scale(1, 1); }
+        }
+        .ukf-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+        #ukf-title { left: 0; top: 0; width: 1000px; height: 100px; text-align: center; }
+        #ukf-level { font-size: 56px; line-height: 1; padding-top: 6px; }
+        #ukf-diff { font-size: 40px; line-height: 1; }
+        .ukf-row { left: 0; width: 480px; height: 80px; font-size: 38px; line-height: 80px; }
+        .ukf-row .ukf-label { position: absolute; left: 16px; color: #808080; }
+        .ukf-row .ukf-val { position: absolute; right: 16px; }
+        .ukf-rank { left: 500px; width: 80px; height: 80px; font-size: 74px; line-height: 80px; text-align: center; }
+        #ukf-extra { left: 0; top: 420px; width: 480px; height: 180px; padding: 16px; font-size: 38px; line-height: 1.05; white-space: pre; }
+        #ukf-total { right: 0; top: 120px; width: 280px; height: 280px; font-size: 320px; line-height: 280px; text-align: center; }
+        #ukf-points { right: 0; top: 620px; width: 380px; height: 80px; font-size: 38px; line-height: 80px; visibility: visible; }
+        #ukf-points .ukf-label { position: absolute; left: 32px; color: #808080; }
+        #ukf-points .ukf-val { position: absolute; right: 32px; }
+        .ukf-p { color: #ff8000; }
+        #ukf-actions { position: absolute; right: 0; top: 520px; width: 380px; height: 80px; display: flex; gap: 20px; visibility: hidden; }
+        #ukf-actions.on { visibility: visible; }
+        #ukf-actions button { flex: 1; font: inherit; font-size: 34px; background: rgba(0, 0, 0, .63); color: #fff; border: 2px solid #fff; cursor: pointer; touch-action: manipulation; }
+        #ukf-actions button.secondary { border-color: #aaa; color: #ccc; }
+        #ukf-actions button:hover, #ukf-actions button:active { background: #fff; color: #000; }
+        #ukf-hint { position: absolute; left: 0; top: 615px; width: 480px; font-size: 28px; color: #888; }
 
         /* ULTRAKILL Authentic Terminal Death Screen Styles */
         .uk-death-overlay {
@@ -313,6 +363,36 @@
             </div>
         </div>
     </div>
+    <div id="uk-style">
+        <div id="uk-style-top"><div id="uk-style-rank"></div></div>
+        <div id="uk-style-track"><div id="uk-style-fill"></div></div>
+        <div id="uk-style-feed"></div>
+    </div>
+
+    <!-- Pantalla de rango final (FinalRank de ULTRAKILL) -->
+    <div id="uk-final" class="hidden">
+        <div id="ukf-box">
+            <div class="ukf-panel pop" id="ukf-title">
+                <div class="ukf-item" id="ukf-level">ULTRANATOMIA &middot; OVOCITO II</div>
+                <div class="ukf-item" id="ukf-diff">-- PRO --</div>
+            </div>
+            <div class="ukf-panel pop ukf-row" id="ukf-time-row" style="top:120px"><span class="ukf-label">TIEMPO:</span><span class="ukf-val ukf-item" id="ukf-time">0:00.000</span></div>
+            <div class="ukf-panel pop ukf-rank" id="ukf-time-box" style="top:120px"><span class="ukf-item" id="ukf-time-rank"></span><i class="ukf-flash"></i></div>
+            <div class="ukf-panel pop ukf-row" id="ukf-acc-row" style="top:220px"><span class="ukf-label">PRECISI&Oacute;N:</span><span class="ukf-val ukf-item" id="ukf-acc">0.0%</span></div>
+            <div class="ukf-panel pop ukf-rank" id="ukf-acc-box" style="top:220px"><span class="ukf-item" id="ukf-acc-rank"></span><i class="ukf-flash"></i></div>
+            <div class="ukf-panel pop ukf-row" id="ukf-style-row" style="top:320px"><span class="ukf-label">ESTILO:</span><span class="ukf-val ukf-item" id="ukf-style">0</span></div>
+            <div class="ukf-panel pop ukf-rank" id="ukf-style-box" style="top:320px"><span class="ukf-item" id="ukf-style-rank"></span><i class="ukf-flash"></i></div>
+            <div class="ukf-panel pop" id="ukf-extra"><span class="ukf-item" id="ukf-extra-text"></span></div>
+            <div class="ukf-panel pop" id="ukf-total"><span class="ukf-item" id="ukf-total-rank"></span><i class="ukf-flash"></i></div>
+            <div class="ukf-panel pop" id="ukf-points"><span class="ukf-label">TOTAL:</span><span class="ukf-val" id="ukf-points-val">+0<span class="ukf-p">P</span></span></div>
+            <div id="ukf-actions">
+                <button type="button" id="ukfRetry">REPETIR [R]</button>
+                <button type="button" id="ukfMenu" class="secondary">MEN&Uacute; [M]</button>
+            </div>
+            <div id="ukf-hint">Clic o [Enter] para saltar</div>
+        </div>
+    </div>
+
     <div id="top-actions">
         <button id="btnRestart">Reiniciar</button>
         <button id="btnMenu">Men&uacute; Demo</button>
@@ -372,12 +452,197 @@
             qte:     { name: 'QTE',     color: 0xa23bff, css: '#a23bff', tema: 'Procesos secuenciales' }
         };
 
-        const BOSS_PHASES = [
-            { type: 'disparo', title: 'FASE 1/4 · CORONA RADIATA', tema: 'Hialuronidasa y dispersión folicular', color: '#ffd400', hex: 0xffd400 },
-            { type: 'golpe',   title: 'FASE 2/4 · ZONA PELÚCIDA (ZP3)', tema: 'Reconocimiento y perforación acrosómica', color: '#ff3344', hex: 0xff3344 },
-            { type: 'parry',   title: 'FASE 3/4 · REACCIÓN CORTICAL', tema: 'Bloqueo de la polispermia y ondas de Ca²⁺', color: '#2a9dff', hex: 0x2a9dff },
-            { type: 'qte',     title: 'FASE 4/4 · SINGAMIA Y FECUNDACIÓN', tema: 'Secuencia final de fusión pronuclear', color: '#a23bff', hex: 0xa23bff }
+        // Jefe final: Ovocito II con la IA de la FLESH PRISON de ULTRAKILL (FleshPrison.cs).
+        // Elige sus ataques sin repetir; cada uno se contrarresta respondiendo la mecánica indicada.
+        // cd = attackCooldown original tras elegir el ataque; dmg = daño al jefe si respondes bien.
+        const BOSS_ATTACKS = [
+            { key: 'insignia', mech: 'qte',     cd: 4, dmg: 15, color: '#ffffff', hex: 0xffffff, title: 'ONDA DE CALCIO', tema: 'Esquiva los pilares' },
+            { key: 'homing',   mech: 'parry',   cd: 1, dmg: 20, color: '#00ffe6', hex: 0x00ffe6, title: 'GRÁNULOS CORTICALES', tema: 'Devuelve la ráfaga' },
+            { key: 'hole',     mech: 'disparo', cd: 2, dmg: 15, color: '#ff00ff', hex: 0xff00ff, title: 'BLOQUEO DE POLISPERMIA', tema: 'Colapsa el vórtice' }
         ];
+        // Las células se pueden destruir al aparecer (como al dispararlas en ULTRAKILL) o, como última
+        // oportunidad, durante los 5 s de la curación
+        const BOSS_WAVE = { key: 'drones', mech: 'golpe', color: '#ffb84d', hex: 0xffb84d, title: 'CÉLULAS DE LA CORONA', tema: 'Destrúyelas ya' };
+        const BOSS_DRONES = { key: 'drones', mech: 'golpe', color: '#66ff88', hex: 0x66ff88, title: '¡CURACIÓN!', tema: 'Última oportunidad: destrúyelas' };
+        const BOSS_MAX_HP = 100;
+        // Dificultad equivalente de la Flesh Prison: NOOB = Harmless (0), PRO = Lenient (1), ULTRA = Standard (2)
+        const FP_DIFFICULTY = { noob: 0, pro: 1, ultra: 2 };
+
+        // ==========================================
+        // HUD DE ESTILO ULTRAKILL (port de StyleHUD.cs)
+        // ==========================================
+        // maxMeter y drainSpeed son los valores serializados del StyleHUD original.
+        // Colores muestreados de los sprites RankD..RankU: letra(s) de color + resto de la palabra en blanco.
+        const UK_STYLE_RANKS = [
+            { l: 'D',   w: 'ESTRUCTIVO', max: 200,  drain: 1.0,  c: ['#0094ff'] },
+            { l: 'C',   w: 'AÓTICO',     max: 300,  drain: 1.25, c: ['#4cff00'] },
+            { l: 'B',   w: 'RUTAL',      max: 400,  drain: 1.5,  c: ['#ffd800'] },
+            { l: 'A',   w: 'NÁRQUICO',   max: 500,  drain: 2.0,  c: ['#ff6a00'] },
+            { l: 'S',   w: 'UPREMO',     max: 700,  drain: 3.0,  c: ['#ff0000'] },
+            { l: 'SS',  w: 'ÁDICO',      max: 850,  drain: 4.0,  c: ['#d10000', '#ff0000'] },
+            { l: 'SSS', w: 'ANGUINARIO', max: 1000, drain: 6.0,  c: ['#d10000', '#d10000', '#ff0000'] },
+            { l: 'ULTRANATÓMICO', w: '', max: 1500, drain: 8.0, ultra: true }
+        ];
+        // Colores de etiqueta de TextMeshPro usados en los bonus de ULTRAKILL
+        const UK_GREEN = '#00ff00', UK_ORANGE = '#ff8000', UK_CYAN = '#00ffff';
+
+        const UKStyle = {
+            el: document.getElementById('uk-style'),
+            rankEl: document.getElementById('uk-style-rank'),
+            fillEl: document.getElementById('uk-style-fill'),
+            feedEl: document.getElementById('uk-style-feed'),
+            meter: 0,
+            rank: 0,
+            combo: false,
+            maxReached: 0,
+            shaking: 0,
+            scale: 0,
+            queue: [],
+            queueWait: 0,
+            lines: [],
+            removals: [],
+            needsFit: true,
+
+            cur() { return UK_STYLE_RANKS[this.rank]; },
+
+            setRank(i) {
+                this.rank = Math.max(0, Math.min(UK_STYLE_RANKS.length - 1, i));
+                const r = this.cur();
+                this.rankEl.classList.toggle('ultra', !!r.ultra);
+                this.rankEl.innerHTML = r.ultra
+                    ? r.l
+                    : r.l.split('').map((ch, k) => '<span style="color:' + r.c[k] + '">' + ch + '</span>').join('') + r.w;
+                this.rankEl.style.fontSize = '';
+                this.needsFit = true;
+            },
+
+            // Ajusta el texto del rango al ancho del panel (el sprite original conserva su proporción)
+            fit() {
+                if (!this.el.classList.contains('on')) return;
+                this.needsFit = false;
+                const avail = this.rankEl.parentElement.clientWidth * 0.94;
+                const w = this.rankEl.scrollWidth;
+                if (w > avail && w > 0) {
+                    const base = parseFloat(getComputedStyle(this.rankEl).fontSize);
+                    this.rankEl.style.fontSize = (base * avail / w) + 'px';
+                }
+            },
+
+            comboStart() {
+                this.meter = Math.max(this.meter, Math.floor(this.cur().max / 4));
+                this.combo = true;
+            },
+
+            comboOver() {
+                this.meter = 0;
+                this.setRank(0);
+                this.combo = false;
+            },
+
+            ascend() {
+                while (this.meter >= this.cur().max) {
+                    this.meter -= this.cur().max;
+                    this.setRank(this.rank + 1);
+                    if (this.rank + 1 === UK_STYLE_RANKS.length - 1) break;
+                }
+                this.meter = Math.max(this.meter, Math.floor(this.cur().max / 4));
+                this.maxReached = Math.max(this.maxReached, this.rank);
+            },
+
+            descend() {
+                if (!this.combo) return;
+                if (this.rank > 0) {
+                    this.setRank(this.rank - 1);
+                    this.meter = this.cur().max - Math.floor(this.cur().max / 4);
+                } else {
+                    this.comboOver();
+                }
+            },
+
+            // AddPoints: devuelve los puntos reales sumados al estilo total (x1.5 contra jefes)
+            add(points, label, opts) {
+                const o = opts || {};
+                let gained = 0;
+                if (points > 0) {
+                    const num = points * (o.boss ? 1.5 : 1);
+                    gained = Math.round(num);
+                    this.meter += num;
+                    this.scale = 0.2;
+                }
+                if (label) this.queue.push({ label, color: o.color, count: o.count });
+                if (this.meter >= this.cur().max && this.rank < 7) this.ascend();
+                else if (this.meter > this.cur().max) this.meter = this.cur().max;
+                return gained;
+            },
+
+            // NewMovement.GetHurt: RemovePoints(0) + DescendRank()
+            hurt() {
+                this.shaking = 5;
+                this.descend();
+            },
+
+            reset() {
+                this.queue.length = 0;
+                this.lines.length = 0;
+                this.removals.length = 0;
+                this.queueWait = 0;
+                this.maxReached = 0;
+                this.shaking = this.scale = 0;
+                this.comboOver();
+                this.renderFeed();
+                this.el.classList.remove('on');
+            },
+
+            renderFeed() {
+                this.feedEl.innerHTML = this.lines.map(l => {
+                    const name = String(l.label).replace(/[<>&]/g, '');
+                    const tag = l.color ? '<span style="color:' + l.color + '">' + name + '</span>' : name;
+                    return '<div>+ ' + tag + (l.count >= 0 ? ' x' + l.count : '') + '</div>';
+                }).join('');
+            },
+
+            update(dt) {
+                if (this.meter > 0 && !this.combo) this.comboStart();
+                if (this.meter < 0) this.descend();
+                else this.meter -= dt * this.cur().drain * 15;
+                const show = this.combo;
+                if (this.el.classList.contains('on') !== show) this.el.classList.toggle('on', show);
+
+                // Lista de bonus: una entrada nueva cada 0.05s, cada una desaparece a los 3s
+                let changed = false;
+                if (this.queueWait > 0) this.queueWait -= dt;
+                if (this.queue.length && this.queueWait <= 0) {
+                    this.lines.unshift(this.queue.shift());
+                    this.removals.push(3);
+                    this.queueWait = 0.05;
+                    changed = true;
+                }
+                for (let i = this.removals.length - 1; i >= 0; i--) {
+                    this.removals[i] -= dt;
+                    if (this.removals[i] <= 0) {
+                        this.removals.splice(i, 1);
+                        this.lines.pop();
+                        changed = true;
+                    }
+                }
+                if (changed) this.renderFeed();
+                if (!show) return;
+                if (this.needsFit) this.fit();
+
+                this.fillEl.style.width = Math.max(0, Math.min(1, this.meter / this.cur().max)) * 100 + '%';
+                const u = this.el.clientWidth / 442;
+                let tx = 0, ty = 0;
+                if (this.shaking > 0) {
+                    tx = this.shaking * (Math.floor(Math.random() * 6) - 3) * u;
+                    ty = this.shaking * (Math.floor(Math.random() * 6) - 3) * u;
+                    this.shaking -= dt * 5;
+                }
+                const sc = this.scale > 0 ? 1 + this.scale : 1;
+                if (this.scale > 0) this.scale -= dt;
+                this.rankEl.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + sc + ')';
+            }
+        };
+        UKStyle.setRank(0);
 
         
         const DIFFICULTIES = {
@@ -625,7 +890,9 @@
         const BASE_FOV = 75;
         const TRIVIA_FOV = 64;
         const RANKS = ['D', 'C', 'B', 'A', 'S'];
-        const ACC_THRESH = [95, 85, 70, 50];
+        const DEG = Math.PI / 180;
+        // Las velocidades de la Flesh Prison se escalan con 16.45 u/s (velocidad de V1 en ULTRAKILL)
+        const SPEED_K = RUN_SPEED / 16.45;
 
         function zFor(i) { return FIRST_Z - i * SPACING; }
 
@@ -800,8 +1067,12 @@
                 coronaCells.add(cell);
             }
 
-            g.add(core, zona, coronaRing, coronaCells);
-            g.userData = { core, zona, coronaRing, coronaCells, t: 0 };
+            // La corona radiata hace de "rotationBone" de la Flesh Prison: gira y de ella salen los proyectiles
+            const bone = new THREE.Group();
+            bone.add(coronaRing, coronaCells);
+
+            g.add(core, zona, bone);
+            g.userData = { core, zona, coronaRing, coronaCells, bone, t: 0 };
             scene.add(g);
             return g;
         }
@@ -1064,9 +1335,9 @@
                 u.core.scale.setScalar(1 + 0.06 * Math.sin(u.t * 3));
                 u.zona.rotation.y += dt * 0.5;
                 u.zona.rotation.x += dt * 0.3;
-                u.coronaRing.rotation.z -= dt * 0.8;
                 u.coronaCells.rotation.y -= dt * 0.7;
-                u.coronaCells.rotation.z += dt * 0.4;
+                // Sin jefe activo gira a la velocidad de reposo de la Flesh Prison (45 °/s)
+                if (!GameState.boss) u.bone.rotation.z += dt * 45 * DEG;
             }
         }
 
@@ -1170,25 +1441,6 @@
                 const to = new THREE.Vector3(0, 3.2, o.z + 0.9);
                 anim(0.28, k => fist.position.lerpVectors(from, to, k * k), () => {
                     dropMesh(fist);
-                    if (o.isBoss) {
-                        const u = finishMarker && finishMarker.userData;
-                        burst(new THREE.Vector3(0, 3.2, o.z), MECH.golpe.color, 70, 13);
-                        flashRing(new THREE.Vector3(0, 3.2, o.z + 2), MECH.golpe.color);
-                        shake(0.8);
-                        if (u && u.zona) {
-                            const mat = u.zona.material;
-                            anim(0.45, k => {
-                                u.zona.scale.setScalar(1 + k * 0.9);
-                                mat.opacity = 0.55 * (1 - k);
-                            }, () => {
-                                u.zona.visible = false;
-                                finishClear(o);
-                            });
-                        } else {
-                            finishClear(o);
-                        }
-                        return;
-                    }
                     for (let i = 0; i < 70; i++) {
                         const pos = new THREE.Vector3((Math.random() - 0.5) * 11, 0.3 + Math.random() * 6, o.z + (Math.random() - 0.5) * 0.8);
                         const vel = new THREE.Vector3((Math.random() - 0.5) * 8, 2 + Math.random() * 8, (Math.random() - 0.3) * 12);
@@ -1217,21 +1469,12 @@
                     bolt.material.color.set(MECH.parry.color);
                     GameState.health = GameState.maxHealth;
                     emit('updateHealth', GameState.health);
-                    GameState.addStyle(100);
+                    GameState.addStyle(100, 'PARRY', { color: UK_GREEN });
                     emit('banner', { text: '¡PARRY! VITALIDAD 100%', color: MECH.parry.css });
                     anim(0.4, k => bolt.position.lerpVectors(hit, turret, k), () => {
                         dropMesh(bolt);
                         burst(turret, MECH.parry.color, 60, 12);
                         shake(0.5);
-                        if (o.isBoss) {
-                            const u = finishMarker && finishMarker.userData;
-                            if (u && u.core) {
-                                u.core.material.color.setHex(0xff88ff);
-                                u.core.material.emissive.setHex(0xaa22ff);
-                            }
-                            finishClear(o);
-                            return;
-                        }
                         removeObstacle(o);
                         finishClear(o);
                     });
@@ -1240,34 +1483,6 @@
 
             disparo(o) {
                 emit('banner', { text: '¡DISPARO!', color: MECH.disparo.css });
-                if (o.isBoss) {
-                    const targetPos = new THREE.Vector3(0, 3.2, o.z);
-                    const from = new THREE.Vector3(0.4, 1.6, GameState.player.z - 1);
-                    const bolt = glowSphere(0xffffaa, 0.35);
-                    anim(0.35, k => bolt.position.lerpVectors(from, targetPos, k), () => {
-                        dropMesh(bolt);
-                        burst(targetPos, MECH.disparo.color, 65, 13);
-                        flashRing(targetPos, MECH.disparo.color);
-                        shake(0.6);
-                        const u = finishMarker && finishMarker.userData;
-                        if (u) {
-                            anim(0.55, k => {
-                                if (u.coronaCells) u.coronaCells.scale.setScalar(1 + k * 1.4);
-                                if (u.coronaRing) {
-                                    u.coronaRing.scale.setScalar(1 + k * 0.9);
-                                    u.coronaRing.material.opacity = 0.85 * (1 - k);
-                                }
-                            }, () => {
-                                if (u.coronaCells) u.coronaCells.visible = false;
-                                if (u.coronaRing) u.coronaRing.visible = false;
-                                finishClear(o);
-                            });
-                        } else {
-                            finishClear(o);
-                        }
-                    });
-                    return;
-                }
                 const targetPos = new THREE.Vector3().copy(o.group.position).add(o.parts.target.position);
                 const from = new THREE.Vector3(0.4, 1.6, GameState.player.z - 1);
                 const bolt = glowSphere(0xffffaa, 0.25);
@@ -1297,16 +1512,16 @@
                 const qData = drawQuestion('qte', layer);
                 const words = qData.words.map(w => ({ t: w.t, order: w.order, picked: false }));
                 const totalTime = GameState.diff.questionTime;
-                const bossPhase = o.isBoss ? BOSS_PHASES[o.phaseIdx] : null;
+                const bossAtk = o.isBoss ? o.attack : null;
                 GameState.qte = { o, q: qData.q, steps: qData.steps, words, i: 0, time: totalTime, maxTime: totalTime, locked: false };
                 GameState.phase = 'qte';
                 emit('showQTE', {
                     q: qData.q,
                     words: words.map(w => w.t),
                     total: words.length,
-                    name: bossPhase ? bossPhase.title : MECH.qte.name,
-                    tema: bossPhase ? bossPhase.tema : MECH.qte.tema,
-                    color: bossPhase ? bossPhase.color : MECH.qte.css,
+                    name: bossAtk ? bossAtk.title : MECH.qte.name,
+                    tema: bossAtk ? bossAtk.tema : MECH.qte.tema,
+                    color: bossAtk ? bossAtk.color : MECH.qte.css,
                     maxTime: totalTime
                 });
             }
@@ -1316,6 +1531,615 @@
             o.cleared = true;
             GameState.onCleared(o);
         }
+
+        // ==========================================
+        // 3b. JEFE FINAL: OVOCITO II = FLESH PRISON (port de FleshPrison.cs adaptado a trivia)
+        // ==========================================
+        // Igual que la Flesh Prison: tras cada oleada de células (drones) empieza una cuenta atrás
+        // (barra blanca); si al terminar siguen vivas, las absorbe y se cura mientras solo recibe el 10%
+        // del daño. Entre oleadas elige, sin repetir, uno de sus ataques. Responder bien contraataca;
+        // fallar aplica el castigo del ataque. Todo corre en tiempo de juego (el bullet time lo frena).
+        function moveTowards(a, b, d) { return Math.abs(b - a) <= d ? b : a + Math.sign(b - a) * d; }
+
+        const tmpQ = new THREE.Quaternion();
+        const IDENT_Q = new THREE.Quaternion();
+        // Quaternion.RotateTowards sobre una dirección
+        function turnTowards(dir, want, maxRad) {
+            const ang = dir.angleTo(want);
+            if (ang < 1e-5) return;
+            tmpQ.setFromUnitVectors(dir, want);
+            if (ang > maxRad) tmpQ.slerpQuaternions(IDENT_Q, tmpQ, maxRad / ang);
+            dir.applyQuaternion(tmpQ).normalize();
+        }
+
+        const ORB_GEO = new THREE.SphereGeometry(0.3, 10, 8);
+        const ORB_MAT = new THREE.MeshBasicMaterial({ color: 0x00ffe6 });
+
+        const BossAI = {
+            create(z, diffId) {
+                const d = FP_DIFFICULTY[diffId] !== undefined ? FP_DIFFICULTY[diffId] : 1;
+                return {
+                    isBoss: true, z, group: finishMarker, parts: {}, cleared: false,
+                    hp: BOSS_MAX_HP, maxHp: BOSS_MAX_HP, type: null, attack: null,
+                    fp: {
+                        d, started: false, inAction: false, asking: false,
+                        rot: 45, rotTarget: 45, droneCd: 3, attackCd: 5, prev: 666,
+                        drones: [], droneAmount: 0, curDrone: 0, spawning: false, healing: false,
+                        dmgMult: 1, secondary: 0, shaking: false, hurtT: 0, idleT: 0.5, idleTex: 0,
+                        projAmount: 0, curProj: 0, projCd: 0, pendingAsk: null, launchT: 0,
+                        timers: [], orbs: [], hole: null, sigil: null, pillars: [], charges: 0, waveAsked: false
+                    }
+                };
+            },
+
+            later(f, t, fn) { f.timers.push({ t, fn }); },
+            maxDroneCd(f) { return !f.started ? 3 : (f.d === 2 ? 25 : 30); },
+            healPerDrone(f) { return 10 * (f.d === 0 ? 0.35 : f.d === 1 ? 0.75 : 1); },
+            alive(b) { return GameState.boss === b && !b.cleared && GameState.phase !== 'dead'; },
+            center(b) { return new THREE.Vector3(0, 3.2, b.z); },
+            hitPoint() { return new THREE.Vector3(GameState.player.x, 2.5, GameState.player.z - 2.5); },
+
+            droneAmount(b) {
+                let n = b.hp > b.maxHp / 2 ? 10 : 12;
+                if (b.fp.d <= 1) n = Math.round(n / (b.fp.d === 0 ? 2 : 1.5));
+                return Math.max(3, n);
+            },
+
+            update(b, dt) {
+                const f = b.fp;
+                this.visual(b, dt);
+                if (dt <= 0) return;
+                this.updateFx(b, dt);
+                const due = [];
+                f.timers = f.timers.filter(t => {
+                    t.t -= dt;
+                    if (t.t <= 0) { due.push(t); return false; }
+                    return true;
+                });
+                due.forEach(t => { if (this.alive(b)) t.fn(); });
+                if (!this.alive(b)) return;
+
+                // CheckHealth: la barra secundaria muestra el tiempo hasta la siguiente oleada
+                if (!f.healing) {
+                    const target = f.droneCd / this.maxDroneCd(f);
+                    f.secondary = moveTowards(f.secondary, target, (Math.abs(f.secondary - target) + 1) * dt);
+                }
+                // UpdateCooldowns (Harmless 0.75x, Lenient 0.9x)
+                if (f.droneCd > 0) f.droneCd = moveTowards(f.droneCd, 0, dt);
+                if (f.attackCd > 0) f.attackCd = moveTowards(f.attackCd, 0, dt * (f.d === 1 ? 0.9 : f.d === 0 ? 0.75 : 1));
+                if (f.shaking) shake(0.2);
+
+                if (f.pendingAsk) {
+                    f.launchT += dt;
+                    if (f.curProj >= 8 || f.launchT >= 2) {
+                        const atk = f.pendingAsk;
+                        f.pendingAsk = null;
+                        GameState.askBoss(atk);
+                    }
+                }
+                if (f.inAction && f.curProj < f.projAmount) {
+                    this.barrage(b, dt);
+                } else if (!f.inAction && !f.asking && GameState.phase === 'boss') {
+                    if (f.droneCd <= 0) this.startDrones(b);
+                    else if (f.drones.length && !f.waveAsked) { f.waveAsked = true; GameState.askBoss(BOSS_WAVE); }
+                    else if (f.droneCd > 3 && f.attackCd <= 0) this.chooseAttack(b);
+                }
+            },
+
+            // Rotación del rotationBone y "texturas" del núcleo (reposo / herido / atacando)
+            visual(b, dt) {
+                const f = b.fp;
+                const u = finishMarker && finishMarker.userData;
+                if (!u) return;
+                const absRot = Math.max(45, Math.abs(f.rot));
+                if (f.rot !== f.rotTarget) f.rot = moveTowards(f.rot, f.rotTarget, dt * (absRot / 2 + 5));
+                u.bone.rotation.z += dt * f.rot * DEG;
+                const m = u.core.material;
+                if (b.cleared) return;
+                if (f.inAction) {
+                    m.color.setHex(0xff99aa);
+                    m.emissive.setHex(0xff2255);
+                    f.idleT = 0;
+                    f.hurtT = 0;
+                    u.core.position.set(0, 0, 0);
+                } else if (f.hurtT > 0) {
+                    f.hurtT = Math.max(0, f.hurtT - dt);
+                    m.color.setHex(0xffffff);
+                    m.emissive.setHex(0xff5566);
+                    const j = f.hurtT * 2;
+                    u.core.position.set((Math.random() * 2 - 1) * j, 0, (Math.random() * 2 - 1) * j);
+                } else {
+                    u.core.position.set(0, 0, 0);
+                    f.idleT -= dt;
+                    if (f.idleT <= 0) {
+                        f.idleTex = f.idleTex ? 0 : 1;
+                        f.idleT = f.idleTex ? 0.25 : 0.5 + Math.random() * 0.5;
+                    }
+                    m.color.setHex(f.idleTex ? 0xffeeaa : 0xffdd66);
+                    m.emissive.setHex(f.idleTex ? 0xffd24a : 0xffaa22);
+                }
+                f.drones.forEach(d => {
+                    d.t += dt;
+                    if (!d.heal) d.group.position.set(d.base.x + Math.sin(d.t * 1.7) * 0.35, d.base.y + Math.sin(d.t * 2.3) * 0.3, d.base.z + Math.cos(d.t * 1.3) * 0.3);
+                    d.group.lookAt(camera.position);
+                });
+            },
+
+            // Proyectiles, sello y agujero negro avanzan hacia el jugador mientras dura la pregunta
+            updateFx(b, dt) {
+                const f = b.fp;
+                const hit = this.hitPoint();
+                f.orbs.forEach(o => {
+                    if (o.locked) return;
+                    o.speed += 25 * SPEED_K * dt;
+                    turnTowards(o.dir, tmpV.subVectors(hit, o.mesh.position).normalize(), 185 * 0.5 * DEG * dt);
+                    o.mesh.position.addScaledVector(o.dir, o.speed * dt);
+                    // Se quedan rondando a 2.6u hasta que se resuelve la pregunta
+                    const off = tmpV.subVectors(o.mesh.position, hit);
+                    if (off.length() < 2.6) o.mesh.position.copy(hit).addScaledVector(off.normalize(), 2.6);
+                });
+                if (f.hole && !f.hole.locked) {
+                    const h = f.hole;
+                    turnTowards(h.dir, tmpV.subVectors(hit, h.group.position).normalize(), 80 * DEG * dt);
+                    h.group.position.addScaledVector(h.dir, 8 * SPEED_K * dt);
+                    const off = tmpV.subVectors(h.group.position, hit);
+                    if (off.length() < 3.2) h.group.position.copy(hit).addScaledVector(off.normalize(), 3.2);
+                    h.aura.position.set((Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.1);
+                }
+                if (f.sigil) {
+                    const s = f.sigil;
+                    s.group.rotation.y += dt * 720 * DEG;
+                    s.act = Math.min(1, s.act + dt * 0.5);
+                    s.dist = moveTowards(s.dist, 1, dt * (1 - s.dist));
+                    s.rings.forEach((r, k) => { r.position.y = 0.06 + 3 * k * s.dist; });
+                }
+            },
+
+            chooseAttack(b) {
+                const f = b.fp;
+                const n = (!f.hole && f.d > 0) ? 3 : 2;
+                let a = Math.floor(Math.random() * n);
+                if (a === f.prev) a = a + 1 < n ? a + 1 : 0;
+                const atk = BOSS_ATTACKS[a];
+                f.inAction = true;
+                f.asking = true;
+                f.attackCd = atk.cd;
+                // AttackWindup: destello del color del ataque 1 s antes de lanzarlo
+                const front = this.center(b);
+                front.z += 3;
+                flashRing(front, atk.hex);
+                burst(front, atk.hex, 18, 6);
+                emit('banner', { text: '¡' + atk.title + '!', color: atk.color });
+                this.later(f, 1, () => this.launch(b, atk));
+                f.prev = a;
+            },
+
+            launch(b, atk) {
+                const f = b.fp;
+                const half = b.hp > b.maxHp / 2;
+                if (atk.key === 'insignia') {
+                    f.inAction = false;
+                    f.charges = half ? 2 : 3;
+                    this.spawnSigil(b);
+                    if (f.droneCd < 1) f.droneCd = 1;
+                } else if (atk.key === 'homing') {
+                    f.projCd = 1;
+                    f.curProj = 0;
+                    f.rotTarget = Math.random() < 0.5 ? 360 : -360;
+                    if ((f.rotTarget > 0 && f.rot < 0) || (f.rotTarget < 0 && f.rot > 0)) f.rot = 0;
+                    f.projAmount = f.d >= 2 ? (half ? 50 : 75) : (half ? 35 : 50);
+                    // La pregunta llega cuando la ráfaga ya es visible (el giro tarda en acelerar)
+                    f.pendingAsk = atk;
+                    f.launchT = 0;
+                    return;
+                } else {
+                    f.inAction = false;
+                    this.spawnHole(b);
+                    if (f.droneCd < 1) f.droneCd = 1;
+                }
+                GameState.askBoss(atk);
+            },
+
+            // ProjectileBurstUpdate: el intervalo depende de la velocidad de giro del hueso
+            barrage(b, dt) {
+                const f = b.fp;
+                f.projCd = moveTowards(f.projCd, 0, dt * (Math.abs(f.rot) / 10));
+                if (f.projCd <= 0) {
+                    const a = finishMarker.userData.bone.rotation.z;
+                    const mesh = new THREE.Mesh(ORB_GEO, ORB_MAT);
+                    mesh.position.set(-Math.sin(a) * 4.2, 3.2 + Math.cos(a) * 2.9, b.z + 1.2);
+                    scene.add(mesh);
+                    f.orbs.push({ mesh, dir: new THREE.Vector3(0, 0, 1), speed: 0.025, locked: false });
+                    f.projCd = 1;
+                    f.curProj++;
+                }
+                if (f.curProj >= f.projAmount) this.endBarrage(f);
+            },
+
+            endBarrage(f) {
+                f.curProj = f.projAmount;
+                f.inAction = false;
+                f.rotTarget = f.rot >= 0 ? 45 : -45;
+                if (f.droneCd < 1) f.droneCd = 1;
+            },
+
+            spawnSigil(b) {
+                const f = b.fp;
+                if (f.sigil) dropMesh(f.sigil.group);
+                const group = new THREE.Group();
+                group.position.set(GameState.player.x, 0, GameState.player.z - 4);
+                const rings = [];
+                for (let i = 0; i < 4; i++) {
+                    const r = new THREE.Mesh(
+                        new THREE.RingGeometry(2.0, 2.5, 6),
+                        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: i ? 0.5 : 0.9, side: THREE.DoubleSide, depthWrite: false })
+                    );
+                    r.rotation.x = -Math.PI / 2;
+                    r.position.y = 0.06;
+                    group.add(r);
+                    rings.push(r);
+                }
+                scene.add(group);
+                f.sigil = { group, rings, act: 0, dist: 0 };
+            },
+
+            // Pilar de luz (VirtueInsignia.Explode): columna que se encoge en 1 s
+            pillar(x, z) {
+                const f = GameState.boss && GameState.boss.fp;
+                const mat = new THREE.MeshBasicMaterial({ color: 0xfff4d6, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+                const p = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 16, 28, 1, true), mat);
+                p.position.set(x, 8, z);
+                scene.add(p);
+                if (f) f.pillars.push(p);
+                shake(0.9);
+                anim(1.0, k => { p.scale.set(Math.max(0.001, 1 - k), 1, Math.max(0.001, 1 - k)); }, () => {
+                    dropMesh(p);
+                    if (f) f.pillars = f.pillars.filter(q => q !== p);
+                });
+            },
+
+            // Cada paso correcto del QTE esquiva una de las cargas del sello
+            qteStep(b, step) {
+                const f = b.fp;
+                if (!f.sigil || step > f.charges) return;
+                const side = step % 2 ? 1 : -1;
+                const gs = GameState;
+                const pz = gs.player.z - 4;
+                anim(0.18, k => { gs.player.x = side * 1.6 * k; }, () => {
+                    this.pillar(-side * 1.2, pz);
+                    anim(0.35, k => { gs.player.x = side * 1.6 * (1 - k); });
+                });
+                if (step === f.charges) { dropMesh(f.sigil.group); f.sigil = null; }
+            },
+
+            spawnHole(b) {
+                const f = b.fp;
+                const group = new THREE.Group();
+                group.position.copy(this.center(b));
+                group.position.z += 3;
+                const body = new THREE.Mesh(new THREE.SphereGeometry(0.75, 16, 12), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+                const aura = new THREE.Mesh(
+                    new THREE.SphereGeometry(1.25, 16, 12),
+                    new THREE.MeshBasicMaterial({ color: 0xb300ff, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false })
+                );
+                group.add(body, aura);
+                scene.add(group);
+                f.hole = { group, aura, dir: this.hitPoint().sub(group.position).normalize(), locked: false };
+                burst(group.position, 0xb300ff, 30, 8);
+            },
+
+            startDrones(b) {
+                const f = b.fp;
+                f.started = true;
+                f.droneCd = this.maxDroneCd(f);
+                f.attackCd = 3;
+                f.inAction = true;
+                f.rot = f.rotTarget = 0;
+                f.droneAmount = this.droneAmount(b);
+                f.shaking = true;
+                if (f.drones.length <= 0) {
+                    f.healing = true;
+                    f.secondary = 0;
+                    emit('banner', { text: '¡CÉLULAS DE LA CORONA!\nSi siguen vivas al vaciarse la barra blanca, curarán al Ovocito II', color: '#ffb84d' });
+                    this.later(f, 1, () => this.spawnDrones(b));
+                } else {
+                    this.startHealing(b);
+                }
+            },
+
+            spawnDrones(b) {
+                const f = b.fp;
+                f.spawning = true;
+                const n = f.droneAmount;
+                if (f.curDrone < n) {
+                    f.secondary = f.curDrone / n;
+                    const step = Math.PI * 2 / n;
+                    const ang = step / 2 + f.curDrone * step;
+                    // Anillo alrededor del ovocito, en el plano perpendicular a la cámara
+                    this.makeDrone(b, new THREE.Vector3(Math.sin(ang) * 5.6, 3.6 + Math.cos(ang) * 3.0, b.z + 1.2));
+                    f.curDrone++;
+                    this.later(f, 0.1, () => this.spawnDrones(b));
+                } else {
+                    f.inAction = false;
+                    f.rotTarget = Math.random() < 0.5 ? 45 : -45;
+                    f.shaking = false;
+                    f.curDrone = 0;
+                    f.droneCd = 25;
+                    f.healing = false;
+                    f.spawning = false;
+                    f.waveAsked = false;
+                }
+            },
+
+            makeDrone(b, pos) {
+                const group = new THREE.Group();
+                const body = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 10), new THREE.MeshPhongMaterial({ color: 0xffb84d, emissive: 0xaa3300, shininess: 50 }));
+                const eyeBall = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                eyeBall.position.z = 0.42;
+                const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: 0xcc0022 }));
+                pupil.position.z = 0.62;
+                group.add(body, eyeBall, pupil);
+                group.position.copy(pos);
+                scene.add(group);
+                b.fp.drones.push({ group, base: pos.clone(), t: Math.random() * 6, heal: null });
+                burst(pos, 0xffb84d, 10, 5);
+            },
+
+            dropDrone(d) {
+                if (d.heal) dropMesh(d.heal);
+                d.heal = null;
+                burst(d.group.position, 0xffb84d, 16, 7);
+                dropMesh(d.group);
+            },
+
+            // StartHealing: rayos de las células al núcleo; a los 5 s las absorbe (oportunidad de GOLPE)
+            startHealing(b) {
+                const f = b.fp;
+                f.healing = true;
+                f.secondary = 0;
+                const c = this.center(b);
+                f.drones.forEach(d => {
+                    d.heal = new THREE.Line(
+                        new THREE.BufferGeometry().setFromPoints([d.group.position.clone(), c]),
+                        new THREE.LineBasicMaterial({ color: 0x66ff88, transparent: true, opacity: 0.9 })
+                    );
+                    scene.add(d.heal);
+                });
+                if (f.d >= 1) f.dmgMult = 0.1;
+                this.later(f, 5, () => this.healFromDrone(b));
+                f.waveAsked = true;
+                GameState.askBoss(BOSS_DRONES);
+            },
+
+            healFromDrone(b) {
+                const f = b.fp;
+                if (b.hp <= 0) return;
+                if (f.drones.length <= 0) {
+                    f.dmgMult = 1;
+                    this.spawnDrones(b);
+                    return;
+                }
+                const d = f.drones.shift();
+                b.hp = Math.min(b.maxHp, b.hp + this.healPerDrone(f));
+                burst(this.center(b), 0x66ff88, 16, 6);
+                this.dropDrone(d);
+                this.later(f, 0.25, () => this.healFromDrone(b));
+            },
+
+            // Daño al jefe: acelera la siguiente oleada (CheckHealth) y a mitad de vida se rompe la zona pelúcida
+            hit(b, dmg) {
+                const f = b.fp;
+                const prev = b.hp;
+                const real = dmg * f.dmgMult;
+                b.hp = Math.max(0, b.hp - real);
+                const n = f.drones.length;
+                f.droneCd -= real * (n === 0 ? 0.133 : n <= 5 ? 0.2 : n <= 8 ? 0.4 : 1.5);
+                if (!f.inAction) f.hurtT = 0.15;
+                const c = this.center(b);
+                burst(c, 0xffdd66, 40, 11);
+                flashRing(new THREE.Vector3(0, 3.2, b.z + 2.5), 0xffffff);
+                shake(0.7);
+                if (f.dmgMult < 1) emit('banner', { text: '¡ESTÁ ABSORBIENDO CÉLULAS! DAÑO x0.1', color: '#66ff88' });
+                const u = finishMarker && finishMarker.userData;
+                if (prev > b.maxHp / 2 && b.hp <= b.maxHp / 2 && u && u.zona) {
+                    u.zona.visible = false;
+                    burst(c, MECH.golpe.color, 60, 14);
+                    emit('banner', { text: '¡ZONA PELÚCIDA PERFORADA!\nEl Ovocito II se enfurece', color: '#ff3344' });
+                }
+                if (b.hp <= 0) {
+                    this.defeat(b);
+                    return true;
+                }
+                return false;
+            },
+
+            // Resultado de la pregunta del ataque actual
+            resolve(b, ok) {
+                const gs = GameState;
+                const f = b.fp;
+                const atk = b.attack;
+                gs.current = null;
+                gs.question = null;
+                gs.qte = null;
+                gs.answerLock = false;
+                gs.targetScale = 1;
+                gs.targetFov = BASE_FOV;
+                gs.phase = 'exec';
+                const done = () => {
+                    if (!this.alive(b)) return;
+                    f.asking = false;
+                    b.attack = null;
+                    if (gs.phase === 'exec') gs.phase = 'boss';
+                };
+                if (!atk) { done(); return; }
+                const hit = this.hitPoint();
+                const c = this.center(b);
+
+                if (atk.key === 'homing') {
+                    this.endBarrage(f);
+                    const orbs = f.orbs.splice(0);
+                    orbs.forEach(o => { o.locked = true; o.from = o.mesh.position.clone(); });
+                    anim(0.25, k => orbs.forEach(o => o.mesh.position.lerpVectors(o.from, hit, k * k)), () => {
+                        if (!ok) {
+                            orbs.forEach(o => scene.remove(o.mesh));
+                            burst(hit, 0x00ffe6, 30, 8);
+                            emit('banner', { text: '¡TE ALCANZÓ LA RÁFAGA!', color: '#ff3344' });
+                            gs.damage(gs.damagePct);
+                            done();
+                            return;
+                        }
+                        // PARRY en el instante del impacto, como en NewMovement.Parry()
+                        if (typeof playParrySfx === 'function') playParrySfx();
+                        if (typeof triggerParryFlash === 'function') triggerParryFlash();
+                        flashRing(hit, 0x2a9dff);
+                        burst(hit, 0x2a9dff, 35, 8);
+                        gs.health = gs.maxHealth;
+                        emit('updateHealth', gs.health);
+                        gs.addStyle(100, 'PARRY', { color: UK_GREEN });
+                        emit('banner', { text: '¡PARRY! VITALIDAD 100%', color: MECH.parry.css });
+                        orbs.forEach(o => {
+                            o.to = c.clone().add(new THREE.Vector3((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 1));
+                        });
+                        anim(0.45, k => orbs.forEach(o => o.mesh.position.lerpVectors(hit, o.to, k)), () => {
+                            orbs.forEach(o => scene.remove(o.mesh));
+                            this.hit(b, atk.dmg);
+                            done();
+                        });
+                    });
+                } else if (atk.key === 'insignia') {
+                    if (f.sigil) { dropMesh(f.sigil.group); f.sigil = null; }
+                    if (!ok) {
+                        // El pilar cae sobre el jugador: LaunchFromPoint + daño
+                        this.pillar(gs.player.x, gs.player.z - 0.5);
+                        emit('banner', { text: '¡TE ATRAPÓ EL PILAR DE LUZ!', color: '#ff3344' });
+                        gs.lift = 1;
+                        gs.damage(gs.damagePct);
+                        done();
+                        return;
+                    }
+                    emit('banner', { text: '¡PILARES ESQUIVADOS! CONTRAATAQUE', color: '#ffffff' });
+                    const bolt = glowSphere(0xffffff, 0.4);
+                    anim(0.3, k => bolt.position.lerpVectors(hit, c, k), () => {
+                        dropMesh(bolt);
+                        this.hit(b, atk.dmg);
+                        done();
+                    });
+                } else if (atk.key === 'hole') {
+                    const h = f.hole;
+                    f.hole = null;
+                    if (!h) { done(); return; }
+                    h.locked = true;
+                    const from = h.group.position.clone();
+                    if (!ok) {
+                        anim(0.3, k => h.group.position.lerpVectors(from, hit, k * k), () => {
+                            burst(hit, 0xb300ff, 40, 10);
+                            dropMesh(h.group);
+                            shake(0.8);
+                            emit('banner', { text: '¡LA SINGULARIDAD TE ATRAVESÓ!', color: '#ff66ff' });
+                            // BlackHoleProjectile: deja la vitalidad en 1 (o quita 10 si ya era baja)
+                            if (gs.health > 10) gs.damageTo(1);
+                            else gs.damage(10);
+                            done();
+                        });
+                        return;
+                    }
+                    const bolt = glowSphere(0xffffaa, 0.3);
+                    const muzzle = new THREE.Vector3(0.4, 1.6, gs.player.z - 1);
+                    anim(0.3, k => bolt.position.lerpVectors(muzzle, from, k), () => {
+                        dropMesh(bolt);
+                        anim(0.5, k => { h.group.scale.setScalar(Math.max(0.001, 1 - k)); h.group.rotation.z += 0.3; }, () => {
+                            burst(from, 0xb300ff, 50, 12);
+                            flashRing(from, 0xff00ff);
+                            dropMesh(h.group);
+                            const shard = glowSphere(0xff66ff, 0.35);
+                            anim(0.3, k => shard.position.lerpVectors(from, c, k), () => {
+                                dropMesh(shard);
+                                this.hit(b, atk.dmg);
+                                done();
+                            });
+                        });
+                    });
+                } else if (atk.key === 'drones') {
+                    if (!ok) {
+                        // Las células sobreviven y disparan sus rayos al jugador
+                        f.drones.forEach(d => {
+                            const line = new THREE.Line(
+                                new THREE.BufferGeometry().setFromPoints([d.group.position.clone(), hit]),
+                                new THREE.LineBasicMaterial({ color: 0xff3344, transparent: true })
+                            );
+                            scene.add(line);
+                            fx.push({ mesh: line, vel: new THREE.Vector3(), spin: new THREE.Vector3(), life: 0.2, max: 0.2, grav: false, grow: 0 });
+                        });
+                        emit('banner', { text: '¡LAS CÉLULAS SIGUEN VIVAS!', color: '#ff3344' });
+                        gs.damage(gs.damagePct);
+                        done();
+                        return;
+                    }
+                    const fist = glowSphere(MECH.golpe.color, 0.45);
+                    const from = new THREE.Vector3(0.7, 1.6, gs.player.z - 1.5);
+                    const to = new THREE.Vector3(0, 3.6, b.z + 1.2);
+                    anim(0.28, k => fist.position.lerpVectors(from, to, k * k), () => {
+                        dropMesh(fist);
+                        flashRing(to, MECH.golpe.color);
+                        shake(0.8);
+                        const killed = f.drones.splice(0);
+                        killed.forEach(d => this.dropDrone(d));
+                        // StyleCalculator: +30 "KILL" por célula y DOUBLE/TRIPLE/MULTIKILL por matarlas juntas
+                        killed.forEach(() => gs.addStyle(30, 'BAJA', { boss: false }));
+                        if (killed.length === 2) gs.addStyle(25, 'DOBLE BAJA', { color: UK_ORANGE, boss: false });
+                        else if (killed.length === 3) gs.addStyle(50, 'TRIPLE BAJA', { color: UK_ORANGE, boss: false });
+                        else if (killed.length > 3) gs.addStyle(100, 'MULTIBAJA', { color: UK_ORANGE, count: killed.length, boss: false });
+                        emit('banner', { text: '¡CÉLULAS DESTRUIDAS! CURACIÓN EVITADA', color: MECH.golpe.css });
+                        done();
+                    });
+                } else {
+                    done();
+                }
+            },
+
+            // ForceDronesOff + muerte del jefe
+            defeat(b) {
+                const gs = GameState;
+                const f = b.fp;
+                b.cleared = true;
+                f.timers.length = 0;
+                this.clear(b, true);
+                emit('hideBossHud');
+                gs.addStyle(400, 'FECUNDACIÓN', { color: UK_CYAN, boss: true });
+                emit('banner', { text: '¡OVOCITO II DERROTADO · FECUNDACIÓN COMPLETADA!', color: '#ffdd66' });
+                const u = finishMarker && finishMarker.userData;
+                burst(this.center(b), 0xffdd66, 95, 16);
+                flashRing(new THREE.Vector3(0, 3.2, b.z + 2), 0xffffff);
+                shake(0.95);
+                if (u && u.core) {
+                    anim(0.65, k => {
+                        u.core.scale.setScalar(1 + k * 1.8);
+                        u.core.material.emissiveIntensity = 0.65 + k * 1.5;
+                    }, () => {
+                        if (finishMarker) finishMarker.visible = false;
+                        gs.finishRun();
+                    });
+                } else {
+                    gs.finishRun();
+                }
+            },
+
+            // Quita todo lo que ha generado el jefe (muerte, reinicio o victoria)
+            clear(b, explode) {
+                if (!b || !b.fp) return;
+                const f = b.fp;
+                f.drones.forEach(d => { if (explode) this.dropDrone(d); else { if (d.heal) dropMesh(d.heal); dropMesh(d.group); } });
+                f.drones.length = 0;
+                f.orbs.forEach(o => scene.remove(o.mesh));
+                f.orbs.length = 0;
+                if (f.hole) { if (explode) burst(f.hole.group.position, 0xb300ff, 30, 9); dropMesh(f.hole.group); f.hole = null; }
+                if (f.sigil) { dropMesh(f.sigil.group); f.sigil = null; }
+                f.pillars.forEach(p => dropMesh(p));
+                f.pillars.length = 0;
+                f.shaking = false;
+            }
+        };
+        const tmpV = new THREE.Vector3();
 
         // ==========================================
         // 4. GESTOR DE ESTADO GLOBAL
@@ -1329,7 +2153,7 @@
             maxHealth: 100,
             bulletScale: 0.12,
             damagePct: 25,
-            stats: { correct: 0, wrong: 0, deaths: 0 },
+            stats: { correct: 0, wrong: 0, deaths: 0, tookDamage: false },
             style: 0,
             styleAtCp: 0,
             lastMech: null,
@@ -1343,7 +2167,8 @@
             targetScale: 1,
             fov: BASE_FOV,
             targetFov: BASE_FOV,
-            player: { z: 0 },
+            lift: 0,
+            player: { z: 0, x: 0 },
             current: null,
             question: null,
             questionTime: 0,
@@ -1362,20 +2187,24 @@
 
             resetAll() {
                 this.token++;
+                BossAI.clear(this.boss, false);
                 clearObstacles();
                 clearFx();
                 anims.length = 0;
                 if (typeof resetParryFlash === 'function') resetParryFlash();
                 this.health = this.maxHealth;
-                this.stats = { correct: 0, wrong: 0, deaths: 0 };
+                this.stats = { correct: 0, wrong: 0, deaths: 0, tookDamage: false };
                 this.style = 0;
                 this.styleAtCp = 0;
+                UKStyle.reset();
                 this.lastMech = null;
                 this.runTime = 0;
                 this.cpIdx = 0;
                 this.cpZ = 0;
                 this.layerIdx = 0;
                 this.player.z = 0;
+                this.player.x = 0;
+                this.lift = 0;
                 this.timeScale = this.targetScale = 1;
                 this.targetFov = BASE_FOV;
                 this.current = null;
@@ -1394,6 +2223,16 @@
                 emit('hideResults');
                 emit('updateHealth', this.health);
                 emit('updateUlti', { charge: 0, ready: false, used: false });
+            },
+
+            // Toda la puntuación positiva pasa por el StyleHUD (x1.5 contra el jefe, como bossStyleGainMultiplier)
+            addStyle(n, label, opts) {
+                if (n <= 0) {
+                    this.style = Math.max(0, this.style + n);
+                    return;
+                }
+                const o = Object.assign({ boss: !!(this.boss && !this.boss.cleared) }, opts);
+                this.style = Math.max(0, this.style + UKStyle.add(n, label || '', o));
             },
 
             addUltiStreak() {
@@ -1416,7 +2255,7 @@
 
             useUlti() {
                 if (!this.ultiReady || this.ultiUsed) return;
-                if (!['running', 'trivia', 'qte'].includes(this.phase)) return;
+                if (!['running', 'trivia', 'qte', 'boss'].includes(this.phase)) return;
                 lastUiAction = performance.now();
 
                 this.token++;
@@ -1434,12 +2273,17 @@
                 this.targetFov = BASE_FOV;
 
                 if (this.boss && !this.boss.cleared) {
-                    const o = this.boss;
-                    this.phase = 'exec';
-                    this.addStyle(200);
-                    const bp = BOSS_PHASES[o.phaseIdx];
-                    emit('banner', { text: '¡ULTI ACTIVADA! FASE SALTADA', color: '#00ffcc' });
-                    EXEC[bp.type](o);
+                    // Contra el jefe: supera la pregunta activa o, si no hay ninguna, le golpea directamente
+                    const b = this.boss;
+                    this.player.x = 0;
+                    this.addStyle(200, 'ULTI', { color: UK_CYAN });
+                    emit('banner', { text: '¡ULTI ACTIVADA!', color: '#00ffcc' });
+                    if (b.attack && !b.fp.pendingAsk) {
+                        BossAI.resolve(b, true);
+                    } else {
+                        this.phase = 'boss';
+                        BossAI.hit(b, 25);
+                    }
                     return;
                 }
 
@@ -1469,7 +2313,7 @@
                 this.cpIdx = nextLayerStartIdx;
                 this.cpZ = toZ;
                 this.styleAtCp = this.style + 250;
-                this.addStyle(250);
+                this.addStyle(250, 'ULTI', { color: UK_CYAN });
 
                 this.phase = 'exec';
                 flashRing(new THREE.Vector3(0, 2.5, fromZ - 2), 0x00ffcc);
@@ -1570,33 +2414,35 @@
             startBossFight() {
                 if (this.phase !== 'running') return;
                 this.layerIdx = 3;
-                this.boss = {
-                    isBoss: true,
-                    z: this.finishZ,
-                    phaseIdx: 0,
-                    type: BOSS_PHASES[0].type,
-                    hp: BOSS_PHASES.length,
-                    maxHp: BOSS_PHASES.length,
-                    group: finishMarker,
-                    parts: {},
-                    cleared: false
-                };
-                emit('banner', { text: '¡JEFE FINAL: OVOCITO II!\nSupera sus 4 barreras celulares para fecundarlo', color: '#ffdd66' });
-                emit('showBossHud', { hp: this.boss.hp, maxHp: this.boss.maxHp, phaseTitle: BOSS_PHASES[0].title, color: BOSS_PHASES[0].color });
-                this.triggerBossPhase();
+                this.boss = BossAI.create(this.finishZ, this.diff.id);
+                this.current = null;
+                this.phase = 'boss';
+                emit('banner', { text: '¡JEFE FINAL: OVOCITO II!\nDestruye sus células antes de que lo curen', color: '#ffdd66' });
+                emit('showBossHud', this.bossHud());
             },
 
-            triggerBossPhase() {
-                if (!this.boss) return;
+            bossHud() {
+                const b = this.boss;
+                const f = b.fp;
+                const state = f.healing && f.drones.length && !f.spawning
+                    ? '¡CURACIÓN!'
+                    : (f.drones.length ? 'CÉLULAS ×' + f.drones.length : '');
+                return { hp: b.hp, maxHp: b.maxHp, secondary: f.secondary, state };
+            },
+
+            // Pregunta del ataque actual del jefe (o de sus células durante la curación)
+            askBoss(spec) {
+                const b = this.boss;
+                if (!b || b.cleared || this.phase === 'dead') return;
+                b.fp.asking = true;
+                b.attack = spec;
+                b.type = spec.mech;
+                this.current = b;
                 this.layerIdx = 3;
-                const bp = BOSS_PHASES[this.boss.phaseIdx];
-                this.boss.type = bp.type;
-                this.current = this.boss;
                 this.targetScale = this.bulletScale;
                 this.targetFov = TRIVIA_FOV;
-                emit('updateBossHud', { hp: this.boss.hp, maxHp: this.boss.maxHp, phaseTitle: bp.title, color: bp.color });
-                if (bp.type === 'qte') {
-                    EXEC.qte(this.boss);
+                if (spec.mech === 'qte') {
+                    EXEC.qte(b);
                     return;
                 }
                 this.phase = 'trivia';
@@ -1617,7 +2463,7 @@
 
             emitQuestion() {
                 const m = MECH[this.current.type];
-                const bp = this.current.isBoss ? BOSS_PHASES[this.current.phaseIdx] : null;
+                const bp = this.current.isBoss ? this.current.attack : null;
                 emit('showTrivia', {
                     q: this.question.q,
                     options: this.question.options,
@@ -1648,7 +2494,7 @@
                 }, () => {
                     if (this.phase === 'dead') return;
                     if (targetObj && targetObj.isBoss) {
-                        this.triggerBossPhase();
+                        this.phase = 'boss';
                     } else if (targetObj) {
                         this.current = targetObj;
                         this.targetScale = this.bulletScale;
@@ -1679,8 +2525,12 @@
                     }
                     this.stats.correct++;
                     this.addUltiStreak();
-                    this.addStyle(this.lastMech && this.lastMech !== type ? 150 : 100);
-                    this.lastMech = type;
+                    this.addCorrectStyle(type);
+                    if (this.current.isBoss) {
+                        const b = this.current;
+                        this.later(450, () => { emit('hideTrivia'); BossAI.resolve(b, true); });
+                        return;
+                    }
                     this.later(450, () => {
                         emit('hideTrivia');
                         this.phase = 'exec';
@@ -1693,6 +2543,11 @@
                     this.stats.wrong++;
                     this.resetUltiStreak();
                     this.addStyle(-150);
+                    if (o.isBoss) {
+                        // Contra el jefe el castigo depende del ataque (lo aplica BossAI.resolve)
+                        this.later(550, () => { emit('hideTrivia'); BossAI.resolve(o, false); });
+                        return;
+                    }
                     this.damage(this.damagePct);
                     if (this.phase === 'dead') return;
                     this.later(550, () => {
@@ -1700,6 +2555,13 @@
                         this.pushBackAndCooldown(o, '¡RESPUESTA INCORRECTA! RETROCESO · +5s');
                     });
                 }
+            },
+
+            // Bonus de estilo por acierto: +100, y +50 "ARSENAL" si cambias de mecánica (antes 150 en total)
+            addCorrectStyle(type) {
+                this.addStyle(100, 'ACIERTO');
+                if (this.lastMech && this.lastMech !== type) this.addStyle(50, 'ARSENAL', { color: UK_CYAN });
+                this.lastMech = type;
             },
 
             triviaTimeout() {
@@ -1710,6 +2572,10 @@
                 this.stats.wrong++;
                 this.resetUltiStreak();
                 this.addStyle(-150);
+                if (o.isBoss) {
+                    this.later(550, () => { emit('hideTrivia'); BossAI.resolve(o, false); });
+                    return;
+                }
                 this.damage(this.damagePct);
                 if (this.phase === 'dead') return;
                 this.later(550, () => {
@@ -1718,12 +2584,15 @@
                 });
             },
 
-            addStyle(n) {
-                this.style = Math.max(0, this.style + n);
+            damage(pct) {
+                this.damageTo(this.health - this.maxHealth * pct / 100);
             },
 
-            damage(pct) {
-                this.health = Math.max(0, this.health - this.maxHealth * pct / 100);
+            // NewMovement.GetHurt: el rango de estilo baja un nivel y tiembla
+            damageTo(value) {
+                this.health = Math.max(0, Math.min(this.maxHealth, value));
+                this.stats.tookDamage = true;
+                UKStyle.hurt();
                 emit('updateHealth', this.health);
                 shake(0.5);
                 if (this.health <= 0) this.die();
@@ -1739,7 +2608,7 @@
                 emit('hideQTE');
                 emit('hideBossHud');
                 if (typeof startUkDeathSequence === 'function') {
-                    startUkDeathSequence(() => this.respawn(), () => setDifficulty('menu'));
+                    startUkDeathSequence(() => this.respawn(), () => this.toMenu());
                 } else {
                     emit('showDeath');
                     this.later(1500, () => this.respawn());
@@ -1757,13 +2626,17 @@
                 this.current = null;
                 this.question = null;
                 this.questionTime = 0;
+                BossAI.clear(this.boss, false);
                 this.boss = null;
                 clearObstacles();
                 if (typeof resetParryFlash === 'function') resetParryFlash();
                 ensureBgmPlaying();
                 this.player.z = this.cpZ;
+                this.player.x = 0;
+                this.lift = 0;
                 this.layerIdx = layerIndexAtZ(this.player.z);
                 this.style = this.styleAtCp;
+                UKStyle.comboOver();
                 this.lastMech = null;
                 for (let i = this.cpIdx; i < this.diff.runLen; i++) createObstacle(this.plan[i], this.zFor(i), i);
                 finishMarker = buildFinishOocyte(this.finishZ);
@@ -1772,38 +2645,8 @@
             },
 
             onCleared(o) {
-                if (o && o.isBoss) {
-                    o.cleared = false;
-                    this.boss.hp = Math.max(0, this.boss.hp - 1);
-                    this.boss.phaseIdx++;
-                    if (this.boss.phaseIdx < BOSS_PHASES.length) {
-                        const nextBp = BOSS_PHASES[this.boss.phaseIdx];
-                        emit('updateBossHud', { hp: this.boss.hp, maxHp: this.boss.maxHp, phaseTitle: nextBp.title, color: nextBp.color });
-                        emit('banner', { text: '¡BARRERA ROTA! → ' + nextBp.title, color: nextBp.color });
-                        this.later(350, () => this.triggerBossPhase());
-                    } else {
-                        this.boss.cleared = true;
-                        emit('hideBossHud');
-                        this.addStyle(400);
-                        emit('banner', { text: '¡OVOCITO II DERROTADO · FECUNDACIÓN COMPLETADA!', color: '#ffdd66' });
-                        const u = finishMarker && finishMarker.userData;
-                        burst(new THREE.Vector3(0, 3.2, this.finishZ), 0xffdd66, 95, 16);
-                        flashRing(new THREE.Vector3(0, 3.2, this.finishZ + 2), 0xffffff);
-                        shake(0.95);
-                        if (u && u.core) {
-                            anim(0.65, k => {
-                                u.core.scale.setScalar(1 + k * 1.8);
-                                u.core.material.emissiveIntensity = 0.65 + k * 1.5;
-                            }, () => {
-                                if (finishMarker) finishMarker.visible = false;
-                                this.finishRun();
-                            });
-                        } else {
-                            this.finishRun();
-                        }
-                    }
-                    return;
-                }
+                // El jefe se resuelve en BossAI (resolve / defeat)
+                if (o && o.isBoss) return;
                 this.current = null;
                 this.question = null;
                 this.targetScale = 1;
@@ -1869,6 +2712,7 @@
                     btnIdx,
                     chain: q.steps.slice(0, q.i).join(' → ')
                 });
+                if (q.o.isBoss) BossAI.qteStep(q.o, q.i);
                 if (q.i >= q.words.length) {
                     q.locked = true;
                     this.later(250, () => this.qteSuccess());
@@ -1884,15 +2728,15 @@
                 this.targetFov = BASE_FOV;
                 this.stats.correct++;
                 this.addUltiStreak();
-                this.addStyle((this.lastMech && this.lastMech !== 'qte' ? 150 : 100) + 100);
-                this.lastMech = 'qte';
+                this.addCorrectStyle('qte');
+                this.addStyle(100, 'SECUENCIA PERFECTA', { color: UK_CYAN });
                 emit('hideQTE');
-                emit('banner', { text: o.isBoss ? '¡SINGAMIA PERFECTA!' : '¡QTE PERFECTO!', color: MECH.qte.css });
                 shake(0.5);
                 if (o.isBoss) {
-                    finishClear(o);
+                    BossAI.resolve(o, true);
                     return;
                 }
+                emit('banner', { text: '¡QTE PERFECTO!', color: MECH.qte.css });
                 o.opening = true;
                 anim(0.5, k => {
                     o.parts.iris.scale.setScalar(1 + k * 1.6);
@@ -1911,6 +2755,10 @@
                 this.stats.wrong++;
                 this.resetUltiStreak();
                 this.addStyle(-100);
+                if (o.isBoss) {
+                    this.later(550, () => { emit('hideQTE'); BossAI.resolve(o, false); });
+                    return;
+                }
                 this.damage(this.damagePct);
                 if (this.phase === 'dead') return;
                 this.later(550, () => {
@@ -1931,29 +2779,36 @@
                 return t === 0 ? 100 : this.stats.correct / t * 100;
             },
 
+            // StatsManager.SendInfo / GetRanks / GetFinalRank de ULTRAKILL
             finishRun() {
                 this.phase = 'finished';
                 this.targetScale = 1;
+                UKStyle.reset();   // StatsManager.HideShit: el HUD de estilo se cierra al terminar
                 const runLen = this.diff.runLen;
-                const timeThresh = [runLen * 12.5, runLen * 16.25, runLen * 20, runLen * 25];
-                const styleThresh = [runLen * 200, runLen * 156.25, runLen * 112.5, runLen * 68.75];
-                const accThresh = [95, 85, 70, 50];
-                const rankLow = (v, th) => v <= th[0] ? 4 : v <= th[1] ? 3 : v <= th[2] ? 2 : v <= th[3] ? 1 : 0;
-                const rankHigh = (v, th) => v >= th[0] ? 4 : v >= th[1] ? 3 : v >= th[2] ? 2 : v >= th[3] ? 1 : 0;
+                // Umbrales en orden D→S como en StatsManager (timeRanks, killRanks, styleRanks)
+                const timeRanks = [runLen * 25, runLen * 20, runLen * 16.25, runLen * 12.5];
+                const accRanks = [50, 70, 85, 95];
+                const styleRanks = [runLen * 68.75, runLen * 112.5, runLen * 156.25, runLen * 200];
+                const getRank = (th, v, reverse) => {
+                    let n = 0;
+                    while (n < th.length && (reverse ? v <= th[n] : v >= th[n])) n++;
+                    return n;
+                };
                 const acc = this.accuracy();
-                const tR = rankLow(this.runTime, timeThresh);
-                const sR = rankHigh(this.style, styleThresh);
-                const aR = rankHigh(acc, accThresh);
-                const perfect = tR === 4 && sR === 4 && acc === 100 && this.stats.deaths === 0;
-                const overall = perfect ? 'P' : RANKS[Math.floor((tR + sR + aR) / 3)];
+                const tR = getRank(timeRanks, this.runTime, true);
+                const aR = getRank(accRanks, acc, false);
+                const sR = getRank(styleRanks, this.style, false);
+                // Cada muerte cuenta como un reinicio desde checkpoint y resta 1 al rankScore
+                let score = Math.max(0, tR + aR + sR - this.stats.deaths);
+                const overall = score === 12 ? 'P' : RANKS[Math.min(4, Math.round(score / 3))];
                 emit('showResults', {
-                    rows: [
-                        ['DIFICULTAD', this.diff.name, this.diff.badge],
-                        ['TIEMPO', fmtTime(this.runTime), RANKS[tR]],
-                        ['ESTILO', this.style + ' pts', RANKS[sR]],
-                        ['PRECISIÓN', acc.toFixed(1) + '%  (' + this.stats.correct + '/' + (this.stats.correct + this.stats.wrong) + ')', RANKS[aR]],
-                        ['MUERTES', String(this.stats.deaths), this.stats.deaths === 0 ? '-' : 'sin Rango P']
-                    ],
+                    level: 'ULTRANATOMIA · OVOCITO II',
+                    difficulty: '-- ' + this.diff.name + ' --',
+                    time: this.runTime, timeRank: RANKS[tR],
+                    acc, accRank: RANKS[aR],
+                    style: this.style, styleRank: RANKS[sR],
+                    restarts: this.stats.deaths,
+                    noDamage: !this.stats.tookDamage,
                     rank: overall
                 });
             },
@@ -1963,8 +2818,10 @@
                 this.fov += (this.targetFov - this.fov) * Math.min(1, dt * 6);
                 const sdt = dt * this.timeScale;
 
-                const active = ['running', 'trivia', 'exec', 'qte'].includes(this.phase);
+                const active = ['running', 'trivia', 'exec', 'qte', 'boss'].includes(this.phase);
                 if (active) this.runTime += dt;
+                if (active && this.boss && !this.boss.cleared) BossAI.update(this.boss, sdt);
+                this.lift = Math.max(0, this.lift - dt * 2.5);
 
                 if (this.phase === 'running') {
                     this.player.z -= RUN_SPEED * sdt;
@@ -1980,6 +2837,8 @@
                 } else if ((this.phase === 'trivia' || this.phase === 'qte') && this.current) {
                     const stopDist = this.current.isBoss ? BOSS_STOP_DIST : STOP_DIST;
                     this.player.z = Math.max(this.current.z + stopDist, this.player.z - RUN_SPEED * sdt);
+                } else if (this.phase === 'boss' && this.boss) {
+                    this.player.z = Math.max(this.boss.z + BOSS_STOP_DIST, this.player.z - RUN_SPEED * sdt);
                 }
 
                 if (this.phase === 'trivia' && !this.answerLock) {
@@ -2006,8 +2865,9 @@
 
             hud() {
                 const L = LAYERS[this.layerIdx] || LAYERS[0];
-                const prog = this.boss && !this.boss.cleared
-                    ? 'JEFE ' + (this.boss.phaseIdx + 1) + '/' + BOSS_PHASES.length
+                const bossOn = this.boss && !this.boss.cleared;
+                const prog = bossOn
+                    ? 'JEFE · ' + Math.ceil(this.boss.hp) + ' PV'
                     : (this.diff.runLen - obstacles.filter(o => !o.cleared).length) + '/' + this.diff.runLen;
                 return {
                     time: this.runTime,
@@ -2016,7 +2876,8 @@
                     layer: L.title,
                     layerColor: L.css,
                     diffName: this.diff.name,
-                    diffColor: this.diff.color
+                    diffColor: this.diff.color,
+                    boss: bossOn && this.phase !== 'dead' ? this.bossHud() : null
                 };
             }
         };
@@ -2048,7 +2909,7 @@
                 }
             }
             const gs = GameState;
-            if (e.code === 'KeyU' && ['running', 'trivia', 'qte'].includes(gs.phase)) {
+            if (e.code === 'KeyU' && ['running', 'trivia', 'qte', 'boss'].includes(gs.phase)) {
                 e.preventDefault();
                 gs.useUlti();
                 return;
@@ -2068,7 +2929,9 @@
                 else if (e.code === 'Digit3' || e.code === 'Numpad3') setDifficulty('ultra');
                 else if (e.code === 'Enter') { tryLockLandscape(); gs.start(); }
             } else if (gs.phase === 'finished') {
-                if (e.code === 'KeyR' || e.code === 'Enter') gs.start();
+                // Como en FinalRank: mientras se revela, Enter/Espacio solo acelera la animación
+                if ((e.code === 'Enter' || e.code === 'Space') && !UKFinal.complete) { e.preventDefault(); UKFinal.skip(); }
+                else if (e.code === 'KeyR' || e.code === 'Enter') gs.start();
                 else if (e.code === 'KeyM') gs.toMenu();
             }
         });
@@ -2459,6 +3322,225 @@
         }
 
         // ==========================================
+        // PANTALLA DE RANGO FINAL (port de FinalRank.cs)
+        // ==========================================
+        const UK_RANK_COLOR = { D: '#0094ff', C: '#4cff00', B: '#ffd800', A: '#ff6a00', S: '#ff0000' };
+        const UK_RANK_POINTS = { D: 500, C: 1000, B: 1500, A: 2000, S: 2500 };
+
+        // StatsManager.DivideMoney: separador de miles "1,005"
+        function ukMoney(n) {
+            let num = Math.round(n), k = 0;
+            while (num >= 1000) { k++; num -= 1000; }
+            if (k > 0) return k + ',' + (num < 10 ? '00' : num < 100 ? '0' : '') + num;
+            return String(num);
+        }
+
+        function ukTime(s) {
+            const m = Math.floor(s / 60);
+            return m + ':' + (s - m * 60).toFixed(3).padStart(6, '0');
+        }
+
+        const UKFinal = {
+            el: document.getElementById('uk-final'),
+            box: document.getElementById('ukf-box'),
+            active: false,
+            complete: true,
+            skipping: false,
+            timeBetween: 0.25,
+            wait: 0,
+            steps: [],
+            i: 0,
+            counting: null,
+            flashes: [],
+            totalPoints: 0,
+            data: null,
+
+            $(id) { return document.getElementById(id); },
+
+            show(d) {
+                this.data = d;
+                this.el.querySelectorAll('.ukf-panel, .ukf-item').forEach(n => {
+                    n.classList.remove('on');
+                    if (n.classList.contains('ukf-panel')) n.classList.add('pop');
+                });
+                this.el.querySelectorAll('.ukf-flash').forEach(n => { n.style.opacity = 0; });
+                this.$('ukf-total').style.background = '';
+                this.$('ukf-level').textContent = d.level;
+                this.$('ukf-diff').textContent = d.difficulty;
+                this.$('ukf-time').textContent = ukTime(0);
+                this.$('ukf-acc').textContent = '0.0%';
+                this.$('ukf-style').textContent = '0';
+                this.$('ukf-actions').classList.remove('on');
+                this.$('ukf-hint').style.visibility = 'visible';
+                let extra = '';
+                if (d.restarts === 0) extra += '+ SIN REINICIOS\n  (+500<span class="ukf-p">P</span>)\n';
+                else extra += '- <span style="color:#ff0000">' + d.restarts + '</span> REINICIOS\n';
+                if (d.noDamage) extra += '+ <span class="ukf-p">SIN DAÑO\n  (</span>+5,000<span class="ukf-p">P)</span>\n';
+                this.$('ukf-extra-text').innerHTML = extra;
+                this.totalPoints = 0;
+                this.pointsShow();
+                this.i = 0;
+                this.wait = 0;
+                this.counting = null;
+                this.flashes = [];
+                this.skipping = false;
+                this.timeBetween = 0.25;
+                this.complete = false;
+                // Mismo orden que FinalRank.toAppear
+                this.steps = [
+                    ['ukf-title', 'panel'], ['ukf-level', 'text'], ['ukf-diff', 'text'],
+                    ['ukf-time-row', 'panel'], ['ukf-time', 'count', 'time'], ['ukf-time-box', 'panel'], ['ukf-time-rank', 'rank', 'timeRank'],
+                    ['ukf-acc-row', 'panel'], ['ukf-acc', 'count', 'acc'], ['ukf-acc-box', 'panel'], ['ukf-acc-rank', 'rank', 'accRank'],
+                    ['ukf-style-row', 'panel'], ['ukf-style', 'count', 'style'], ['ukf-style-box', 'panel'], ['ukf-style-rank', 'rank', 'styleRank'],
+                    ['ukf-extra', 'panel'], ['ukf-extra-text', 'extra'],
+                    ['ukf-total', 'panel'], ['ukf-total-rank', 'total']
+                ];
+                this.$('ukf-points').classList.add('on');
+                this.el.classList.remove('hidden');
+                document.body.classList.add('ukf-on');
+                this.layout();
+                this.active = true;
+                this.appear();
+            },
+
+            hide() {
+                this.active = false;
+                this.complete = true;
+                this.el.classList.add('hidden');
+                document.body.classList.remove('ukf-on');
+            },
+
+            layout() {
+                const s = Math.min(window.innerWidth / 1040, window.innerHeight / 740);
+                this.box.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+            },
+
+            pointsShow(extra) {
+                this.$('ukf-points-val').innerHTML = '+' + ukMoney(this.totalPoints + (extra || 0)) + '<span class="ukf-p">P</span>';
+            },
+
+            addPoints(n) {
+                this.totalPoints += n;
+                this.pointsShow();
+            },
+
+            // FlashPanel: el panel se pone blanco y se desvanece (x0.5 más lento en el rango total)
+            flash(panelId, mult) {
+                const f = this.$(panelId).querySelector('.ukf-flash');
+                if (!f) return;
+                this.flashes = this.flashes.filter(x => x.el !== f);
+                this.flashes.forEach(x => { x.a = 0; x.el.style.opacity = 0; });
+                this.flashes = [{ el: f, a: 1, mult }];
+                f.style.opacity = 1;
+            },
+
+            appear() {
+                if (this.i >= this.steps.length) {
+                    this.finish();
+                    return;
+                }
+                const [id, kind, key] = this.steps[this.i++];
+                const node = this.$(id);
+                if (this.skipping) node.classList.remove('pop');
+                node.classList.add('on');
+                const d = this.data;
+                const tb = this.timeBetween;
+                if (kind === 'count') {
+                    this.counting = { key, node, saved: key === 'time' ? d.time : (key === 'acc' ? d.acc : d.style), checked: 0 };
+                    if (this.skipping) this.countStep(0);
+                } else if (kind === 'rank') {
+                    const r = d[key];
+                    node.textContent = r;
+                    node.style.color = UK_RANK_COLOR[r];
+                    this.addPoints(UK_RANK_POINTS[r]);
+                    this.flash(node.parentElement.id, 1);
+                    this.wait = tb * 2;
+                } else if (kind === 'extra') {
+                    if (d.restarts === 0) this.addPoints(500);
+                    if (d.noDamage) this.addPoints(5000);
+                    this.wait = tb;
+                } else if (kind === 'total') {
+                    node.textContent = d.rank;
+                    if (d.rank === 'P') {
+                        node.style.color = '#ffffff';
+                        this.$('ukf-total').style.background = 'rgb(255, 175, 0)';
+                    } else {
+                        node.style.color = UK_RANK_COLOR[d.rank];
+                    }
+                    this.flash('ukf-total', 0.5);
+                    this.wait = tb * 4;
+                } else {
+                    this.wait = tb;
+                }
+                if (this.i >= this.steps.length) this.finish();
+            },
+
+            finish() {
+                if (this.complete) return;
+                this.complete = true;
+                this.$('ukf-actions').classList.add('on');
+                this.$('ukf-hint').style.visibility = 'hidden';
+            },
+
+            // Ritmos de conteo de FinalRank.Update: tiempo 20/s + 1.5x lo que falta, bajas 45/s, estilo 4500/s
+            countStep(dt) {
+                const c = this.counting;
+                if (c.key === 'time') {
+                    if (c.saved > c.checked) c.checked += dt * 20 + dt * (c.saved - c.checked) * 1.5;
+                } else if (c.key === 'acc') {
+                    c.checked += dt * 45;
+                } else {
+                    c.checked += dt * 4500;
+                }
+                const done = c.checked >= c.saved || this.skipping;
+                if (done) c.checked = c.saved;
+                if (c.key === 'time') c.node.textContent = ukTime(c.checked);
+                else if (c.key === 'acc') c.node.textContent = c.checked.toFixed(1) + '%';
+                else {
+                    c.node.textContent = Math.round(c.checked).toString();
+                    if (done) this.addPoints(c.saved);
+                    else this.pointsShow(Math.round(c.checked));
+                }
+                if (done) {
+                    this.counting = null;
+                    this.wait = this.timeBetween * 2;
+                }
+            },
+
+            skip() {
+                if (this.complete) return;
+                this.skipping = true;
+                this.timeBetween = 0.01;
+                if (this.wait > this.timeBetween * 4) this.wait = this.timeBetween * 4;
+            },
+
+            tick(dt) {
+                if (!this.active) return;
+                for (const f of this.flashes) {
+                    f.a = Math.max(0, f.a - dt * f.mult);
+                    f.el.style.opacity = f.a;
+                }
+                if (this.complete) return;
+                if (this.counting) {
+                    this.countStep(dt);
+                } else if (this.wait > 0) {
+                    this.wait -= dt;
+                    if (this.wait <= 0) this.appear();
+                }
+            }
+        };
+
+        UKFinal.el.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('#ukf-actions')) return;
+            UKFinal.skip();
+        });
+        document.getElementById('ukfRetry').addEventListener('click', (e) => { e.stopPropagation(); lastUiAction = performance.now(); GameState.start(); });
+        document.getElementById('ukfMenu').addEventListener('click', (e) => { e.stopPropagation(); lastUiAction = performance.now(); GameState.toMenu(); });
+        window.addEventListener('showResults', (e) => UKFinal.show(e.detail));
+        window.addEventListener('hideResults', () => UKFinal.hide());
+        window.addEventListener('resize', () => { if (UKFinal.active) UKFinal.layout(); });
+
+        // ==========================================
         // 6. BUCLE DE RENDER
         // ==========================================
         const clock = new THREE.Clock();
@@ -2475,7 +3557,8 @@
             if (ukDeathActive && ukDeathPhase === 1) {
                 ukDeathTimer += rawDt;
                 if (bgmEl && !bgmEl.paused) {
-                    bgmEl.playbackRate = Math.max(0.06, 1.0 - (ukDeathTimer / 2.0));
+                    // Chromium solo admite playbackRate >= 0.0625; por debajo lanza NotSupportedError
+                    bgmEl.playbackRate = Math.max(0.0625, 1.0 - (ukDeathTimer / 2.0));
                 }
                 if (ukDeathTimer >= 2.0) {
                     endUkDeathSequence();
@@ -2502,6 +3585,8 @@
             updateAnims(dt);
             animateObstacles(sdt);
             updateFx(sdt);
+            if (['running', 'trivia', 'exec', 'qte', 'boss'].includes(GameState.phase)) UKStyle.update(sdt);
+            UKFinal.tick(rawDt);
 
             const pz = GameState.player.z;
 
@@ -2534,12 +3619,13 @@
             const bob = running ? Math.sin(performance.now() * 0.012) * 0.08 : 0;
             shakeAmt *= Math.max(0, 1 - dt * 6);
             const curShake = timeController.currentStop > 0 ? 0 : shakeAmt;
+            const px = GameState.player.x;
             camera.position.set(
-                (Math.random() - 0.5) * curShake,
-                2.2 + bob + (Math.random() - 0.5) * curShake,
+                px + (Math.random() - 0.5) * curShake,
+                2.2 + bob + GameState.lift * 1.6 + (Math.random() - 0.5) * curShake,
                 pz
             );
-            camera.lookAt(0, 2.6, pz - 20);
+            camera.lookAt(px * 0.5, 2.6, pz - 20);
 
             // Animar el acrosoma y flagelo del espermatozoide jugador
             playerAvatar.position.copy(camera.position);
@@ -2616,12 +3702,16 @@
 
                 // --- HUD DEL JEFE (OVOCITO II) ---
                 this.bossHud = this.add.container(0, 0);
-                this.bossHudBg = this.add.rectangle(0, 0, 380, 44, 0x1a0b00, 0.90).setStrokeStyle(2, 0xffdd66);
-                this.bossTitleTxt = this.add.text(0, -10, 'JEFE FINAL · OVOCITO II', F(13, { color: '#ffdd66' })).setOrigin(0.5);
-                this.bossBarBg = this.add.rectangle(-174, 8, 348, 12, 0x331a00).setOrigin(0, 0.5);
-                this.bossBar = this.add.rectangle(-174, 8, 348, 12, 0xffdd66).setOrigin(0, 0.5);
-                this.bossHud.add([this.bossHudBg, this.bossTitleTxt, this.bossBarBg, this.bossBar]);
+                this.bossHudBg = this.add.rectangle(0, 2, 380, 50, 0x1a0b00, 0.90).setStrokeStyle(2, 0xffdd66);
+                this.bossTitleTxt = this.add.text(0, -12, 'JEFE FINAL · OVOCITO II', F(13, { color: '#ffdd66' })).setOrigin(0.5);
+                this.bossBarBg = this.add.rectangle(-174, 6, 348, 12, 0x331a00).setOrigin(0, 0.5);
+                this.bossBar = this.add.rectangle(-174, 6, 348, 12, 0xffdd66).setOrigin(0, 0.5);
+                // Barra secundaria (BossHealthBar.secondaryBar): tiempo hasta la siguiente oleada de células
+                this.bossBar2Bg = this.add.rectangle(-174, 18, 348, 5, 0x221100).setOrigin(0, 0.5);
+                this.bossBar2 = this.add.rectangle(-174, 18, 348, 5, 0xffffff).setOrigin(0, 0.5);
+                this.bossHud.add([this.bossHudBg, this.bossTitleTxt, this.bossBarBg, this.bossBar, this.bossBar2Bg, this.bossBar2]);
                 this.bossHud.setVisible(false);
+                this.bossTitle = '';
 
                 // --- PANEL DE TRIVIA CON SOPORTE TÁCTIL Y RATÓN ---
                 this.tri = this.add.container(0, 0);
@@ -2725,34 +3815,7 @@
                 this.deathBg = this.add.rectangle(0, 0, 10, 10, 0x660000, 0.55).setOrigin(0, 0).setVisible(false);
                 this.deathText = this.add.text(0, 0, 'VITALIDAD AGOTADA\nReiniciando desde el checkpoint...', F(28, { align: 'center' })).setOrigin(0.5).setVisible(false);
 
-                // --- RESULTADOS CON BOTONES TÁCTILES ---
-                this.res = this.add.container(0, 0);
-                this.resBg = this.add.rectangle(0, 0, 540, 440, 0x000000, 0.92).setStrokeStyle(4, 0xffffff);
-                this.resTitle = this.add.text(0, -180, 'DEMO COMPLETADA', F(26)).setOrigin(0.5);
-                this.resRows = this.add.text(-240, -135, '', F(18, { lineSpacing: 12 }));
-                this.resRank = this.add.text(0, 85, '', F(84, { color: '#ffd700' })).setOrigin(0.5);
-
-                this.resRetryBtn = this.add.rectangle(-120, 175, 210, 48, 0x161616, 0.95)
-                    .setStrokeStyle(2, 0xffffff)
-                    .setInteractive({ useHandCursor: true });
-                this.resRetryTxt = this.add.text(-120, 175, 'REPETIR [R]', F(17)).setOrigin(0.5);
-                this.resRetryBtn.on('pointerdown', () => { lastUiAction = performance.now(); GameState.start(); });
-                this.resRetryBtn.on('pointerover', () => this.resRetryBtn.setFillStyle(0x333333, 1));
-                this.resRetryBtn.on('pointerout', () => this.resRetryBtn.setFillStyle(0x161616, 0.95));
-
-                this.resMenuBtn = this.add.rectangle(120, 175, 210, 48, 0x161616, 0.95)
-                    .setStrokeStyle(2, 0xaaaaaa)
-                    .setInteractive({ useHandCursor: true });
-                this.resMenuTxt = this.add.text(120, 175, 'MENÚ [M]', F(17)).setOrigin(0.5);
-                this.resMenuBtn.on('pointerdown', () => { lastUiAction = performance.now(); GameState.toMenu(); });
-                this.resMenuBtn.on('pointerover', () => this.resMenuBtn.setFillStyle(0x333333, 1));
-                this.resMenuBtn.on('pointerout', () => this.resMenuBtn.setFillStyle(0x161616, 0.95));
-
-                this.res.add([
-                    this.resBg, this.resTitle, this.resRows, this.resRank,
-                    this.resRetryBtn, this.resRetryTxt, this.resMenuBtn, this.resMenuTxt
-                ]);
-                this.res.setVisible(false);
+                // Los resultados usan la pantalla FinalRank en HTML (#uk-final)
 
                 this.layout();
                 this.scale.on('resize', this.layout, this);
@@ -2777,18 +3840,13 @@
                 });
                 window.addEventListener('hideTrivia', () => this.tri.setVisible(false));
                 window.addEventListener('showBossHud', (e) => {
-                    const d = e.detail;
-                    this.bossTitleTxt.setText('JEFE FINAL: OVOCITO II · ' + d.phaseTitle).setColor(d.color || '#ffdd66');
-                    this.bossBar.width = Math.max(0.01, 348 * (d.hp / d.maxHp));
-                    this.bossHud.setVisible(true);
-                });
-                window.addEventListener('updateBossHud', (e) => {
-                    const d = e.detail;
-                    this.bossTitleTxt.setText('JEFE FINAL: OVOCITO II · ' + d.phaseTitle).setColor(d.color || '#ffdd66');
-                    this.bossBar.width = Math.max(0.01, 348 * (d.hp / d.maxHp));
+                    this.drawBossHud(e.detail);
                     this.bossHud.setVisible(true);
                 });
                 window.addEventListener('hideBossHud', () => this.bossHud.setVisible(false));
+                const gameHud = [this.hudLeft, this.styleText, this.timeText, this.progText, this.layerText, this.diffText];
+                window.addEventListener('showResults', () => gameHud.forEach(o => o.setVisible(false)));
+                window.addEventListener('hideResults', () => gameHud.forEach(o => o.setVisible(true)));
                 window.addEventListener('updateHealth', (e) => {
                     const frac = Math.max(0, e.detail / 100);
                     this.tweens.add({
@@ -2827,6 +3885,12 @@
                     this.progText.setText(String(h.progress).startsWith('JEFE') ? h.progress : 'OBSTÁCULOS ' + h.progress);
                     if (h.layer) this.layerText.setText(h.layer).setColor(h.layerColor || '#ffffff');
                     if (h.diffName) this.diffText.setText('DIFICULTAD: ' + h.diffName).setColor(h.diffColor || '#ffffff');
+                    if (h.boss) {
+                        this.drawBossHud(h.boss);
+                        if (!this.bossHud.visible) this.bossHud.setVisible(true);
+                    } else if (this.bossHud.visible) {
+                        this.bossHud.setVisible(false);
+                    }
                 });
                 window.addEventListener('banner', (e) => {
                     this.bannerText.setText(e.detail.text).setColor(e.detail.color).setAlpha(1);
@@ -2890,13 +3954,16 @@
                 window.addEventListener('hideQTE', () => this.qteBox.setVisible(false));
                 window.addEventListener('showDeath', () => { this.deathBg.setVisible(true); this.deathText.setVisible(true); });
                 window.addEventListener('hideDeath', () => { this.deathBg.setVisible(false); this.deathText.setVisible(false); });
-                window.addEventListener('showResults', (e) => {
-                    const lines = e.detail.rows.map(r => r[0].padEnd(12) + r[1].padEnd(17) + r[2]);
-                    this.resRows.setText(lines.join('\n'));
-                    this.resRank.setText('RANGO ' + e.detail.rank);
-                    this.res.setVisible(true);
-                });
-                window.addEventListener('hideResults', () => this.res.setVisible(false));
+            }
+
+            drawBossHud(d) {
+                const title = 'JEFE FINAL: OVOCITO II' + (d.state ? ' · ' + d.state : '');
+                if (title !== this.bossTitle) {
+                    this.bossTitle = title;
+                    this.bossTitleTxt.setText(title);
+                }
+                this.bossBar.width = Math.max(0.01, 348 * Math.max(0, d.hp / d.maxHp));
+                this.bossBar2.width = Math.max(0.01, 348 * Math.max(0, Math.min(1, d.secondary)));
             }
 
             layout() {
@@ -2915,7 +3982,6 @@
                 this.qteBox.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 560, (h - 24) / 430));
                 this.deathBg.setSize(w, h);
                 this.deathText.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 24) / 520));
-                this.res.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 540, (h - 24) / 440));
             }
 
             displayTrivia(d) {
