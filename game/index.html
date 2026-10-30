@@ -338,7 +338,7 @@
     </div>
     <canvas id="three-canvas"></canvas>
     <div id="phaser-canvas"></div>
-    <audio id="bgm" src="bgm.mp3" loop preload="auto"></audio>
+    <audio id="bgm" src="bgm.mp3" loop preload="none"></audio>
     <audio id="sfxParry" src="parry.mp3" preload="auto"></audio>
     <audio id="sfxDeathSequence" src="DeathSequence.mp3" preload="auto"></audio>
     <div id="parry-flash"></div>
@@ -2343,6 +2343,7 @@
                 this.resetAll();
                 this.mode = 'run';
                 document.getElementById('menu').classList.add('hidden');
+                if (typeof unlockAudio === 'function') unlockAudio();
                 if (typeof ensureBgmPlaying === 'function') ensureBgmPlaying();
                 initDecksForRun(this.diff.variety);
                 this.buildRun();
@@ -3119,7 +3120,74 @@
         }
         let parryUnlocked = false;
 
+        // --- Motor de audio (Web Audio API) para efectos de sonido ---
+        // El SFX del parry se decodifica una sola vez en memoria y se reproduce con un
+        // AudioBufferSourceNode nuevo en cada parry: sin seek en un <audio>, sin cortes
+        // y sin competir con el elemento de la música. Si Web Audio no está disponible
+        // (o falla la carga, p. ej. abriendo el archivo con file://) se usa el <audio> de respaldo.
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let sfxGain = null;
+        let parryBuffer = null;
+        let audioPrimed = false;
+        let bgmWanted = false;
+        let bgmBlobUrl = null;
+        let bgmLastRetry = 0;
+
+        try {
+            // iOS 17+: misma categoría de sesión que el <audio> (suena aunque el switch de silencio esté activo)
+            if (navigator.audioSession) navigator.audioSession.type = 'playback';
+        } catch (_) {}
+
+        if (AudioCtxClass) {
+            try {
+                audioCtx = new AudioCtxClass({ latencyHint: 'interactive' });
+            } catch (_) {
+                try { audioCtx = new AudioCtxClass(); } catch (__) { audioCtx = null; }
+            }
+        }
+
+        if (audioCtx && window.fetch) {
+            sfxGain = audioCtx.createGain();
+            sfxGain.gain.value = 0.85;
+            sfxGain.connect(audioCtx.destination);
+            fetch(sfxParryEl ? sfxParryEl.getAttribute('src') : 'parry.mp3')
+                .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+                .then(data => new Promise((resolve, reject) => {
+                    const p = audioCtx.decodeAudioData(data, resolve, reject);
+                    if (p && typeof p.then === 'function') p.then(resolve, reject);
+                }))
+                .then(buf => { parryBuffer = buf; })
+                .catch(() => { parryBuffer = null; });
+        }
+
+        function resumeAudioCtx() {
+            if (!audioCtx || audioCtx.state === 'running') return;
+            try {
+                const p = audioCtx.resume();
+                if (p && typeof p.catch === 'function') p.catch(() => {});
+            } catch (_) {}
+        }
+
+        // Debe llamarse dentro de un gesto del usuario (clic en INICIAR DEMO, tecla, toque)
+        function unlockAudio() {
+            if (!audioCtx) return;
+            resumeAudioCtx();
+            if (audioPrimed) return;
+            audioPrimed = true;
+            try {
+                const src = audioCtx.createBufferSource();
+                src.buffer = audioCtx.createBuffer(1, 1, 22050);
+                src.connect(audioCtx.destination);
+                src.start(0);
+            } catch (_) {}
+        }
+
         function unlockParrySfx() {
+            if (audioCtx) {
+                unlockAudio();
+                if (parryBuffer) return;
+            }
             if (!sfxParryEl || parryUnlocked) return;
             parryUnlocked = true;
             try {
@@ -3144,6 +3212,16 @@
         }
 
         function playParrySfx() {
+            if (audioCtx && parryBuffer && sfxGain) {
+                resumeAudioCtx();
+                try {
+                    const src = audioCtx.createBufferSource();
+                    src.buffer = parryBuffer;
+                    src.connect(sfxGain);
+                    src.start(0);
+                    return;
+                } catch (_) {}
+            }
             if (!sfxParryEl) return;
             try {
                 sfxParryEl.muted = false;
@@ -3155,17 +3233,69 @@
 
         function ensureBgmPlaying() {
             if (!bgmEl) return;
+            bgmWanted = true;
             bgmEl.volume = 0.5;
             if (bgmEl.paused) {
-                bgmEl.play().catch(() => {});
+                const p = bgmEl.play();
+                if (p && typeof p.catch === 'function') p.catch(() => {});
             }
         }
 
         function stopBgm() {
             if (!bgmEl) return;
+            bgmWanted = false;
             bgmEl.pause();
             bgmEl.currentTime = 0;
+            applyBgmBlob();
         }
+
+        // Música completa en memoria: evita que el streaming por red vacíe el buffer
+        // a mitad de partida (silencios de varios segundos). Solo se cambia la fuente
+        // mientras la música está detenida, para no cortarla.
+        function applyBgmBlob() {
+            if (!bgmEl || !bgmBlobUrl || bgmWanted || !bgmEl.paused) return;
+            if (bgmEl.src === bgmBlobUrl) return;
+            bgmEl.preload = 'auto';
+            bgmEl.src = bgmBlobUrl;
+        }
+
+        if (bgmEl) {
+            if (window.fetch && window.URL && typeof URL.createObjectURL === 'function') {
+                fetch(bgmEl.getAttribute('src'))
+                    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+                    .then(data => {
+                        bgmBlobUrl = URL.createObjectURL(new Blob([data], { type: 'audio/mpeg' }));
+                        applyBgmBlob();
+                    })
+                    .catch(() => { bgmEl.preload = 'auto'; });
+            } else {
+                bgmEl.preload = 'auto';
+            }
+
+            // Si el navegador/sistema pausa la música durante la partida, se reanuda al instante
+            bgmEl.addEventListener('pause', () => {
+                if (!bgmWanted || document.hidden || bgmEl.ended) return;
+                const now = performance.now();
+                if (now - bgmLastRetry < 1000) return;
+                bgmLastRetry = now;
+                setTimeout(() => { if (bgmWanted && bgmEl.paused && !document.hidden) ensureBgmPlaying(); }, 0);
+            });
+        }
+
+        // Al volver a la pestaña/app, o en cualquier gesto, recuperar el audio si se perdió
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden || !bgmWanted) return;
+            resumeAudioCtx();
+            ensureBgmPlaying();
+        });
+        function resumeAudioOnGesture() {
+            if (!bgmWanted) return;
+            resumeAudioCtx();
+            if (bgmEl && bgmEl.paused) ensureBgmPlaying();
+        }
+        ['pointerdown', 'touchend', 'keydown'].forEach(ev => {
+            document.addEventListener(ev, resumeAudioOnGesture, { capture: true, passive: true });
+        });
 
         // ==========================================
         // CONTROLADOR DE PANTALLA DE MUERTE ULTRAKILL (DIAGNÓSTICO TERMINAL ESPERMÁTICO)
@@ -3262,6 +3392,8 @@
                 try { sfxDeathSequenceEl.pause(); sfxDeathSequenceEl.currentTime = 0; } catch (_) {}
             }
             if (bgmEl) {
+                // Pausa intencional: evita que el auto-reanudado de la música la vuelva a iniciar
+                bgmWanted = false;
                 try { bgmEl.pause(); bgmEl.playbackRate = 1.0; } catch (_) {}
             }
 
@@ -4013,6 +4145,8 @@
             antialias: true,
             transparent: true,
             input: { keyboard: false, mouse: true, touch: true, gamepad: false },
+            // La UI de Phaser no reproduce sonidos: sin su AudioContext propio que compita con la música y los SFX
+            audio: { noAudio: true },
             scene: [UIScene]
         };
         const phaserGame = new Phaser.Game(phaserConfig);
