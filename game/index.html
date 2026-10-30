@@ -22,6 +22,7 @@
         #phaser-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 2; touch-action: none; }
         #phaser-canvas canvas { width: 100% !important; height: 100% !important; display: block; image-rendering: -webkit-optimize-contrast; image-rendering: pixelated; }
         #parry-flash { position: fixed; inset: 0; z-index: 5; pointer-events: none; opacity: 0; background-color: #ffffff; }
+        #ulti-flash { position: fixed; inset: 0; z-index: 5; pointer-events: none; opacity: 0; background-color: #ffd400; transition: opacity 0.06s ease-out; }
         #instructions { position: absolute; bottom: 12px; left: 16px; right: 16px; z-index: 3; pointer-events: none; text-shadow: 1px 1px 2px black; font-size: 12px; line-height: 1.4; opacity: .85; }
 
         /* Barra rápida de acciones en partida (Solo botón de Menú) */
@@ -343,6 +344,7 @@
     <audio id="sfxParry" src="parry.mp3" preload="auto"></audio>
     <audio id="sfxDeathSequence" src="DeathSequence.mp3" preload="auto"></audio>
     <div id="parry-flash"></div>
+    <div id="ulti-flash"></div>
 
     <!-- ULTRAKILL Authentic Terminal Death Screen Overlay -->
     <div id="uk-death-overlay" class="uk-death-overlay hidden">
@@ -2278,6 +2280,7 @@
                     const b = this.boss;
                     this.player.x = 0;
                     this.addStyle(200, 'ULTI', { color: '#ffd400' });
+                    triggerUltiFlash();
                     emit('banner', { text: '¡ULTI ACTIVADA!', color: '#ffd400' });
                     if (b.attack && !b.fp.pendingAsk) {
                         BossAI.resolve(b, true);
@@ -2322,7 +2325,7 @@
                 this.phase = 'exec';
                 flashRing(new THREE.Vector3(0, 2.5, fromZ - 2), 0xffd400);
                 burst(new THREE.Vector3(0, 2.5, fromZ - 3), 0xffd400, 50, 14);
-                shake(0.8);
+                triggerUltiFlash();
                 emit('banner', { text: '¡ULTI ACTIVADA! SALTANDO 4 OBSTÁCULOS...', color: '#ffd400' });
 
                 anim(0.55, k => {
@@ -3108,10 +3111,12 @@
         const bgmEl = document.getElementById('bgm');
         const sfxParryEl = document.getElementById('sfxParry');
         const parryFlashEl = document.getElementById('parry-flash');
+        const ultiFlashEl  = document.getElementById('ulti-flash');
         const timeController = {
             timeScale: 1.0,
             currentStop: 0,
-            flashTimer: 0
+            flashTimer: 0,
+            ultiFlashTimer: 0
         };
 
         function trueStop(length) {
@@ -3126,6 +3131,20 @@
             timeController.flashTimer = 0.10;
             trueStop(0.25);
             shake(0.5);
+        }
+
+        // Impact frame + temblor estilo Kamehameha al usar la ULTI
+        function triggerUltiFlash() {
+            // Impact frame dorado: congela 1 frame (~0.06 s) y satura la pantalla
+            if (ultiFlashEl) ultiFlashEl.style.opacity = '0.85';
+            timeController.ultiFlashTimer = 0.08;
+            trueStop(0.06);
+            // Sacudida inicial fuerte
+            shake(1.8);
+            // Pulsos de shake secundarios encadenados (desvanecimiento gradual)
+            setTimeout(() => { shake(1.2); }, 90);
+            setTimeout(() => { shake(0.9); }, 200);
+            setTimeout(() => { shake(0.5); }, 350);
         }
 
         function resetParryFlash() {
@@ -3727,6 +3746,13 @@
                 if (timeController.flashTimer <= 0) {
                     timeController.flashTimer = 0;
                     if (parryFlashEl) parryFlashEl.style.opacity = '0';
+                }
+            }
+            if (timeController.ultiFlashTimer > 0) {
+                timeController.ultiFlashTimer -= unscaledDt;
+                if (timeController.ultiFlashTimer <= 0) {
+                    timeController.ultiFlashTimer = 0;
+                    if (ultiFlashEl) ultiFlashEl.style.opacity = '0';
                 }
             }
             const sdt = GameState.update(dt);
