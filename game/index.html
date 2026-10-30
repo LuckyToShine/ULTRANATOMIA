@@ -3148,68 +3148,21 @@
             shake(0.5);
         }
 
-        // Impact frame + temblor estilo Kamehameha al usar la ULTI
+        // Impact frame + temblor + animación completa sincronizada con el audio del Kamehameha (~11.8s)
         function triggerUltiFlash() {
             if (typeof playKamehamehaSfx === 'function') playKamehamehaSfx();
 
-            // --- IMPACT FRAME dorado: parpadeo doble para sensación de golpe pesado ---
-            if (ultiFlashEl) {
-                ultiFlashEl.style.transition = 'none';
-                ultiFlashEl.style.opacity = '1.0';
-            }
-            // Primer freeze frame
-            trueStop(0.10);
-            timeController.ultiFlashTimer = 0.12;
-
-            // Parpadeo secundario: apaga y vuelve a encender para dar efecto de impacto real
-            setTimeout(() => {
-                if (ultiFlashEl) ultiFlashEl.style.opacity = '0.0';
-            }, 80);
-            setTimeout(() => {
-                if (ultiFlashEl) ultiFlashEl.style.opacity = '0.75';
-                timeController.ultiFlashTimer = 0.10;
-            }, 130);
-
-            // --- KAMEHAMEHA: haz de energía en Three.js ---
-            // Aparece desde la cámara (jugador) disparado hacia adelante
             const pz = GameState.player.z;
             const px = GameState.player.x;
             const beamOrigin = new THREE.Vector3(px, 2.2, pz - 1.5);
+            const tk = GameState.token;
 
-            // Núcleo del haz (cilindro brillante dorado)
-            const beamCoreMat = new THREE.MeshBasicMaterial({
-                color: 0xffd400,
-                transparent: true,
-                opacity: 0.95,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
-            });
-            const beamCoreGeo = new THREE.CylinderGeometry(0.18, 0.38, 28, 14, 1, true);
-            const beamCore = new THREE.Mesh(beamCoreGeo, beamCoreMat);
-            beamCore.rotation.x = Math.PI / 2;
-            beamCore.position.set(px, 2.2, pz - 15.5);
-            scene.add(beamCore);
-
-            // Aura exterior del haz (más ancha, azul-blanca)
-            const beamAuraMat = new THREE.MeshBasicMaterial({
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.35,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
-            });
-            const beamAuraGeo = new THREE.CylinderGeometry(0.55, 1.1, 28, 10, 1, true);
-            const beamAura = new THREE.Mesh(beamAuraGeo, beamAuraMat);
-            beamAura.rotation.x = Math.PI / 2;
-            beamAura.position.set(px, 2.2, pz - 15.5);
-            scene.add(beamAura);
-
-            // Esfera de carga en el origen del disparo (acrosoma del espermatozoide)
-            const chargeGeo = new THREE.SphereGeometry(0.7, 14, 12);
+            // --- 1. ESFERA DE CARGA (0s a ~6.8s: "Ka... me... ha... me...") ---
+            const chargeGeo = new THREE.SphereGeometry(0.85, 20, 16);
             const chargeMat = new THREE.MeshBasicMaterial({
-                color: 0xffd400,
+                color: 0x66ccff,
                 transparent: true,
-                opacity: 1.0,
+                opacity: 0.9,
                 blending: THREE.AdditiveBlending,
                 depthWrite: false
             });
@@ -3217,52 +3170,171 @@
             chargeSphere.position.copy(beamOrigin);
             scene.add(chargeSphere);
 
-            // Explosión de partículas en el punto de lanzamiento
-            burst(beamOrigin, 0xffd400, 55, 16);
-            burst(beamOrigin, 0xffffff, 30, 22);
-            flashRing(beamOrigin, 0xffd400);
+            // Anillo de energía en espiral durante la carga
+            const chargeRingGeo = new THREE.TorusGeometry(1.2, 0.08, 8, 28);
+            const chargeRingMat = new THREE.MeshBasicMaterial({
+                color: 0x99eeff,
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const chargeRing = new THREE.Mesh(chargeRingGeo, chargeRingMat);
+            chargeRing.position.copy(beamOrigin);
+            scene.add(chargeRing);
 
-            // --- SHAKE en oleadas tipo Kamehameha ---
-            // Sacudida inicial ultra fuerte (el disparo sale)
-            shake(2.5);
-            setTimeout(() => { shake(2.0); }, 40);
-            setTimeout(() => { shake(1.6); }, 100);
-            setTimeout(() => { shake(1.2); }, 200);
-            setTimeout(() => { shake(0.9); }, 330);
-            setTimeout(() => { shake(0.6); }, 480);
-            setTimeout(() => { shake(0.35); }, 650);
+            // --- 2. HAZ PRINCIPAL (a partir de 6.8s: "¡¡HAAAAA!!") ---
+            const beamLength = 80;
+            const beamCoreGeo = new THREE.CylinderGeometry(0.35, 1.4, beamLength, 18, 1, true);
+            const beamCoreMat = new THREE.MeshBasicMaterial({
+                color: 0xffea00,
+                transparent: true,
+                opacity: 0.0,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const beamCore = new THREE.Mesh(beamCoreGeo, beamCoreMat);
+            beamCore.rotation.x = Math.PI / 2;
+            beamCore.position.set(px, 2.2, pz - beamLength / 2 - 1.5);
+            scene.add(beamCore);
 
-            // --- Animación del haz: crece y se desvanece en ~0.55 s ---
-            let beamT = 0;
-            const beamDur = 0.55;
-            const tk = GameState.token;
-            function animBeam(nowT) {
-                beamT += 0.016; // ~60fps aprox
-                const k = Math.min(1, beamT / beamDur);
-                // El haz crece en grosor al principio y luego se desvanece
-                const growK = k < 0.25 ? k / 0.25 : 1;
-                const fadeK = k > 0.55 ? (k - 0.55) / 0.45 : 0;
-                beamCoreMat.opacity = Math.max(0, 0.95 * growK * (1 - fadeK));
-                beamAuraMat.opacity = Math.max(0, 0.35 * growK * (1 - fadeK));
-                chargeMat.opacity  = Math.max(0, (1 - k * 2.2));
-                chargeSphere.scale.setScalar(1 + k * 1.8);
-                // Rotación leve del aura para efecto espiral
-                beamAura.rotation.z += 0.08;
-                if (k < 1 && tk === GameState.token) {
-                    requestAnimationFrame(animBeam);
+            const beamAuraGeo = new THREE.CylinderGeometry(0.9, 3.2, beamLength, 14, 1, true);
+            const beamAuraMat = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.0,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const beamAura = new THREE.Mesh(beamAuraGeo, beamAuraMat);
+            beamAura.rotation.x = Math.PI / 2;
+            beamAura.position.set(px, 2.2, pz - beamLength / 2 - 1.5);
+            scene.add(beamAura);
+
+            // Tiempos clave en segundos según el audio (11.78s total)
+            const T_FIRE = 6.85;   // Disparo violento del rayo
+            const T_END = 11.78;   // Fin del audio y animación
+            let blastTriggered = false;
+            let startTime = performance.now();
+
+            function animKamehameha() {
+                if (tk !== GameState.token) {
+                    cleanup();
+                    return;
+                }
+                const elapsed = (performance.now() - startTime) / 1000;
+
+                if (elapsed < T_FIRE) {
+                    // --- FASE DE CARGA (0s - 6.85s) ---
+                    const chargeProgress = elapsed / T_FIRE;
+                    const pulse = 1 + 0.35 * Math.sin(elapsed * 18);
+                    const grow = 0.5 + chargeProgress * 1.5;
+                    chargeSphere.scale.setScalar(grow * pulse);
+
+                    // De azul a dorado conforme se concentra el poder
+                    if (chargeProgress > 0.6) {
+                        chargeMat.color.setHex(0xffee55);
+                    }
+                    chargeRing.rotation.x += 0.08;
+                    chargeRing.rotation.y += 0.12;
+                    chargeRing.scale.setScalar(grow * (1.1 + 0.2 * Math.cos(elapsed * 14)));
+
+                    // Temblor creciente conforme se carga
+                    if (elapsed > 1.2) {
+                        const chargeShake = 0.15 + chargeProgress * 0.6;
+                        shake(chargeShake);
+                    }
+
+                    if (Math.random() < 0.25) {
+                        burst(beamOrigin, 0x66ddff, 3, 4);
+                    }
+                } else if (!blastTriggered) {
+                    // --- DISPARO INSTANTÁNEO (¡HAAAA! a los 6.85s) ---
+                    blastTriggered = true;
+
+                    // IMPACT FRAME en el momento del disparo
+                    if (ultiFlashEl) {
+                        ultiFlashEl.style.transition = 'none';
+                        ultiFlashEl.style.opacity = '1.0';
+                    }
+                    trueStop(0.12);
+                    timeController.ultiFlashTimer = 0.16;
+
+                    setTimeout(() => {
+                        if (ultiFlashEl) ultiFlashEl.style.opacity = '0.0';
+                    }, 100);
+                    setTimeout(() => {
+                        if (ultiFlashEl) {
+                            ultiFlashEl.style.opacity = '0.85';
+                            timeController.ultiFlashTimer = 0.14;
+                        }
+                    }, 160);
+
+                    // Gran explosión inicial
+                    burst(beamOrigin, 0xffd400, 70, 20);
+                    burst(beamOrigin, 0xffffff, 45, 26);
+                    flashRing(beamOrigin, 0xffd400);
+
+                    // Temblor máximo
+                    shake(3.0);
                 } else {
-                    scene.remove(beamCore);
-                    scene.remove(beamAura);
-                    scene.remove(chargeSphere);
-                    beamCoreGeo.dispose();
-                    beamAuraGeo.dispose();
-                    chargeGeo.dispose();
-                    beamCoreMat.dispose();
-                    beamAuraMat.dispose();
-                    chargeMat.dispose();
+                    // --- FASE DE DISPARO ACTIVO (6.85s - 11.78s) ---
+                    const blastDuration = T_END - T_FIRE;
+                    const blastElapsed = elapsed - T_FIRE;
+                    const blastRatio = Math.min(1, blastElapsed / blastDuration);
+
+                    // Desvanecimiento del haz hacia el final del audio
+                    let beamOpacity = 1.0;
+                    if (blastRatio > 0.70) {
+                        beamOpacity = 1.0 - (blastRatio - 0.70) / 0.30;
+                    }
+
+                    beamCoreMat.opacity = Math.max(0, 0.95 * beamOpacity);
+                    beamAuraMat.opacity = Math.max(0, 0.45 * beamOpacity);
+
+                    const beamThick = 1 + 0.25 * Math.sin(blastElapsed * 25);
+                    beamCore.scale.set(beamThick, 1, beamThick);
+                    beamAura.scale.set(beamThick * 1.2, 1, beamThick * 1.2);
+                    beamAura.rotation.z += 0.25;
+
+                    chargeSphere.scale.setScalar(2.2 * beamThick);
+                    chargeMat.opacity = Math.max(0, 0.8 * beamOpacity);
+                    chargeMat.color.setHex(0xffffff);
+
+                    // Temblor continuo durante todo el lanzamiento del rayo
+                    if (blastRatio < 0.75) {
+                        shake(1.5 + 0.6 * Math.sin(blastElapsed * 30));
+                        if (Math.random() < 0.4) {
+                            burst(beamOrigin, 0xffd400, 4, 8);
+                        }
+                    } else {
+                        shake(0.5 * beamOpacity);
+                    }
+                }
+
+                if (elapsed < T_END) {
+                    requestAnimationFrame(animKamehameha);
+                } else {
+                    cleanup();
                 }
             }
-            requestAnimationFrame(animBeam);
+
+            function cleanup() {
+                scene.remove(chargeSphere);
+                scene.remove(chargeRing);
+                scene.remove(beamCore);
+                scene.remove(beamAura);
+                chargeGeo.dispose();
+                chargeMat.dispose();
+                chargeRingGeo.dispose();
+                chargeRingMat.dispose();
+                beamCoreGeo.dispose();
+                beamCoreMat.dispose();
+                beamAuraGeo.dispose();
+                beamAuraMat.dispose();
+            }
+
+            requestAnimationFrame(animKamehameha);
         }
 
         function resetParryFlash() {
@@ -3306,7 +3378,7 @@
             sfxGain = audioCtx.createGain();
             sfxGain.gain.value = 0.85;
             sfxGain.connect(audioCtx.destination);
-            fetch(sfxParryEl ? sfxParryEl.getAttribute('src') : 'parry.mp3')
+            fetch('parry.mp3')
                 .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
                 .then(data => new Promise((resolve, reject) => {
                     const p = audioCtx.decodeAudioData(data, resolve, reject);
@@ -3387,22 +3459,25 @@
         }
 
         function playParrySfx() {
-            if (audioCtx && parryBuffer && sfxGain) {
+            if (audioCtx) {
                 resumeAudioCtx();
-                try {
-                    const src = audioCtx.createBufferSource();
-                    src.buffer = parryBuffer;
-                    src.connect(sfxGain);
-                    src.start(0);
-                    return;
-                } catch (_) {}
+                if (parryBuffer && sfxGain) {
+                    try {
+                        const src = audioCtx.createBufferSource();
+                        src.buffer = parryBuffer;
+                        src.connect(sfxGain);
+                        src.start(0);
+                        return;
+                    } catch (_) {}
+                }
             }
             if (!sfxParryEl) return;
             try {
                 sfxParryEl.muted = false;
                 sfxParryEl.currentTime = 0;
-                sfxParryEl.volume = 0.85;
-                sfxParryEl.play().catch(() => {});
+                sfxParryEl.volume = 1.0;
+                const p = sfxParryEl.play();
+                if (p && typeof p.catch === 'function') p.catch(() => {});
             } catch (_) {}
         }
 
