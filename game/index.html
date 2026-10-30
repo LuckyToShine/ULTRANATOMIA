@@ -20,14 +20,14 @@
         #three-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 1; touch-action: none; }
         /* Phaser UI encima de Three.js con soporte táctil y de ratón */
         #phaser-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 2; touch-action: none; }
-        #phaser-canvas canvas { width: 100% !important; height: 100% !important; display: block; }
+        #phaser-canvas canvas { width: 100% !important; height: 100% !important; display: block; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
         #parry-flash { position: fixed; inset: 0; z-index: 5; pointer-events: none; opacity: 0; background-color: #ffffff; }
         #instructions { position: absolute; bottom: 12px; left: 16px; right: 16px; z-index: 3; pointer-events: none; text-shadow: 1px 1px 2px black; font-size: 12px; line-height: 1.4; opacity: .85; }
 
-        /* Barra rápida de acciones en partida (Reiniciar / Menú) */
+        /* Barra rápida de acciones en partida (Solo botón de Menú) */
         #top-actions { position: absolute; top: 82px; left: 14px; z-index: 4; display: flex; flex-wrap: wrap; gap: 6px; }
-        #top-actions button, #top-actions a { font: inherit; font-size: 12px; background: rgba(17,17,17,.85); color: #ddd; border: 1px solid #666; padding: 5px 10px; cursor: pointer; text-decoration: none; touch-action: manipulation; }
-        #top-actions button:hover, #top-actions button:active, #top-actions a:hover, #top-actions a:active { background: #fff; color: #000; border-color: #fff; }
+        #top-actions button { font: inherit; font-size: 12px; background: rgba(17,17,17,.85); color: #ddd; border: 1px solid #666; padding: 5px 10px; cursor: pointer; text-decoration: none; touch-action: manipulation; }
+        #top-actions button:hover, #top-actions button:active { background: #fff; color: #000; border-color: #fff; }
 
         /* Botón de pantalla completa en esquina superior derecha del menú */
         #menu .fs-corner-btn { position: absolute; top: 14px; right: 14px; z-index: 12; font: inherit; font-size: 12px; padding: 7px 14px; margin: 0; border: 2px solid #fff; background: #111; color: #fff; cursor: pointer; font-weight: bold; letter-spacing: 1px; touch-action: manipulation; }
@@ -167,9 +167,10 @@
             100% { transform: scale(1, 1); }
         }
         .ukf-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
-        #ukf-title { left: 0; top: 0; width: 1000px; height: 100px; text-align: center; }
-        #ukf-level { font-size: 56px; line-height: 1; padding-top: 6px; }
-        #ukf-diff { font-size: 40px; line-height: 1; }
+        #ukf-title { left: 0; top: 0; width: 1000px; height: 110px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        #ukf-level { font-size: 42px; line-height: 1.05; padding-top: 2px; }
+        #ukf-story { font-size: 32px; line-height: 1.15; color: #ffd400; text-shadow: 0 0 10px rgba(255, 212, 0, 0.5); letter-spacing: 1px; }
+        #ukf-diff { font-size: 26px; line-height: 1.05; color: #ccc; }
         .ukf-row { left: 0; width: 480px; height: 80px; font-size: 38px; line-height: 80px; }
         .ukf-row .ukf-label { position: absolute; left: 16px; color: #808080; }
         .ukf-row .ukf-val { position: absolute; right: 16px; }
@@ -360,6 +361,7 @@
             </div>
             <div class="uk-death-bottom">
                 <div class="uk-death-subprompt">Pulsa <span class="uk-key-hint">ESC</span> para men&uacute; &middot; Toca o haz clic en cualquier lugar para reiniciar</div>
+                <div style="margin-top:14px;"><button type="button" id="btnDeathMenu" style="pointer-events:auto; font:inherit; font-size:clamp(12px, 2vw, 15px); background:#1a0000; color:#ff4455; border:1px solid #ff4455; padding:8px 18px; cursor:pointer; touch-action:manipulation; font-weight:bold; letter-spacing:1px;">VOLVER AL MEN&Uacute; [ESC]</button></div>
             </div>
         </div>
     </div>
@@ -374,6 +376,7 @@
         <div id="ukf-box">
             <div class="ukf-panel pop" id="ukf-title">
                 <div class="ukf-item" id="ukf-level">ULTRANATOMIA &middot; OVOCITO II</div>
+                <div class="ukf-item" id="ukf-story">el esperma de didi llego al ovulo de naomi</div>
                 <div class="ukf-item" id="ukf-diff">-- PRO --</div>
             </div>
             <div class="ukf-panel pop ukf-row" id="ukf-time-row" style="top:120px"><span class="ukf-label">TIEMPO:</span><span class="ukf-val ukf-item" id="ukf-time">0:00.000</span></div>
@@ -394,10 +397,7 @@
     </div>
 
     <div id="top-actions">
-        <button id="btnRestart">Reiniciar</button>
         <button id="btnMenu">Men&uacute; Demo</button>
-        <button id="btnFullscreen" type="button">Pantalla Completa</button>
-        <a href="../">Inicio</a>
     </div>
     <div id="instructions">Toca o pulsa 1-3: responder trivia &middot; QTE: toca o pulsa 1-4 para ordenar los pasos &middot; U (o toca barra): usar ULTI</div>
 
@@ -945,7 +945,8 @@
             return 3;
         }
 
-        const DPR = Math.min(window.devicePixelRatio || 1, 3);
+        // Escalar por enteros exactos de DPR (1, 2 o 3) para evitar desenfoque por subpíxeles o interpolación fraccional
+        const DPR = Math.max(1, Math.min(3, Math.round(window.devicePixelRatio || 1)));
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(LAYERS[0].bg);
         scene.fog = new THREE.Fog(LAYERS[0].bg, 10, 72);
@@ -2106,7 +2107,7 @@
                 this.clear(b, true);
                 emit('hideBossHud');
                 gs.addStyle(400, 'FECUNDACIÓN', { color: UK_CYAN, boss: true });
-                emit('banner', { text: '¡OVOCITO II DERROTADO · FECUNDACIÓN COMPLETADA!', color: '#ffdd66' });
+                emit('banner', { text: '¡OVOCITO II DERROTADO · EL ESPERMA DE DIDI LLEGÓ AL ÓVULO DE NAOMI!', color: '#ffdd66' });
                 const u = finishMarker && finishMarker.userData;
                 burst(this.center(b), 0xffdd66, 95, 16);
                 flashRing(new THREE.Vector3(0, 3.2, b.z + 2), 0xffffff);
@@ -2237,10 +2238,10 @@
 
             addUltiStreak() {
                 if (this.ultiUsed || this.ultiReady) return;
-                this.ultiCharge = Math.min(4, this.ultiCharge + 1);
-                if (this.ultiCharge >= 4) {
+                this.ultiCharge = Math.min(3, this.ultiCharge + 1);
+                if (this.ultiCharge >= 3) {
                     this.ultiReady = true;
-                    emit('banner', { text: '¡ULTI LISTA! [U] SALTAR SECCIÓN (1 USO)', color: '#00ffcc' });
+                    emit('banner', { text: '¡ULTI LISTA! [U] SALTAR 4 OBSTÁCULOS (1 USO)', color: '#ffd400' });
                 }
                 emit('updateUlti', { charge: this.ultiCharge, ready: this.ultiReady, used: this.ultiUsed });
             },
@@ -2276,8 +2277,8 @@
                     // Contra el jefe: supera la pregunta activa o, si no hay ninguna, le golpea directamente
                     const b = this.boss;
                     this.player.x = 0;
-                    this.addStyle(200, 'ULTI', { color: UK_CYAN });
-                    emit('banner', { text: '¡ULTI ACTIVADA!', color: '#00ffcc' });
+                    this.addStyle(200, 'ULTI', { color: '#ffd400' });
+                    emit('banner', { text: '¡ULTI ACTIVADA!', color: '#ffd400' });
                     if (b.attack && !b.fp.pendingAsk) {
                         BossAI.resolve(b, true);
                     } else {
@@ -2292,34 +2293,37 @@
                 const next = this.nextObstacle();
                 if (!next) return;
 
-                const curLayer = Math.min(3, Math.floor(next.index / epl));
-                const nextLayerStartIdx = Math.min(runLen, (curLayer + 1) * epl);
+                // Salta exactamente 4 obstáculos
+                const targetIdx = Math.min(runLen, next.index + 4);
 
                 obstacles.slice().forEach(o => {
-                    if (!o.cleared && o.index < nextLayerStartIdx) {
+                    if (!o.cleared && o.index < targetIdx) {
                         o.cleared = true;
-                        burst(new THREE.Vector3(0, 3.2, o.z), 0x00ffcc, 35, 11);
+                        burst(new THREE.Vector3(0, 3.2, o.z), 0xffd400, 35, 11);
                         removeObstacle(o);
                     }
                 });
 
-                const targetZ = nextLayerStartIdx < runLen
-                    ? this.zFor(nextLayerStartIdx) + TRIGGER_DIST + 6
+                const targetZ = targetIdx < runLen
+                    ? this.zFor(targetIdx) + TRIGGER_DIST + 6
                     : this.finishZ + BOSS_TRIGGER_DIST + 6;
 
                 const fromZ = this.player.z;
                 const toZ = Math.min(fromZ, targetZ);
 
-                this.cpIdx = nextLayerStartIdx;
-                this.cpZ = toZ;
+                const passedCheckpoint = Math.floor(targetIdx / epl) * epl;
+                if (passedCheckpoint > this.cpIdx) {
+                    this.cpIdx = passedCheckpoint;
+                    this.cpZ = this.zFor(passedCheckpoint);
+                }
                 this.styleAtCp = this.style + 250;
-                this.addStyle(250, 'ULTI', { color: UK_CYAN });
+                this.addStyle(250, 'ULTI', { color: '#ffd400' });
 
                 this.phase = 'exec';
-                flashRing(new THREE.Vector3(0, 2.5, fromZ - 2), 0x00ffcc);
-                burst(new THREE.Vector3(0, 2.5, fromZ - 3), 0x00ffcc, 50, 14);
+                flashRing(new THREE.Vector3(0, 2.5, fromZ - 2), 0xffd400);
+                burst(new THREE.Vector3(0, 2.5, fromZ - 3), 0xffd400, 50, 14);
                 shake(0.8);
-                emit('banner', { text: '¡ULTI ACTIVADA! SALTANDO SECCIÓN...', color: '#00ffcc' });
+                emit('banner', { text: '¡ULTI ACTIVADA! SALTANDO 4 OBSTÁCULOS...', color: '#ffd400' });
 
                 anim(0.55, k => {
                     const ease = 1 - Math.pow(1 - k, 3);
@@ -2328,11 +2332,11 @@
                     if (this.phase === 'dead') return;
                     this.layerIdx = layerIndexAtZ(this.player.z);
                     this.phase = 'running';
-                    if (nextLayerStartIdx < runLen) {
+                    if (targetIdx < runLen) {
                         const L = LAYERS[this.layerIdx];
-                        emit('banner', { text: 'SECCIÓN SALTADA · ' + L.title, color: L.css });
+                        emit('banner', { text: '4 OBSTÁCULOS SALTADOS · ' + L.title, color: L.css });
                     } else {
-                        emit('banner', { text: 'SECCIÓN SALTADA · ANTESALA DEL OVOCITO II', color: '#ffdd66' });
+                        emit('banner', { text: 'OBSTÁCULOS SALTADOS · ANTESALA DEL OVOCITO II', color: '#ffdd66' });
                     }
                 });
             },
@@ -2804,6 +2808,7 @@
                 const overall = score === 12 ? 'P' : RANKS[Math.min(4, Math.round(score / 3))];
                 emit('showResults', {
                     level: 'ULTRANATOMIA · OVOCITO II',
+                    story: 'el esperma de didi llego al ovulo de naomi',
                     difficulty: '-- ' + this.diff.name + ' --',
                     time: this.runTime, timeRank: RANKS[tR],
                     acc, accRank: RANKS[aR],
@@ -3059,10 +3064,21 @@
         }
 
         document.getElementById('startRun').onclick = () => { tryLockLandscape(); GameState.start(); };
-        document.getElementById('btnRestart').onclick = (e) => { GameState.restart(); e.target.blur(); };
-        document.getElementById('btnMenu').onclick = (e) => { GameState.toMenu(); e.target.blur(); };
-        document.getElementById('btnFullscreen').onclick = (e) => { e.preventDefault(); toggleFullscreen(); e.target.blur(); };
-        document.getElementById('btnFullscreenMenu').onclick = (e) => { e.preventDefault(); toggleFullscreen(); e.target.blur(); };
+        const btnRestartEl = document.getElementById('btnRestart');
+        if (btnRestartEl) btnRestartEl.onclick = (e) => { GameState.restart(); e.target.blur(); };
+        const btnMenuEl = document.getElementById('btnMenu');
+        if (btnMenuEl) btnMenuEl.onclick = (e) => { GameState.toMenu(); e.target.blur(); };
+        const btnFullscreenEl = document.getElementById('btnFullscreen');
+        if (btnFullscreenEl) btnFullscreenEl.onclick = (e) => { e.preventDefault(); toggleFullscreen(); e.target.blur(); };
+        const btnFullscreenMenuEl = document.getElementById('btnFullscreenMenu');
+        if (btnFullscreenMenuEl) btnFullscreenMenuEl.onclick = (e) => { e.preventDefault(); toggleFullscreen(); e.target.blur(); };
+        const btnDeathMenuEl = document.getElementById('btnDeathMenu');
+        if (btnDeathMenuEl) {
+            btnDeathMenuEl.addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                triggerUkMenu();
+            });
+        }
 
         document.querySelectorAll('a[href="../"]').forEach(link => {
             link.addEventListener('click', (e) => {
@@ -3498,6 +3514,7 @@
                 this.el.querySelectorAll('.ukf-flash').forEach(n => { n.style.opacity = 0; });
                 this.$('ukf-total').style.background = '';
                 this.$('ukf-level').textContent = d.level;
+                if (this.$('ukf-story')) this.$('ukf-story').textContent = d.story || 'el esperma de didi llego al ovulo de naomi';
                 this.$('ukf-diff').textContent = d.difficulty;
                 this.$('ukf-time').textContent = ukTime(0);
                 this.$('ukf-acc').textContent = '0.0%';
@@ -3520,7 +3537,7 @@
                 this.complete = false;
                 // Mismo orden que FinalRank.toAppear
                 this.steps = [
-                    ['ukf-title', 'panel'], ['ukf-level', 'text'], ['ukf-diff', 'text'],
+                    ['ukf-title', 'panel'], ['ukf-level', 'text'], ['ukf-story', 'text'], ['ukf-diff', 'text'],
                     ['ukf-time-row', 'panel'], ['ukf-time', 'count', 'time'], ['ukf-time-box', 'panel'], ['ukf-time-rank', 'rank', 'timeRank'],
                     ['ukf-acc-row', 'panel'], ['ukf-acc', 'count', 'acc'], ['ukf-acc-box', 'panel'], ['ukf-acc-rank', 'rank', 'accRank'],
                     ['ukf-style-row', 'panel'], ['ukf-style', 'count', 'style'], ['ukf-style-box', 'panel'], ['ukf-style-rank', 'rank', 'styleRank'],
@@ -3792,8 +3809,10 @@
             }
 
             create() {
+                this.cameras.main.setRoundPixels(true);
+
                 const F = (size, extra) => Object.assign({
-                    fontFamily: '"Courier New", Courier, monospace',
+                    fontFamily: '"Courier New", Courier, "Lucida Console", Monaco, monospace',
                     fontSize: size + 'px',
                     color: '#ffffff',
                     fontStyle: 'bold',
@@ -3806,13 +3825,13 @@
                 this.hpBar = this.add.rectangle(0, 0, 260, 28, 0xff0000).setOrigin(0, 0);
                 this.hpLabel = this.add.text(8, 5, 'VITALIDAD', F(17));
 
-                // Barra de ULTI con 4 barritas
-                this.ultiBg = this.add.rectangle(0, 32, 260, 28, 0x0a1414, 0.92).setOrigin(0, 0).setStrokeStyle(1.5, 0x224444);
-                this.ultiLabel = this.add.text(6, 39, 'ULTI 0/4', F(11, { color: '#669999' }));
+                // Barra de ULTI con 3 barritas amarillas
+                this.ultiBg = this.add.rectangle(0, 32, 260, 28, 0x14140a, 0.92).setOrigin(0, 0).setStrokeStyle(1.5, 0x444422);
+                this.ultiLabel = this.add.text(6, 39, 'ULTI 0/3', F(11, { color: '#999966' }));
                 this.ultiBars = [];
-                for (let i = 0; i < 4; i++) {
-                    const bx = 76 + i * 44;
-                    const seg = this.add.rectangle(bx, 37, 40, 18, 0x162626).setOrigin(0, 0).setStrokeStyle(1.5, 0x335555);
+                for (let i = 0; i < 3; i++) {
+                    const bx = 76 + i * 58;
+                    const seg = this.add.rectangle(bx, 37, 52, 18, 0x262616).setOrigin(0, 0).setStrokeStyle(1.5, 0x555533);
                     this.ultiBars.push(seg);
                 }
                 this.ultiBg.setInteractive({ useHandCursor: true });
@@ -3991,21 +4010,21 @@
                 window.addEventListener('updateUlti', (e) => {
                     const { charge, ready, used } = e.detail;
                     if (used) {
-                        this.ultiLabel.setText('AGOTADA').setColor('#555555');
+                        this.ultiLabel.setText('VACÍA').setColor('#777777');
                         this.ultiBg.setFillStyle(0x111111, 0.85).setStrokeStyle(1.5, 0x333333);
                         this.ultiBars.forEach(b => b.setFillStyle(0x1a1a1a).setStrokeStyle(1.5, 0x333333));
                     } else if (ready) {
-                        this.ultiLabel.setText('¡LISTA! [U]').setColor('#00ffcc');
-                        this.ultiBg.setFillStyle(0x062e26, 0.96).setStrokeStyle(2, 0x00ffcc);
-                        this.ultiBars.forEach(b => b.setFillStyle(0x00ffcc).setStrokeStyle(1.5, 0xffffff));
+                        this.ultiLabel.setText('¡LISTA! [U]').setColor('#ffd400');
+                        this.ultiBg.setFillStyle(0x2a2404, 0.96).setStrokeStyle(2, 0xffd400);
+                        this.ultiBars.forEach(b => b.setFillStyle(0xffd400).setStrokeStyle(1.5, 0xffffff));
                     } else {
-                        this.ultiLabel.setText('ULTI ' + charge + '/4').setColor(charge > 0 ? '#66ffee' : '#669999');
-                        this.ultiBg.setFillStyle(0x0a1414, 0.92).setStrokeStyle(1.5, 0x224444);
+                        this.ultiLabel.setText('ULTI ' + charge + '/3').setColor(charge > 0 ? '#ffee55' : '#999966');
+                        this.ultiBg.setFillStyle(0x14140a, 0.92).setStrokeStyle(1.5, 0x444422);
                         this.ultiBars.forEach((b, idx) => {
                             if (idx < charge) {
-                                b.setFillStyle(0x00d4aa).setStrokeStyle(1.5, 0x88ffee);
+                                b.setFillStyle(0xffd400).setStrokeStyle(1.5, 0xffe680);
                             } else {
-                                b.setFillStyle(0x162626).setStrokeStyle(1.5, 0x335555);
+                                b.setFillStyle(0x262616).setStrokeStyle(1.5, 0x555533);
                             }
                         });
                     }
@@ -4102,18 +4121,20 @@
                 const w = this.scale.width, h = this.scale.height;
                 const hudScale = Math.min(1, w / 460);
                 this.hudLeft.setPosition(14, 14).setScale(hudScale);
-                this.styleText.setPosition(w - 14, 14).setScale(hudScale);
-                this.timeText.setPosition(w - 14, 14 + 26 * hudScale).setScale(hudScale);
-                this.progText.setPosition(w - 14, 14 + 48 * hudScale).setScale(hudScale);
-                this.layerText.setPosition(w - 14, 14 + 68 * hudScale).setScale(hudScale);
-                this.diffText.setPosition(w - 14, 14 + 86 * hudScale).setScale(hudScale);
+                this.styleText.setPosition(Math.round(w - 14), 14).setScale(hudScale);
+                this.timeText.setPosition(Math.round(w - 14), Math.round(14 + 26 * hudScale)).setScale(hudScale);
+                this.progText.setPosition(Math.round(w - 14), Math.round(14 + 48 * hudScale)).setScale(hudScale);
+                this.layerText.setPosition(Math.round(w - 14), Math.round(14 + 68 * hudScale)).setScale(hudScale);
+                this.diffText.setPosition(Math.round(w - 14), Math.round(14 + 86 * hudScale)).setScale(hudScale);
 
-                this.bossHud.setPosition(w / 2, 34).setScale(Math.min(1, (w - 280) / 400 > 0.55 ? (w - 280) / 400 : w / 460));
-                this.bannerText.setPosition(w / 2, h * 0.20).setScale(Math.min(1, w / 520));
-                this.tri.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 560, (h - 24) / 440));
-                this.qteBox.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 560, (h - 24) / 430));
+                this.bossHud.setPosition(Math.round(w / 2), 34).setScale(Math.min(1, (w - 280) / 400 > 0.55 ? (w - 280) / 400 : w / 460));
+                this.bannerText.setPosition(Math.round(w / 2), Math.round(h * 0.20)).setScale(Math.min(1, w / 520));
+                const triScale = Math.min(1, (w - 16) / 560, (h - 24) / 440);
+                this.tri.setPosition(Math.round(w / 2), Math.round(h / 2)).setScale(triScale);
+                const qteScale = Math.min(1, (w - 16) / 560, (h - 24) / 430);
+                this.qteBox.setPosition(Math.round(w / 2), Math.round(h / 2)).setScale(qteScale);
                 this.deathBg.setSize(w, h);
-                this.deathText.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 24) / 520));
+                this.deathText.setPosition(Math.round(w / 2), Math.round(h / 2)).setScale(Math.min(1, (w - 24) / 520));
             }
 
             displayTrivia(d) {
@@ -4141,7 +4162,8 @@
             width: window.innerWidth,
             height: window.innerHeight,
             resolution: DPR,
-            autoRound: false,
+            roundPixels: true,
+            autoRound: true,
             antialias: true,
             transparent: true,
             input: { keyboard: false, mouse: true, touch: true, gamepad: false },
@@ -4151,12 +4173,16 @@
         };
         const phaserGame = new Phaser.Game(phaserConfig);
 
-        window.addEventListener('resize', () => {
+        function handleResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3));
+            renderer.setPixelRatio(DPR);
             renderer.setSize(window.innerWidth, window.innerHeight);
             phaserGame.scale.resize(window.innerWidth, window.innerHeight);
+        }
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(handleResize, 150);
         });
     </script>
 </body>

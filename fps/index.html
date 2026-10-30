@@ -402,6 +402,7 @@ Reiniciando al inicio de la capa...</div>
             </div>
             <div class="uk-death-bottom">
                 <div class="uk-death-subprompt">Pulsa <span class="uk-key-hint">ESC</span> para men&uacute; &middot; Toca o haz clic en cualquier lugar para reiniciar</div>
+                <div style="margin-top:14px;"><button type="button" id="btnDeathMenu" style="pointer-events:auto; font:inherit; font-size:clamp(12px, 2vw, 15px); background:#1a0000; color:#ff4455; border:1px solid #ff4455; padding:8px 18px; cursor:pointer; touch-action:manipulation; font-weight:bold; letter-spacing:1px;">VOLVER AL MEN&Uacute; [ESC]</button></div>
             </div>
         </div>
     </div>
@@ -1598,6 +1599,13 @@ Reiniciando al inicio de la capa...</div>
                 if (ukDeathPhase === 2) {
                     triggerUkRestart();
                 }
+            });
+        }
+        const btnDeathMenuEl = $('btnDeathMenu');
+        if (btnDeathMenuEl) {
+            btnDeathMenuEl.addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                triggerUkMenu();
             });
         }
         if (ukDeathOverlayEl) {

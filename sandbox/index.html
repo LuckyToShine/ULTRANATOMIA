@@ -20,7 +20,7 @@
         #three-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 1; touch-action: none; }
         /* Phaser UI encima de Three.js con soporte táctil y de ratón */
         #phaser-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 2; touch-action: none; }
-        #phaser-canvas canvas { width: 100% !important; height: 100% !important; display: block; }
+        #phaser-canvas canvas { width: 100% !important; height: 100% !important; display: block; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
         #parry-flash { position: fixed; inset: 0; z-index: 5; pointer-events: none; opacity: 0; background-color: #ffffff; }
         #instructions { position: absolute; bottom: 12px; left: 16px; right: 16px; z-index: 3; pointer-events: none; text-shadow: 1px 1px 2px black; font-size: 12px; line-height: 1.4; opacity: .85; }
 
@@ -580,7 +580,8 @@
             return 3;
         }
 
-        const DPR = Math.min(window.devicePixelRatio || 1, 3);
+        // Escalar por enteros exactos de DPR (1, 2 o 3) para evitar desenfoque por subpíxeles o interpolación fraccional
+        const DPR = Math.max(1, Math.min(3, Math.round(window.devicePixelRatio || 1)));
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(LAYERS[0].bg);
         scene.fog = new THREE.Fog(LAYERS[0].bg, 10, 72);
@@ -1220,10 +1221,10 @@
 
             addUltiStreak() {
                 if (this.ultiUsed || this.ultiReady) return;
-                this.ultiCharge = Math.min(4, this.ultiCharge + 1);
-                if (this.ultiCharge >= 4) {
+                this.ultiCharge = Math.min(3, this.ultiCharge + 1);
+                if (this.ultiCharge >= 3) {
                     this.ultiReady = true;
-                    emit('banner', { text: '¡ULTI LISTA! [U] SALTAR SECCIÓN (1 USO)', color: '#00ffcc' });
+                    emit('banner', { text: '¡ULTI LISTA! [U] SALTAR 4 OBSTÁCULOS (1 USO)', color: '#ffd400' });
                 }
                 emit('updateUlti', { charge: this.ultiCharge, ready: this.ultiReady, used: this.ultiUsed });
             },
@@ -1258,46 +1259,49 @@
                 if (this.mode !== 'run') {
                     obstacles.slice().forEach(o => {
                         o.cleared = true;
-                        burst(new THREE.Vector3(0, 3.2, o.z), 0x00ffcc, 35, 11);
+                        burst(new THREE.Vector3(0, 3.2, o.z), 0xffd400, 35, 11);
                         removeObstacle(o);
                     });
                     this.addStyle(250);
                     this.phase = 'idle';
-                    emit('banner', { text: '¡ULTI ACTIVADA! OBSTÁCULO DESTRUIDO', color: '#00ffcc' });
+                    emit('banner', { text: '¡ULTI ACTIVADA! OBSTÁCULO DESTRUIDO', color: '#ffd400' });
                     return;
                 }
 
                 const next = this.nextObstacle();
                 if (!next) return;
 
-                const curLayer = Math.min(3, Math.floor(next.index / CHECKPOINT_EVERY));
-                const nextLayerStartIdx = Math.min(RUN_LEN, (curLayer + 1) * CHECKPOINT_EVERY);
+                // Salta exactamente 4 obstáculos
+                const targetIdx = Math.min(RUN_LEN, next.index + 4);
 
                 obstacles.slice().forEach(o => {
-                    if (!o.cleared && o.index < nextLayerStartIdx) {
+                    if (!o.cleared && o.index < targetIdx) {
                         o.cleared = true;
-                        burst(new THREE.Vector3(0, 3.2, o.z), 0x00ffcc, 35, 11);
+                        burst(new THREE.Vector3(0, 3.2, o.z), 0xffd400, 35, 11);
                         removeObstacle(o);
                     }
                 });
 
-                const targetZ = nextLayerStartIdx < RUN_LEN
-                    ? this.zFor(nextLayerStartIdx) + TRIGGER_DIST + 6
+                const targetZ = targetIdx < RUN_LEN
+                    ? this.zFor(targetIdx) + TRIGGER_DIST + 6
                     : this.finishZ + 6;
 
                 const fromZ = this.player.z;
                 const toZ = Math.min(fromZ, targetZ);
 
-                this.cpIdx = nextLayerStartIdx;
-                this.cpZ = toZ;
+                const passedCheckpoint = Math.floor(targetIdx / CHECKPOINT_EVERY) * CHECKPOINT_EVERY;
+                if (passedCheckpoint > this.cpIdx) {
+                    this.cpIdx = passedCheckpoint;
+                    this.cpZ = this.zFor(passedCheckpoint);
+                }
                 this.styleAtCp = this.style + 250;
                 this.addStyle(250);
 
                 this.phase = 'exec';
-                flashRing(new THREE.Vector3(0, 2.5, fromZ - 2), 0x00ffcc);
-                burst(new THREE.Vector3(0, 2.5, fromZ - 3), 0x00ffcc, 50, 14);
+                flashRing(new THREE.Vector3(0, 2.5, fromZ - 2), 0xffd400);
+                burst(new THREE.Vector3(0, 2.5, fromZ - 3), 0xffd400, 50, 14);
                 shake(0.8);
-                emit('banner', { text: '¡ULTI ACTIVADA! SALTANDO SECCIÓN...', color: '#00ffcc' });
+                emit('banner', { text: '¡ULTI ACTIVADA! SALTANDO 4 OBSTÁCULOS...', color: '#ffd400' });
 
                 anim(0.55, k => {
                     const ease = 1 - Math.pow(1 - k, 3);
@@ -1306,9 +1310,9 @@
                     if (this.phase === 'dead') return;
                     this.layerIdx = layerIndexAtZ(this.player.z);
                     this.phase = 'running';
-                    if (nextLayerStartIdx < RUN_LEN) {
+                    if (targetIdx < RUN_LEN) {
                         const L = LAYERS[this.layerIdx];
-                        emit('banner', { text: 'SECCIÓN SALTADA · ' + L.title, color: L.css });
+                        emit('banner', { text: '4 OBSTÁCULOS SALTADOS · ' + L.title, color: L.css });
                     } else {
                         emit('banner', { text: '¡TRAMO FINAL ALCANZADO!', color: '#ffdd66' });
                     }
@@ -2315,8 +2319,10 @@
             }
 
             create() {
+                this.cameras.main.setRoundPixels(true);
+
                 const F = (size, extra) => Object.assign({
-                    fontFamily: '"Courier New", Courier, monospace',
+                    fontFamily: '"Courier New", Courier, "Lucida Console", Monaco, monospace',
                     fontSize: size + 'px',
                     color: '#ffffff',
                     fontStyle: 'bold',
@@ -2329,13 +2335,13 @@
                 this.hpBar = this.add.rectangle(0, 0, 260, 28, 0xff0000).setOrigin(0, 0);
                 this.hpLabel = this.add.text(8, 5, 'VITALIDAD', F(17));
 
-                // Barra de ULTI con 4 barritas
-                this.ultiBg = this.add.rectangle(0, 32, 260, 28, 0x0a1414, 0.92).setOrigin(0, 0).setStrokeStyle(1.5, 0x224444);
-                this.ultiLabel = this.add.text(6, 39, 'ULTI 0/4', F(11, { color: '#669999' }));
+                // Barra de ULTI con 3 barritas amarillas
+                this.ultiBg = this.add.rectangle(0, 32, 260, 28, 0x14140a, 0.92).setOrigin(0, 0).setStrokeStyle(1.5, 0x444422);
+                this.ultiLabel = this.add.text(6, 39, 'ULTI 0/3', F(11, { color: '#999966' }));
                 this.ultiBars = [];
-                for (let i = 0; i < 4; i++) {
-                    const bx = 76 + i * 44;
-                    const seg = this.add.rectangle(bx, 37, 40, 18, 0x162626).setOrigin(0, 0).setStrokeStyle(1.5, 0x335555);
+                for (let i = 0; i < 3; i++) {
+                    const bx = 76 + i * 58;
+                    const seg = this.add.rectangle(bx, 37, 52, 18, 0x262616).setOrigin(0, 0).setStrokeStyle(1.5, 0x555533);
                     this.ultiBars.push(seg);
                 }
                 this.ultiBg.setInteractive({ useHandCursor: true });
@@ -2533,21 +2539,21 @@
                 window.addEventListener('updateUlti', (e) => {
                     const { charge, ready, used } = e.detail;
                     if (used) {
-                        this.ultiLabel.setText('AGOTADA').setColor('#555555');
+                        this.ultiLabel.setText('VACÍA').setColor('#777777');
                         this.ultiBg.setFillStyle(0x111111, 0.85).setStrokeStyle(1.5, 0x333333);
                         this.ultiBars.forEach(b => b.setFillStyle(0x1a1a1a).setStrokeStyle(1.5, 0x333333));
                     } else if (ready) {
-                        this.ultiLabel.setText('¡LISTA! [U]').setColor('#00ffcc');
-                        this.ultiBg.setFillStyle(0x062e26, 0.96).setStrokeStyle(2, 0x00ffcc);
-                        this.ultiBars.forEach(b => b.setFillStyle(0x00ffcc).setStrokeStyle(1.5, 0xffffff));
+                        this.ultiLabel.setText('¡LISTA! [U]').setColor('#ffd400');
+                        this.ultiBg.setFillStyle(0x2a2404, 0.96).setStrokeStyle(2, 0xffd400);
+                        this.ultiBars.forEach(b => b.setFillStyle(0xffd400).setStrokeStyle(1.5, 0xffffff));
                     } else {
-                        this.ultiLabel.setText('ULTI ' + charge + '/4').setColor(charge > 0 ? '#66ffee' : '#669999');
-                        this.ultiBg.setFillStyle(0x0a1414, 0.92).setStrokeStyle(1.5, 0x224444);
+                        this.ultiLabel.setText('ULTI ' + charge + '/3').setColor(charge > 0 ? '#ffee55' : '#999966');
+                        this.ultiBg.setFillStyle(0x14140a, 0.92).setStrokeStyle(1.5, 0x444422);
                         this.ultiBars.forEach((b, idx) => {
                             if (idx < charge) {
-                                b.setFillStyle(0x00d4aa).setStrokeStyle(1.5, 0x88ffee);
+                                b.setFillStyle(0xffd400).setStrokeStyle(1.5, 0xffe680);
                             } else {
-                                b.setFillStyle(0x162626).setStrokeStyle(1.5, 0x335555);
+                                b.setFillStyle(0x262616).setStrokeStyle(1.5, 0x555533);
                             }
                         });
                     }
@@ -2654,17 +2660,19 @@
                 const w = this.scale.width, h = this.scale.height;
                 const hudScale = Math.min(1, w / 460);
                 this.hudLeft.setPosition(14, 16).setScale(hudScale);
-                this.styleText.setPosition(w - 14, 16).setScale(hudScale);
-                this.timeText.setPosition(w - 14, 16 + 28 * hudScale).setScale(hudScale);
-                this.progText.setPosition(w - 14, 16 + 52 * hudScale).setScale(hudScale);
-                if (this.layerText) this.layerText.setPosition(w - 14, 16 + 72 * hudScale).setScale(hudScale);
+                this.styleText.setPosition(Math.round(w - 14), 16).setScale(hudScale);
+                this.timeText.setPosition(Math.round(w - 14), Math.round(16 + 28 * hudScale)).setScale(hudScale);
+                this.progText.setPosition(Math.round(w - 14), Math.round(16 + 52 * hudScale)).setScale(hudScale);
+                if (this.layerText) this.layerText.setPosition(Math.round(w - 14), Math.round(16 + 72 * hudScale)).setScale(hudScale);
 
-                this.bannerText.setPosition(w / 2, h * 0.20).setScale(Math.min(1, w / 520));
-                this.tri.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 560, (h - 24) / 430));
-                this.qteBox.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 560, (h - 24) / 430));
+                this.bannerText.setPosition(Math.round(w / 2), Math.round(h * 0.20)).setScale(Math.min(1, w / 520));
+                const triScale = Math.min(1, (w - 16) / 560, (h - 24) / 430);
+                this.tri.setPosition(Math.round(w / 2), Math.round(h / 2)).setScale(triScale);
+                const qteScale = Math.min(1, (w - 16) / 560, (h - 24) / 430);
+                this.qteBox.setPosition(Math.round(w / 2), Math.round(h / 2)).setScale(qteScale);
                 this.deathBg.setSize(w, h);
-                this.deathText.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 24) / 520));
-                this.res.setPosition(w / 2, h / 2).setScale(Math.min(1, (w - 16) / 540, (h - 24) / 440));
+                this.deathText.setPosition(Math.round(w / 2), Math.round(h / 2)).setScale(Math.min(1, (w - 24) / 520));
+                this.res.setPosition(Math.round(w / 2), Math.round(h / 2)).setScale(Math.min(1, (w - 16) / 540, (h - 24) / 440));
             }
 
             displayTrivia(d) {
@@ -2692,7 +2700,8 @@
             width: window.innerWidth,
             height: window.innerHeight,
             resolution: DPR,
-            autoRound: false,
+            roundPixels: true,
+            autoRound: true,
             antialias: true,
             transparent: true,
             input: { keyboard: false, mouse: true, touch: true, gamepad: false },
@@ -2701,12 +2710,16 @@
         const phaserGame = new Phaser.Game(phaserConfig);
 
         // Reescalado dinámico
-        window.addEventListener('resize', () => {
+        function handleResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3));
+            renderer.setPixelRatio(DPR);
             renderer.setSize(window.innerWidth, window.innerHeight);
             phaserGame.scale.resize(window.innerWidth, window.innerHeight);
+        }
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(handleResize, 150);
         });
     </script>
 </body>
