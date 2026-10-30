@@ -376,7 +376,7 @@
         <div id="ukf-box">
             <div class="ukf-panel pop" id="ukf-title">
                 <div class="ukf-item" id="ukf-level">ULTRANATOMIA &middot; OVOCITO II</div>
-                <div class="ukf-item" id="ukf-story">el esperma de didi llego al ovulo de naomi</div>
+                <div class="ukf-item" id="ukf-story">Felicidades Shinji</div>
                 <div class="ukf-item" id="ukf-diff">-- PRO --</div>
             </div>
             <div class="ukf-panel pop ukf-row" id="ukf-time-row" style="top:120px"><span class="ukf-label">TIEMPO:</span><span class="ukf-val ukf-item" id="ukf-time">0:00.000</span></div>
@@ -2107,7 +2107,7 @@
                 this.clear(b, true);
                 emit('hideBossHud');
                 gs.addStyle(400, 'FECUNDACIÓN', { color: UK_CYAN, boss: true });
-                emit('banner', { text: '¡OVOCITO II DERROTADO · EL ESPERMA DE DIDI LLEGÓ AL ÓVULO DE NAOMI!', color: '#ffdd66' });
+                emit('banner', { text: '¡OVOCITO II DERROTADO · FELICIDADES SHINJI!', color: '#ffdd66' });
                 const u = finishMarker && finishMarker.userData;
                 burst(this.center(b), 0xffdd66, 95, 16);
                 flashRing(new THREE.Vector3(0, 3.2, b.z + 2), 0xffffff);
@@ -2808,7 +2808,7 @@
                 const overall = score === 12 ? 'P' : RANKS[Math.min(4, Math.round(score / 3))];
                 emit('showResults', {
                     level: 'ULTRANATOMIA · OVOCITO II',
-                    story: 'el esperma de didi llego al ovulo de naomi',
+                    story: 'Felicidades Shinji',
                     difficulty: '-- ' + this.diff.name + ' --',
                     time: this.runTime, timeRank: RANKS[tR],
                     acc, accRank: RANKS[aR],
@@ -3514,7 +3514,7 @@
                 this.el.querySelectorAll('.ukf-flash').forEach(n => { n.style.opacity = 0; });
                 this.$('ukf-total').style.background = '';
                 this.$('ukf-level').textContent = d.level;
-                if (this.$('ukf-story')) this.$('ukf-story').textContent = d.story || 'el esperma de didi llego al ovulo de naomi';
+                if (this.$('ukf-story')) this.$('ukf-story').textContent = d.story || 'Felicidades Shinji';
                 this.$('ukf-diff').textContent = d.difficulty;
                 this.$('ukf-time').textContent = ukTime(0);
                 this.$('ukf-acc').textContent = '0.0%';

@@ -390,6 +390,9 @@ struct branch {
                 <a href="sandbox/" data-subapp="sandbox/index.html" class="retro-btn font-bold uppercase tracking-widest text-left">
                     SANDBOX
                 </a>
+                <button type="button" id="btnCredits" class="retro-btn font-bold uppercase tracking-widest text-left">
+                    CREDITS
+                </button>
             </div>
 
             <!-- Bottom: Socials -->
@@ -519,6 +522,19 @@ struct branch {
             </svg>
         </div>
 
+        <!-- Credits Overlay -->
+        <div id="creditsPanel" class="absolute inset-0 z-50 bg-black hidden flex-col items-center justify-center text-center p-6">
+            <h2 class="font-bold uppercase tracking-widest text-white mb-6" style="font-size: clamp(2rem, 9cqh, 5rem);">CREDITS</h2>
+            <ul class="text-zinc-200 tracking-wider uppercase leading-relaxed mb-8" style="font-size: clamp(1.1rem, 5cqh, 2.4rem);">
+                <li>Benitez Hernandez, Raúl</li>
+                <li>Mercado Silva, Alejandro</li>
+                <li>Ortiz Ponce de Leon, Jonathan</li>
+                <li>Perez Velasquez, Naomi Danae</li>
+                <li>Ramos Ríos, Erick Saúl</li>
+            </ul>
+            <button type="button" id="btnCreditsBack" class="retro-btn font-bold uppercase tracking-widest">BACK</button>
+        </div>
+
     </div>
 
     <!-- Seamless Sub-App Viewer (keeps Fullscreen active across TUTORIAL, GAME, FPS, and SANDBOX) -->
@@ -527,6 +543,14 @@ struct branch {
     </div>
 
     <script>
+        const creditsPanel = document.getElementById('creditsPanel');
+        function toggleCredits(show) {
+            creditsPanel.classList.toggle('hidden', !show);
+            creditsPanel.classList.toggle('flex', show);
+        }
+        document.getElementById('btnCredits').addEventListener('click', () => toggleCredits(true));
+        document.getElementById('btnCreditsBack').addEventListener('click', () => toggleCredits(false));
+
         const btnFullscreen = document.getElementById('btnFullscreen');
         const appViewer = document.getElementById('appViewer');
         const appFrame = document.getElementById('appFrame');
