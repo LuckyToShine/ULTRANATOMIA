@@ -378,6 +378,9 @@ struct branch {
 
             <!-- Middle: Main Menu Buttons -->
             <div class="flex flex-col menu-btn-group w-3/4 max-w-[400px]">
+                <a href="tutorial/" data-subapp="tutorial/index.html" class="retro-btn font-bold uppercase tracking-widest text-left">
+                    TUTORIAL
+                </a>
                 <a href="game/" data-subapp="game/index.html" class="retro-btn font-bold uppercase tracking-widest text-left">
                     GAME
                 </a>
@@ -387,16 +390,13 @@ struct branch {
                 <a href="sandbox/" data-subapp="sandbox/index.html" class="retro-btn font-bold uppercase tracking-widest text-left">
                     SANDBOX
                 </a>
-                <a href="https://github.com/LuckyToShine/ULTRANATOMIA" target="_blank" rel="noopener noreferrer" class="retro-btn font-bold uppercase tracking-widest text-left">
-                    GITHUB
-                </a>
             </div>
 
             <!-- Bottom: Socials -->
             <div class="mt-auto pt-4 md:pt-6">
                 <p class="text-zinc-400 menu-socials-text">INIT SOCIALS...OK</p>
                 <div class="flex menu-socials-links text-white">
-                    <a href="#" class="border-b-2 border-white pb-1 hover:bg-white hover:text-black transition-colors px-1 uppercase">DISCORD</a>
+                    <a href="https://github.com/LuckyToShine/ULTRANATOMIA" target="_blank" rel="noopener noreferrer" class="border-b-2 border-white pb-1 hover:bg-white hover:text-black transition-colors px-1 uppercase">DISCORD</a>
                     <a href="#" class="border-b-2 border-white pb-1 hover:bg-white hover:text-black transition-colors px-1 uppercase">TWITTER</a>
                     <a href="#" class="border-b-2 border-white pb-1 hover:bg-white hover:text-black transition-colors px-1 uppercase">YOUTUBE</a>
                 </div>
@@ -521,7 +521,7 @@ struct branch {
 
     </div>
 
-    <!-- Seamless Sub-App Viewer (keeps Fullscreen active across GAME, FPS, and SANDBOX) -->
+    <!-- Seamless Sub-App Viewer (keeps Fullscreen active across TUTORIAL, GAME, FPS, and SANDBOX) -->
     <div id="appViewer">
         <iframe id="appFrame" allow="fullscreen; autoplay; pointer-lock; gamepad" title="ULTRANATOMIA"></iframe>
     </div>
@@ -803,7 +803,7 @@ struct branch {
             } else if (e.key === '4' || e.key === 'f' || e.key === 'F') {
                 toggleFullscreen();
             } else if (e.key === '5') {
-                window.open('https://github.com/LuckyToShine/ULTRANATOMIA', '_blank', 'noopener,noreferrer');
+                openSubApp('tutorial/index.html');
             }
         });
     </script>

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>ULTRANATOMIA - Tutorial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body {
+            margin: 0; height: 100%; background: #000; color: #fff;
+            font-family: 'VT323', monospace; overflow: hidden;
+            user-select: none; -webkit-user-select: none;
+        }
+        body::before {
+            content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+        }
+        #wrap {
+            height: 100%; display: flex; flex-direction: column;
+            padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
+        }
+        #top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        #top h1 { margin: 0; font-size: clamp(22px, 5vh, 40px); letter-spacing: 2px; }
+        #progress { flex: 1; min-width: 120px; height: 10px; border: 2px solid #fff; }
+        #progressFill { height: 100%; width: 0; background: #fff; transition: width .3s; }
+        #stepLabel { color: #aaa; font-size: clamp(14px, 3vh, 22px); }
+        .btn {
+            font: inherit; font-size: clamp(16px, 3.4vh, 26px); color: #fff; background: transparent;
+            border: 3px solid #fff; border-radius: 10px; padding: 2px 16px; cursor: pointer;
+            letter-spacing: 2px; touch-action: manipulation; text-decoration: none;
+        }
+        .btn:hover, .btn:focus { background: #fff; color: #000; outline: none; }
+        .btn:disabled { opacity: .3; pointer-events: none; }
+        #main { flex: 1; display: flex; gap: 16px; min-height: 0; margin-top: 10px; }
+        #lesson { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow-y: auto; }
+        #lesson h2 { margin: 0 0 4px; font-size: clamp(22px, 5.5vh, 44px); letter-spacing: 2px; }
+        #lesson p { margin: 4px 0; font-size: clamp(15px, 3.3vh, 24px); color: #ddd; line-height: 1.15; }
+        #lesson b { color: #fff; }
+        #hud {
+            width: clamp(150px, 24vw, 260px); border: 2px solid #555; padding: 8px;
+            display: flex; flex-direction: column; gap: 8px; font-size: clamp(14px, 2.8vh, 20px);
+        }
+        .bar { height: 12px; border: 2px solid #fff; }
+        .bar > div { height: 100%; background: #fff; transition: width .3s; }
+        #hpFill { background: #ff3344; }
+        #ultiBars { display: flex; gap: 4px; }
+        #ultiBars span { flex: 1; height: 12px; border: 2px solid #999966; }
+        #ultiBars span.on { background: #ffee55; border-color: #ffee55; }
+        #ultiBars.ready span { animation: blink .4s infinite alternate; }
+        @keyframes blink { to { opacity: .35; } }
+        #rank { font-size: clamp(26px, 6vh, 46px); text-align: center; line-height: 1; }
+        #feed { color: #aaa; min-height: 3em; }
+        #card {
+            margin-top: 8px; border: 3px solid var(--c, #fff); padding: 8px 12px;
+            box-shadow: 0 0 16px var(--c, #fff) inset;
+        }
+        #card .tag { color: var(--c, #fff); font-size: clamp(16px, 3.4vh, 26px); letter-spacing: 2px; }
+        #card .q { font-size: clamp(18px, 4vh, 30px); margin: 4px 0 8px; }
+        #opts { display: flex; flex-direction: column; gap: 6px; }
+        #opts .btn { text-align: left; border-color: var(--c, #fff); }
+        #opts .btn.ok { background: #1b5e20; border-color: #66ff88; color: #fff; }
+        #opts .btn.bad { background: #5e1b1b; border-color: #ff4455; color: #fff; }
+        #chain { color: #a23bff; min-height: 1.2em; font-size: clamp(15px, 3vh, 22px); }
+        #timer { height: 6px; background: var(--c, #fff); margin-bottom: 6px; }
+        .pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+        .pill { border: 2px solid; padding: 0 8px; font-size: clamp(14px, 3vh, 22px); }
+        #msg { min-height: 1.3em; font-size: clamp(16px, 3.4vh, 26px); margin-top: 6px; }
+        #bottom { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; }
+        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 50; transition: opacity .25s; }
+        @media (max-width: 640px) { #hud { display: none; } }
+    </style>
+</head>
+<body>
+<div id="flash"></div>
+<div id="wrap">
+    <div id="top">
+        <a href="../" class="btn" id="btnBack">&larr; MEN&Uacute;</a>
+        <h1>TUTORIAL</h1>
+        <div id="progress"><div id="progressFill"></div></div>
+        <span id="stepLabel"></span>
+    </div>
+    <div id="main">
+        <div id="lesson"></div>
+        <div id="hud">
+            <div>VITALIDAD <span id="hpTxt">100%</span></div>
+            <div class="bar"><div id="hpFill" style="width:100%"></div></div>
+            <div>ULTI <span id="ultiTxt">0/3</span></div>
+            <div id="ultiBars"><span></span><span></span><span></span></div>
+            <div>ESTILO <span id="styleTxt">0</span></div>
+            <div id="rank">D</div>
+            <div id="feed"></div>
+        </div>
+    </div>
+    <div id="bottom">
+        <button type="button" class="btn" id="btnPrev">&larr; ANTERIOR</button>
+        <button type="button" class="btn" id="btnNext">SIGUIENTE [ENTER] &rarr;</button>
+    </div>
+</div>
+
+<script>
+    const MECH = {
+        golpe:   { name: 'GOLPE',   css: '#ff3344', tema: 'Histología' },
+        parry:   { name: 'PARRY',   css: '#2a9dff', tema: 'Regulación hormonal' },
+        disparo: { name: 'DISPARO', css: '#ffd400', tema: 'Bioquímica' },
+        qte:     { name: 'QTE',     css: '#a23bff', tema: 'Procesos secuenciales' }
+    };
+    const RANKS = ['D', 'C', 'B', 'A', 'S'];
+    const PRACTICE_TIME = 10;
+
+    // Estado simulado del HUD (imita las reglas del juego principal)
+    const S = { hp: 100, ulti: 0, ultiReady: false, ultiUsed: false, style: 0, lastMech: null };
+
+    const $ = (id) => document.getElementById(id);
+    const lessonEl = $('lesson');
+
+    function renderHud() {
+        $('hpTxt').textContent = Math.round(S.hp) + '%';
+        $('hpFill').style.width = S.hp + '%';
+        $('ultiTxt').textContent = S.ultiUsed ? 'USADA' : S.ulti + '/3';
+        [...$('ultiBars').children].forEach((b, i) => b.classList.toggle('on', i < S.ulti));
+        $('ultiBars').classList.toggle('ready', S.ultiReady);
+        $('styleTxt').textContent = S.style;
+        $('rank').textContent = RANKS[Math.min(RANKS.length - 1, Math.floor(S.style / 250))];
+    }
+    function feed(text, color) {
+        const d = document.createElement('div');
+        d.textContent = '+ ' + text;
+        if (color) d.style.color = color;
+        $('feed').prepend(d);
+        while ($('feed').children.length > 4) $('feed').lastChild.remove();
+    }
+    function flash() {
+        $('flash').style.opacity = '0.6';
+        setTimeout(() => { $('flash').style.opacity = '0'; }, 120);
+    }
+    function onCorrect(type) {
+        S.style += 100; feed('ACIERTO');
+        if (S.lastMech && S.lastMech !== type) { S.style += 50; feed('ARSENAL', '#00ffff'); }
+        S.lastMech = type;
+        if (!S.ultiUsed && !S.ultiReady) {
+            S.ulti = Math.min(3, S.ulti + 1);
+            if (S.ulti >= 3) S.ultiReady = true;
+        }
+        if (type === 'parry') { S.hp = 100; S.style += 100; feed('PARRY', '#66ff88'); flash(); }
+        renderHud();
+    }
+    function onWrong() {
+        S.hp = Math.max(10, S.hp - 25);
+        S.style = Math.max(0, S.style - 150);
+        if (!S.ultiUsed && !S.ultiReady) S.ulti = 0;
+        renderHud();
+    }
+
+    // ---------- Ejercicios ----------
+    let drill = null; // { kind, ... , done }
+    let timerId = null;
+
+    function clearTimer() { if (timerId) { clearInterval(timerId); timerId = null; } }
+
+    function startTimer(onTimeout) {
+        clearTimer();
+        const bar = $('timer');
+        let left = PRACTICE_TIME;
+        bar.style.width = '100%';
+        timerId = setInterval(() => {
+            left -= 0.1;
+            bar.style.width = Math.max(0, left / PRACTICE_TIME * 100) + '%';
+            if (left <= 0) { clearTimer(); onTimeout(); }
+        }, 100);
+    }
+
+    function shuffle(a) {
+        a = a.slice();
+        for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+        return a;
+    }
+
+    // Pregunta de trivia: a[0] es la respuesta correcta (igual que en el banco del juego)
+    function triviaHtml(type, q) {
+        const m = MECH[type];
+        return '<div id="card" style="--c:' + m.css + '"><div class="tag">' + m.name + ' &middot; ' + m.tema + '</div>' +
+            '<div id="timer"></div><div class="q">' + q + '</div><div id="opts"></div></div><div id="msg"></div>';
+    }
+
+    function mountTrivia(type, item, onDone) {
+        const opts = shuffle(item.a.map((t, i) => ({ t, ok: i === 0 })));
+        const box = $('opts');
+        let locked = false;
+        const buttons = opts.map((o, i) => {
+            const b = document.createElement('button');
+            b.type = 'button'; b.className = 'btn';
+            b.textContent = (i + 1) + '. ' + o.t;
+            b.addEventListener('click', () => pick(i));
+            box.appendChild(b);
+            return b;
+        });
+        function pick(i) {
+            if (locked) return;
+            locked = true; clearTimer();
+            const okIdx = opts.findIndex(o => o.ok);
+            buttons[okIdx].classList.add('ok');
+            if (i === okIdx) {
+                onCorrect(type);
+                $('msg').innerHTML = '<span style="color:#66ff88">&iexcl;CORRECTO! &iexcl;' + MECH[type].name + '!</span>';
+                onDone(true);
+            } else {
+                if (i >= 0) buttons[i].classList.add('bad');
+                onWrong();
+                $('msg').innerHTML = '<span style="color:#ff4455">' + (i < 0 ? '&iexcl;TIEMPO AGOTADO!' : '&iexcl;RESPUESTA INCORRECTA!') +
+                    ' RETROCESO &middot; +5s &middot; -VIDA</span> <button type="button" class="btn" id="retry">REINTENTAR [R]</button>';
+                $('retry').addEventListener('click', () => drill && drill.retry());
+                onDone(false);
+            }
+        }
+        drill.pick = pick;
+        startTimer(() => pick(-1));
+    }
+
+    function mountQte(item, onDone) {
+        const words = shuffle(item.steps.map((t, order) => ({ t, order, picked: false })));
+        const box = $('opts');
+        let i = 0, locked = false;
+        const buttons = words.map((w, idx) => {
+            const b = document.createElement('button');
+            b.type = 'button'; b.className = 'btn';
+            b.textContent = (idx + 1) + '. ' + w.t;
+            b.addEventListener('click', () => pick(idx));
+            box.appendChild(b);
+            return b;
+        });
+        function pick(idx) {
+            if (locked || idx < 0 || idx >= words.length) return;
+            const w = words[idx];
+            if (w.picked) return;
+            if (w.order !== i) {
+                locked = true; clearTimer();
+                if (idx >= 0) buttons[idx].classList.add('bad');
+                buttons[words.findIndex(x => x.order === i)].classList.add('ok');
+                onWrong();
+                $('msg').innerHTML = '<span style="color:#ff4455">&iexcl;ORDEN INCORRECTO! RETROCESO &middot; +5s</span> <button type="button" class="btn" id="retry">REINTENTAR [R]</button>';
+                $('retry').addEventListener('click', () => drill && drill.retry());
+                onDone(false);
+                return;
+            }
+            w.picked = true; i++;
+            buttons[idx].classList.add('ok');
+            $('chain').textContent = item.steps.slice(0, i).join(' → ');
+            startTimer(timeout); // cada acierto reinicia el tiempo, como en el juego
+            if (i === words.length) {
+                locked = true; clearTimer();
+                onCorrect('qte');
+                $('msg').innerHTML = '<span style="color:#66ff88">&iexcl;SECUENCIA COMPLETA! &iexcl;QTE!</span>';
+                onDone(true);
+            }
+        }
+        function timeout() {
+            if (locked) return;
+            locked = true;
+            buttons[words.findIndex(x => x.order === i)].classList.add('ok');
+            onWrong();
+            $('msg').innerHTML = '<span style="color:#ff4455">&iexcl;TIEMPO AGOTADO! RETROCESO &middot; +5s</span> <button type="button" class="btn" id="retry">REINTENTAR [R]</button>';
+            $('retry').addEventListener('click', () => drill && drill.retry());
+            onDone(false);
+        }
+        drill.pick = pick;
+        startTimer(timeout);
+    }
+
+    // ---------- Lecciones ----------
+    const Q = {
+        golpe:   { q: '¿Qué célula forma la barrera hematotesticular?', a: ['Célula de Sertoli', 'Célula de Leydig', 'Espermatogonia'] },
+        parry:   { q: '¿Qué célula produce testosterona?', a: ['Célula de Leydig', 'Célula de Sertoli', 'Espermatogonia'] },
+        disparo: { q: 'Fuente de energía principal del esperma:', a: ['Fructosa', 'Glucosa', 'Sacarosa'] },
+        qte:     { q: 'Recorrido espermático en conductos masculinos:', steps: ['Testículo', 'Epidídimo', 'Conducto deferente', 'Uretra'] },
+        streak: [
+            ['golpe',   { q: 'Capa fibrosa externa del testículo:', a: ['Túnica albugínea', 'Túnica vaginal', 'Túnica dartos'] }],
+            ['parry',   { q: 'Hormona que estimula la espermatogénesis:', a: ['FSH', 'LH', 'Prolactina'] }],
+            ['disparo', { q: 'Enzima prostática que licúa el semen:', a: ['PSA', 'Hialuronidasa', 'Amilasa'] }]
+        ]
+    };
+
+    function triviaLesson(type, title, intro, setup) {
+        return {
+            title,
+            needsDrill: true,
+            html: intro + triviaHtml(type, Q[type].q),
+            mount(done) {
+                if (setup) setup();
+                drill = { retry: () => mountLesson(cur) };
+                mountTrivia(type, Q[type], (ok) => { if (ok) done(); });
+            }
+        };
+    }
+
+    const LESSONS = [
+        {
+            title: 'BIENVENIDO, S.P.E.R.M.A.',
+            html: '<p>Eres <b>S.P.E.R.M.A.</b>, avanzando por las <b>4 capas</b> del aparato reproductor hasta el <b>Jefe Final: el Ovocito II</b>.</p>' +
+                '<p>Tu cola avanza sola. Cuando llegas a un <b>obst&aacute;culo anat&oacute;mico</b>, el tiempo se ralentiza (<b>bullet time</b>) y aparece una pregunta.</p>' +
+                '<p>Cada obst&aacute;culo usa una <b>mec&aacute;nica</b> distinta, identificada por su color:</p>' +
+                '<div class="pills">' + Object.values(MECH).map(m => '<span class="pill" style="color:' + m.css + ';border-color:' + m.css + '">' + m.name + ' &middot; ' + m.tema + '</span>').join('') + '</div>' +
+                '<p>Este tutorial te deja practicar cada una sin riesgo. Pulsa <b>SIGUIENTE</b> o <b>[ENTER]</b>.</p>'
+        },
+        triviaLesson('golpe', 'MEC&Aacute;NICA 1: GOLPE',
+            '<p>Los obst&aacute;culos <b style="color:#ff3344">rojos</b> son de <b>Histolog&iacute;a</b>. Responde bien para destrozarlos.</p>' +
+            '<p>Pulsa <b>1</b>, <b>2</b> o <b>3</b> (o toca la opci&oacute;n) antes de que se vac&iacute;e la barra de tiempo.</p>'),
+        triviaLesson('parry', 'MEC&Aacute;NICA 2: PARRY',
+            '<p>Los obst&aacute;culos <b style="color:#2a9dff">azules</b> son de <b>Hormonas</b>. Un PARRY correcto <b>restaura tu vitalidad al 100%</b>.</p>' +
+            '<p>Tu vida est&aacute; baja (mira el panel). &iexcl;Haz PARRY para curarte!</p>',
+            () => { S.hp = 40; renderHud(); }),
+        triviaLesson('disparo', 'MEC&Aacute;NICA 3: DISPARO',
+            '<p>Los obst&aacute;culos <b style="color:#ffd400">amarillos</b> son de <b>Bioqu&iacute;mica</b>. Acierta para disparar y destruirlos a distancia.</p>' +
+            '<p>Consejo: cambiar de mec&aacute;nica entre aciertos da <b style="color:#00ffff">+50 ARSENAL</b> de estilo.</p>'),
+        {
+            title: 'MEC&Aacute;NICA 4: QTE',
+            needsDrill: true,
+            html: '<p>Los obst&aacute;culos <b style="color:#a23bff">morados</b> son <b>Secuencias</b>. Ordena las palabras pulsando <b>1-4</b> (o toc&aacute;ndolas) en el orden correcto.</p>' +
+                '<p>Cada palabra correcta reinicia el tiempo. Un solo error cuenta como fallo.</p>' +
+                triviaHtml('qte', Q.qte.q).replace('<div id="opts">', '<div id="chain"></div><div id="opts">'),
+            mount(done) {
+                drill = { retry: () => mountLesson(cur), qte: true };
+                mountQte(Q.qte, (ok) => { if (ok) done(); });
+            }
+        },
+        {
+            title: 'FALLAR TIENE CONSECUENCIAS',
+            html: '<p>Si respondes mal o se acaba el tiempo:</p>' +
+                '<p>&middot; Pierdes vida: <b>-15%</b> en NOOB, <b>-25%</b> en PRO, <b>-40%</b> en ULTRA.</p>' +
+                '<p>&middot; Sufres <b>RETROCESO</b> y el obst&aacute;culo vuelve en <b>+5s</b>.</p>' +
+                '<p>&middot; Pierdes <b>-150 de estilo</b>, bajas un rango y se <b>reinicia la racha de ULTI</b>.</p>' +
+                '<p>Si tu vitalidad llega a 0, mueres. Usa el <b style="color:#2a9dff">PARRY</b> para recuperarte.</p>' +
+                '<p>Tiempo por pregunta: <b>10s</b> (NOOB), <b>8s</b> (PRO), <b>5s</b> (ULTRA).</p>'
+        },
+        {
+            title: 'LA ULTI',
+            needsDrill: true,
+            html: '<p>Encadena <b>3 aciertos seguidos</b> para cargar la <b style="color:#ffd400">ULTI</b>. Cuando est&eacute; lista, pulsa <b>[U]</b> (o toca la barra) para <b>saltar 4 obst&aacute;culos</b> de golpe.</p>' +
+                '<p>Solo tienes <b>1 uso por partida</b>, y un fallo vac&iacute;a la racha. &iexcl;Responde estas 3 y luego act&iacute;vala!</p>' +
+                '<div id="streakArea"></div>',
+            mount(done) {
+                S.ulti = 0; S.ultiReady = false; S.ultiUsed = false; renderHud();
+                let n = 0;
+                const next = () => {
+                    if (n >= Q.streak.length) {
+                        $('streakArea').innerHTML = '<p style="color:#ffd400">&iexcl;ULTI LISTA! Pulsa <b>[U]</b> o el bot&oacute;n.</p>' +
+                            '<button type="button" class="btn" id="btnUlti" style="border-color:#ffd400;color:#ffd400">USAR ULTI [U]</button>';
+                        drill = {
+                            ulti: () => {
+                                if (!S.ultiReady) return;
+                                S.ultiReady = false; S.ultiUsed = true; S.ulti = 0;
+                                S.style += 250; feed('ULTI', '#ffd400'); flash(); renderHud();
+                                $('streakArea').innerHTML = '<p style="color:#ffd400">&iexcl;ULTI ACTIVADA! SALTANDO 4 OBST&Aacute;CULOS...</p>';
+                                done();
+                            }
+                        };
+                        $('btnUlti').addEventListener('click', () => drill.ulti());
+                        return;
+                    }
+                    const [type, item] = Q.streak[n];
+                    $('streakArea').innerHTML = '<p>Racha: ' + n + '/3</p>' + triviaHtml(type, item.q);
+                    drill = { retry: () => { S.ulti = 0; n = 0; renderHud(); next(); } };
+                    mountTrivia(type, item, (ok) => { if (ok) { n++; setTimeout(next, 600); } });
+                };
+                next();
+            }
+        },
+        {
+            title: 'ESTILO Y RANGO',
+            html: '<p>Como en ULTRAKILL, el panel de <b>ESTILO</b> premia jugar bien:</p>' +
+                '<p>&middot; <b>+100 ACIERTO</b> por cada respuesta correcta.</p>' +
+                '<p>&middot; <b style="color:#00ffff">+50 ARSENAL</b> si cambias de mec&aacute;nica respecto a la anterior.</p>' +
+                '<p>&middot; Los puntos valen <b>x1.5</b> contra el jefe.</p>' +
+                '<p>&middot; Recibir da&ntilde;o te <b>baja un rango</b>.</p>' +
+                '<p>Al final se califican <b>TIEMPO</b>, <b>PRECISI&Oacute;N</b> y <b>ESTILO</b>. &iexcl;Hazlo todo perfecto para el <b>Rango P</b>!</p>'
+        },
+        {
+            title: 'JEFE FINAL: OVOCITO II',
+            html: '<p>Al final de la capa 4 te espera el <b>Ovocito II</b>. Sus ataques usan las mismas mec&aacute;nicas:</p>' +
+                '<div class="pills">' +
+                '<span class="pill" style="color:#fff;border-color:#fff">ONDA DE CALCIO &middot; QTE</span>' +
+                '<span class="pill" style="color:#00ffe6;border-color:#00ffe6">GR&Aacute;NULOS CORTICALES &middot; PARRY</span>' +
+                '<span class="pill" style="color:#ff00ff;border-color:#ff00ff">BLOQUEO DE POLISPERMIA &middot; DISPARO</span>' +
+                '<span class="pill" style="color:#ffb84d;border-color:#ffb84d">C&Eacute;LULAS DE LA CORONA &middot; GOLPE</span>' +
+                '</div>' +
+                '<p>Las <b>c&eacute;lulas de la corona</b> curan al jefe: <b>destr&uacute;yelas r&aacute;pido</b> con GOLPE antes de que terminen la curaci&oacute;n.</p>' +
+                '<p>Mira el color y el nombre del ataque para saber qu&eacute; mec&aacute;nica usar.</p>'
+        },
+        {
+            title: '&iexcl;TUTORIAL COMPLETADO!',
+            html: '<p>Ya conoces todo lo necesario. Resumen de controles:</p>' +
+                '<p>&middot; <b>1-3</b> / tocar: responder trivia.</p>' +
+                '<p>&middot; <b>1-4</b> / tocar: ordenar palabras en el QTE.</p>' +
+                '<p>&middot; <b>U</b> / tocar la barra: usar la ULTI.</p>' +
+                '<p>Recomendaci&oacute;n: empieza en dificultad <b>NOOB</b>.</p>' +
+                '<p><button type="button" class="btn" id="btnPlay">JUGAR AHORA &rarr;</button></p>'
+        }
+    ];
+
+    let cur = 0;
+    let completed = new Set();
+
+    function mountLesson(i) {
+        clearTimer();
+        drill = null;
+        cur = i;
+        const L = LESSONS[i];
+        lessonEl.innerHTML = '<h2>' + L.title + '</h2>' + L.html;
+        lessonEl.scrollTop = 0;
+        $('stepLabel').textContent = (i + 1) + '/' + LESSONS.length;
+        $('progressFill').style.width = ((i + 1) / LESSONS.length * 100) + '%';
+        $('btnPrev').disabled = i === 0;
+        $('btnNext').style.visibility = i === LESSONS.length - 1 ? 'hidden' : 'visible';
+        $('btnNext').disabled = !!L.needsDrill && !completed.has(i);
+        if (L.mount) {
+            L.mount(() => {
+                completed.add(i);
+                $('btnNext').disabled = false;
+            });
+        }
+        const play = $('btnPlay');
+        if (play) play.addEventListener('click', goPlay);
+    }
+
+    function go(d) {
+        const n = cur + d;
+        if (n < 0 || n >= LESSONS.length) return;
+        if (d > 0 && $('btnNext').disabled) return;
+        mountLesson(n);
+    }
+
+    function goPlay() {
+        try {
+            if (window.parent && window.parent !== window && typeof window.parent.openSubApp === 'function') {
+                window.parent.openSubApp('game/index.html', false);
+                return;
+            }
+        } catch (_) {}
+        window.location.href = '../game/';
+    }
+
+    $('btnPrev').addEventListener('click', () => go(-1));
+    $('btnNext').addEventListener('click', () => go(1));
+
+    $('btnBack').addEventListener('click', (e) => {
+        try {
+            if (window.parent && window.parent !== window && typeof window.parent.closeSubApp === 'function') {
+                e.preventDefault();
+                window.parent.closeSubApp();
+            }
+        } catch (_) {}
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (e.repeat) return;
+        const m = /^(?:Digit|Numpad)([1-4])$/.exec(e.code);
+        if (m && drill && drill.pick) {
+            const n = Number(m[1]);
+            if (drill.qte || n <= 3) { e.preventDefault(); drill.pick(n - 1); }
+            return;
+        }
+        if (e.code === 'KeyU' && drill && drill.ulti) { e.preventDefault(); drill.ulti(); return; }
+        if (e.code === 'KeyR' && drill && drill.retry && $('retry')) { e.preventDefault(); drill.retry(); return; }
+        if (e.code === 'Enter') { e.preventDefault(); go(1); }
+        else if (e.code === 'ArrowRight') go(1);
+        else if (e.code === 'ArrowLeft') go(-1);
+        else if (e.code === 'Escape') { $('btnBack').click(); }
+    });
+
+    renderHud();
+    mountLesson(0);
+</script>
+</body>
+</html>
