@@ -344,6 +344,7 @@
     <audio id="sfxParry" src="parry.mp3" preload="auto"></audio>
     <audio id="sfxDeathSequence" src="DeathSequence.mp3" preload="auto"></audio>
     <audio id="sfxUiClick" src="ui-click.mp3" preload="auto"></audio>
+    <audio id="sfxKamehameha" src="kamehameha.mp3" preload="auto"></audio>
     <div id="parry-flash"></div>
     <div id="ulti-flash"></div>
 
@@ -3120,6 +3121,7 @@
         const bgmEl = document.getElementById('bgm');
         const sfxParryEl = document.getElementById('sfxParry');
         const sfxUiClickEl = document.getElementById('sfxUiClick');
+        const sfxKamehamehaEl = document.getElementById('sfxKamehameha');
         const parryFlashEl = document.getElementById('parry-flash');
         const ultiFlashEl  = document.getElementById('ulti-flash');
         const timeController = {
@@ -3145,6 +3147,8 @@
 
         // Impact frame + temblor estilo Kamehameha al usar la ULTI
         function triggerUltiFlash() {
+            if (typeof playKamehamehaSfx === 'function') playKamehamehaSfx();
+
             // --- IMPACT FRAME dorado: parpadeo doble para sensación de golpe pesado ---
             if (ultiFlashEl) {
                 ultiFlashEl.style.transition = 'none';
@@ -3276,6 +3280,7 @@
         let sfxGain = null;
         let parryBuffer = null;
         let uiClickBuffer = null;
+        let kamehamehaBuffer = null;
         let audioPrimed = false;
         let bgmWanted = false;
         let bgmBlobUrl = null;
@@ -3316,6 +3321,16 @@
                 }))
                 .then(buf => { uiClickBuffer = buf; })
                 .catch(() => { uiClickBuffer = null; });
+
+            // Cargar el SFX del Kamehameha
+            fetch('kamehameha.mp3')
+                .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+                .then(data => new Promise((resolve, reject) => {
+                    const p = audioCtx.decodeAudioData(data, resolve, reject);
+                    if (p && typeof p.then === 'function') p.then(resolve, reject);
+                }))
+                .then(buf => { kamehamehaBuffer = buf; })
+                .catch(() => { kamehamehaBuffer = null; });
         }
 
         function resumeAudioCtx() {
@@ -3416,6 +3431,26 @@
                         sfxUiClickEl.currentTime = 0;
                     } catch (_) {}
                 }, 1000);
+            } catch (_) {}
+        }
+
+        function playKamehamehaSfx() {
+            if (audioCtx && kamehamehaBuffer && sfxGain) {
+                resumeAudioCtx();
+                try {
+                    const src = audioCtx.createBufferSource();
+                    src.buffer = kamehamehaBuffer;
+                    src.connect(sfxGain);
+                    src.start(0);
+                    return;
+                } catch (_) {}
+            }
+            if (!sfxKamehamehaEl) return;
+            try {
+                sfxKamehamehaEl.muted = false;
+                sfxKamehamehaEl.currentTime = 0;
+                sfxKamehamehaEl.volume = 0.95;
+                sfxKamehamehaEl.play().catch(() => {});
             } catch (_) {}
         }
 
