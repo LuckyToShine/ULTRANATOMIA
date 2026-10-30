@@ -396,7 +396,7 @@ struct branch {
             <div class="mt-auto pt-4 md:pt-6">
                 <p class="text-zinc-400 menu-socials-text">INIT SOCIALS...OK</p>
                 <div class="flex menu-socials-links text-white">
-                    <a href="https://github.com/LuckyToShine/ULTRANATOMIA" target="_blank" rel="noopener noreferrer" class="border-b-2 border-white pb-1 hover:bg-white hover:text-black transition-colors px-1 uppercase">DISCORD</a>
+                    <a href="https://github.com/LuckyToShine/ULTRANATOMIA" target="_blank" rel="noopener noreferrer" class="border-b-2 border-white pb-1 hover:bg-white hover:text-black transition-colors px-1 uppercase">GITHUB</a>
                     <a href="#" class="border-b-2 border-white pb-1 hover:bg-white hover:text-black transition-colors px-1 uppercase">TWITTER</a>
                     <a href="#" class="border-b-2 border-white pb-1 hover:bg-white hover:text-black transition-colors px-1 uppercase">YOUTUBE</a>
                 </div>
@@ -713,7 +713,50 @@ struct branch {
             return !!(appViewer && appViewer.classList.contains('active'));
         }
 
+        // GitHub Pages sends "Cache-Control: max-age=600", so browsers keep showing an old copy
+        // for up to 10 minutes after a deploy. Compare against the latest commit on GitHub and
+        // reload once when it changes; sub-apps get the build id as a cache-busting query.
+        const BUILD_KEY = 'ultranatomia_build';
+        const BUILD_RELOAD_KEY = 'ultranatomia_build_reloaded';
+        const DEPLOY_GRACE_MS = 3 * 60 * 1000;
+        let buildId = null;
+        try {
+            buildId = localStorage.getItem(BUILD_KEY);
+        } catch (_) {}
+
+        function withBuild(url) {
+            if (!buildId) return url;
+            return url + (url.indexOf('?') === -1 ? '?' : '&') + 'v=' + encodeURIComponent(buildId);
+        }
+
+        function checkForNewBuild() {
+            if (!window.fetch) return;
+            fetch('https://api.github.com/repos/LuckyToShine/ULTRANATOMIA/commits/main', { cache: 'no-store' })
+                .then((res) => (res.ok ? res.json() : null))
+                .then((commit) => {
+                    if (!commit || !commit.sha || !commit.commit || !commit.commit.committer) return;
+                    // Give GitHub Pages time to finish deploying before trusting the new commit
+                    if (Date.now() - Date.parse(commit.commit.committer.date) < DEPLOY_GRACE_MS) return;
+                    const latest = commit.sha.slice(0, 7);
+                    const previous = buildId;
+                    if (latest === previous) return;
+                    buildId = latest;
+                    try {
+                        localStorage.setItem(BUILD_KEY, latest);
+                    } catch (_) {}
+                    if (!previous || isSubAppOpen()) return;
+                    let alreadyReloaded = false;
+                    try {
+                        alreadyReloaded = sessionStorage.getItem(BUILD_RELOAD_KEY) === latest;
+                        sessionStorage.setItem(BUILD_RELOAD_KEY, latest);
+                    } catch (_) {}
+                    if (!alreadyReloaded) window.location.reload();
+                })
+                .catch(() => {});
+        }
+
         function openSubApp(url, pushHistory = true) {
+            url = withBuild(url.split('?')[0]);
             if (!appViewer || !appFrame) {
                 window.location.href = url;
                 return;
@@ -789,6 +832,7 @@ struct branch {
         document.addEventListener('mozfullscreenchange', onNativeFullscreenChange);
         document.addEventListener('MSFullscreenChange', onNativeFullscreenChange);
         updateFullscreenLabel();
+        checkForNewBuild();
 
         // Keyboard navigation shortcuts
         window.addEventListener('keydown', (e) => {
