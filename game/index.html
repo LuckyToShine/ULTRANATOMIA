@@ -3967,6 +3967,7 @@
                         GameState.useUlti();
                     }
                 });
+                this.ultiBlinkTween = null;
 
                 this.hudLeft.add([this.hpBg, this.hpBar, this.hpLabel, this.ultiBg, this.ultiLabel, ...this.ultiBars]);
                 this.hpProxy = { v: 1 };
@@ -4136,6 +4137,14 @@
                 });
                 window.addEventListener('updateUlti', (e) => {
                     const { charge, ready, used } = e.detail;
+                    // Detener parpadeo anterior en cualquier caso
+                    if (this.ultiBlinkTween) {
+                        this.ultiBlinkTween.stop();
+                        this.ultiBlinkTween = null;
+                        this.ultiBg.setAlpha(1);
+                        this.ultiBars.forEach(b => b.setAlpha(1));
+                        this.ultiLabel.setAlpha(1);
+                    }
                     if (used) {
                         this.ultiLabel.setText('VACÍA').setColor('#777777');
                         this.ultiBg.setFillStyle(0x111111, 0.85).setStrokeStyle(1.5, 0x333333);
@@ -4144,6 +4153,21 @@
                         this.ultiLabel.setText('¡LISTA! [U]').setColor('#ffd400');
                         this.ultiBg.setFillStyle(0x2a2404, 0.96).setStrokeStyle(2, 0xffd400);
                         this.ultiBars.forEach(b => b.setFillStyle(0xffd400).setStrokeStyle(1.5, 0xffffff));
+                        // Parpadeo continuo mientras la ulti está lista
+                        const blinkProxy = { v: 1 };
+                        this.ultiBlinkTween = this.tweens.add({
+                            targets: blinkProxy,
+                            v: 0.35,
+                            duration: 340,
+                            yoyo: true,
+                            repeat: -1,
+                            ease: 'Sine.easeInOut',
+                            onUpdate: () => {
+                                this.ultiBg.setAlpha(blinkProxy.v);
+                                this.ultiBars.forEach(b => b.setAlpha(blinkProxy.v));
+                                this.ultiLabel.setAlpha(blinkProxy.v);
+                            }
+                        });
                     } else {
                         this.ultiLabel.setText('ULTI ' + charge + '/3').setColor(charge > 0 ? '#ffee55' : '#999966');
                         this.ultiBg.setFillStyle(0x14140a, 0.92).setStrokeStyle(1.5, 0x444422);
