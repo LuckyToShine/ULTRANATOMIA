@@ -2811,9 +2811,12 @@
                 // Cada muerte cuenta como un reinicio desde checkpoint y resta 1 al rankScore
                 let score = Math.max(0, tR + aR + sR - this.stats.deaths);
                 const overall = score === 12 ? 'P' : RANKS[Math.min(4, Math.round(score / 3))];
+                const storyText = Math.random() < 0.10
+                    ? 'el esperma de didi llego al ovulo de naomi'
+                    : 'Felicidades Shinji';
                 emit('showResults', {
                     level: 'ULTRANATOMIA · OVOCITO II',
-                    story: 'Felicidades Shinji',
+                    story: storyText,
                     difficulty: '-- ' + this.diff.name + ' --',
                     time: this.runTime, timeRank: RANKS[tR],
                     acc, accRank: RANKS[aR],
