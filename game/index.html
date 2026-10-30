@@ -3135,16 +3135,117 @@
 
         // Impact frame + temblor estilo Kamehameha al usar la ULTI
         function triggerUltiFlash() {
-            // Impact frame dorado: congela 1 frame (~0.06 s) y satura la pantalla
-            if (ultiFlashEl) ultiFlashEl.style.opacity = '0.85';
-            timeController.ultiFlashTimer = 0.08;
-            trueStop(0.06);
-            // Sacudida inicial fuerte
-            shake(1.8);
-            // Pulsos de shake secundarios encadenados (desvanecimiento gradual)
-            setTimeout(() => { shake(1.2); }, 90);
-            setTimeout(() => { shake(0.9); }, 200);
-            setTimeout(() => { shake(0.5); }, 350);
+            // --- IMPACT FRAME dorado: parpadeo doble para sensación de golpe pesado ---
+            if (ultiFlashEl) {
+                ultiFlashEl.style.transition = 'none';
+                ultiFlashEl.style.opacity = '1.0';
+            }
+            // Primer freeze frame
+            trueStop(0.10);
+            timeController.ultiFlashTimer = 0.12;
+
+            // Parpadeo secundario: apaga y vuelve a encender para dar efecto de impacto real
+            setTimeout(() => {
+                if (ultiFlashEl) ultiFlashEl.style.opacity = '0.0';
+            }, 80);
+            setTimeout(() => {
+                if (ultiFlashEl) ultiFlashEl.style.opacity = '0.75';
+                timeController.ultiFlashTimer = 0.10;
+            }, 130);
+
+            // --- KAMEHAMEHA: haz de energía en Three.js ---
+            // Aparece desde la cámara (jugador) disparado hacia adelante
+            const pz = GameState.player.z;
+            const px = GameState.player.x;
+            const beamOrigin = new THREE.Vector3(px, 2.2, pz - 1.5);
+
+            // Núcleo del haz (cilindro brillante dorado)
+            const beamCoreMat = new THREE.MeshBasicMaterial({
+                color: 0xffd400,
+                transparent: true,
+                opacity: 0.95,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const beamCoreGeo = new THREE.CylinderGeometry(0.18, 0.38, 28, 14, 1, true);
+            const beamCore = new THREE.Mesh(beamCoreGeo, beamCoreMat);
+            beamCore.rotation.x = Math.PI / 2;
+            beamCore.position.set(px, 2.2, pz - 15.5);
+            scene.add(beamCore);
+
+            // Aura exterior del haz (más ancha, azul-blanca)
+            const beamAuraMat = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.35,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const beamAuraGeo = new THREE.CylinderGeometry(0.55, 1.1, 28, 10, 1, true);
+            const beamAura = new THREE.Mesh(beamAuraGeo, beamAuraMat);
+            beamAura.rotation.x = Math.PI / 2;
+            beamAura.position.set(px, 2.2, pz - 15.5);
+            scene.add(beamAura);
+
+            // Esfera de carga en el origen del disparo (acrosoma del espermatozoide)
+            const chargeGeo = new THREE.SphereGeometry(0.7, 14, 12);
+            const chargeMat = new THREE.MeshBasicMaterial({
+                color: 0xffd400,
+                transparent: true,
+                opacity: 1.0,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const chargeSphere = new THREE.Mesh(chargeGeo, chargeMat);
+            chargeSphere.position.copy(beamOrigin);
+            scene.add(chargeSphere);
+
+            // Explosión de partículas en el punto de lanzamiento
+            burst(beamOrigin, 0xffd400, 55, 16);
+            burst(beamOrigin, 0xffffff, 30, 22);
+            flashRing(beamOrigin, 0xffd400);
+
+            // --- SHAKE en oleadas tipo Kamehameha ---
+            // Sacudida inicial ultra fuerte (el disparo sale)
+            shake(2.5);
+            setTimeout(() => { shake(2.0); }, 40);
+            setTimeout(() => { shake(1.6); }, 100);
+            setTimeout(() => { shake(1.2); }, 200);
+            setTimeout(() => { shake(0.9); }, 330);
+            setTimeout(() => { shake(0.6); }, 480);
+            setTimeout(() => { shake(0.35); }, 650);
+
+            // --- Animación del haz: crece y se desvanece en ~0.55 s ---
+            let beamT = 0;
+            const beamDur = 0.55;
+            const tk = GameState.token;
+            function animBeam(nowT) {
+                beamT += 0.016; // ~60fps aprox
+                const k = Math.min(1, beamT / beamDur);
+                // El haz crece en grosor al principio y luego se desvanece
+                const growK = k < 0.25 ? k / 0.25 : 1;
+                const fadeK = k > 0.55 ? (k - 0.55) / 0.45 : 0;
+                beamCoreMat.opacity = Math.max(0, 0.95 * growK * (1 - fadeK));
+                beamAuraMat.opacity = Math.max(0, 0.35 * growK * (1 - fadeK));
+                chargeMat.opacity  = Math.max(0, (1 - k * 2.2));
+                chargeSphere.scale.setScalar(1 + k * 1.8);
+                // Rotación leve del aura para efecto espiral
+                beamAura.rotation.z += 0.08;
+                if (k < 1 && tk === GameState.token) {
+                    requestAnimationFrame(animBeam);
+                } else {
+                    scene.remove(beamCore);
+                    scene.remove(beamAura);
+                    scene.remove(chargeSphere);
+                    beamCoreGeo.dispose();
+                    beamAuraGeo.dispose();
+                    chargeGeo.dispose();
+                    beamCoreMat.dispose();
+                    beamAuraMat.dispose();
+                    chargeMat.dispose();
+                }
+            }
+            requestAnimationFrame(animBeam);
         }
 
         function resetParryFlash() {
